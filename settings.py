@@ -54,5 +54,5 @@ def get_layer_list():
     return layer_list
 
 
-
+settings = get_settings()
 

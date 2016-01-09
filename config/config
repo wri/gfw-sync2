@@ -1,0 +1,15 @@
+[tool_info]
+name = string
+version = float
+
+[bucket_drives]
+__many__ = drive
+
+[paths]
+__many__ = path
+
+[folders]
+__many__ = string
+
+[spatial_references]
+__many__ = string

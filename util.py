@@ -1,7 +1,20 @@
 import zipfile
 import os
 import glob
+import arcpy
 
+
+def get_auth_key(platform):
+    abspath = os.path.abspath(__file__)
+    dir_name = os.path.dirname(abspath)
+    token_file = os.path.join(dir_name, r"config\cartodb_token.txt")
+    with open(token_file, "r") as f:
+        for row in f:
+            return row
+
+def get_srs(layer):
+    desc = arcpy.Describe(layer)
+    return desc.spatialReference.name
 
 def unzip(source_filename, dest_dir):
     with zipfile.ZipFile(source_filename) as zf:

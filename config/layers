@@ -1,0 +1,22 @@
+[__many__]
+type = option('merge', 'single')
+alias = string
+bucket = string
+folder = string
+shapefile = shapefile
+gdb = gdb
+where_clause = string(default=None)
+transformation = string(default=None)
+keywords = string_list(default=None)
+
+[[layers]]
+
+[[[__many__]]]
+country = string(min=3, max=3)
+alias = string
+shapefile = shapefile
+where_clause = string(default=None)
+transformation = string(default=None)
+
+[[[[fields]]]]
+__many__ = string_list(default=None)
