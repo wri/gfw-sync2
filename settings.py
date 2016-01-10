@@ -24,10 +24,6 @@ def get_country_iso3_list():
     return get_ini_file('config', 'country_iso3.ini')
 
 
-def get_metadata_keys():
-    return get_ini_file('config', 'metadata.ini')
-
-
 def get_layer_ini_files():
     abspath = os.path.abspath(__file__)
     dir_name = os.path.dirname(abspath)
@@ -43,6 +39,7 @@ def get_layers():
         layers.append(ConfigObj(f))
 
     return layers
+
 
 def get_layer_list():
 

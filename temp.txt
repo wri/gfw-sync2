@@ -1,3 +1,0 @@
-# Replace a layer/table view name with a path to a dataset (which can be a layer file) or create the layer/table view within the script
-# The following inputs are layers or table views: "disolve_test"
-arcpy.CalculateField_management(in_table="disolve_test", field="wkb", expression="md5(!Shape!.WKT)", expression_type="PYTHON_9.3", code_block="import hashlib\n\ndef md5(shape):\n   m = hashlib.md5()\n   m.update(shape)\n   return m.hexdigest()")

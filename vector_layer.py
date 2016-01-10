@@ -5,6 +5,7 @@ import arcpy
 from layer import Layer
 import warnings
 from datetime import datetime
+import cartodb
 
 
 class VectorLayer(Layer):
@@ -40,6 +41,9 @@ class VectorLayer(Layer):
 
         self._version = None
         self.version = self.name + " " + str(datetime.now())
+
+        self.wgs84_file = None
+        self.export_file = None
 
     # Validate dataset
     @property
@@ -116,8 +120,11 @@ class VectorLayer(Layer):
                     warnings.warn("Where clause '%s' is invalide" % self.where_clause)
         self._where_clause = w
 
-    def _get_fields(self):
-        return arcpy.ListFields(self.fc)
+    def archive(self):
+        if self.export_file is not None:
+            self._archive(self.export_file, True)
+        if self.wgs84_file is not None:
+            self._archive(self.wgs84_file, False)
 
     def append_features(self, input_layer, fms=None):
 
@@ -182,32 +189,24 @@ class VectorLayer(Layer):
 
         return
 
-
-    def reconcile_version(self):
-        pass
+    def _get_fields(self):
+        return arcpy.ListFields(self.fc)
 
     def post_version(self):
-        pass
-
-    def delete_version(self):
-        pass
-
-    def push_to_cartodb(self):
-
-    def _select(self, where_clause=None):
-        if where_clause is None:
-            l = arcpy.MakeFeatureLayer_management(self.fc, self.name)
-            arcpy.ChangeVersion_management(self.name, 'TRANSACTIONAL', self.version,'')
-        else:
-            l = arcpy.MakeFeatureLayer_management(self.fc, self.name, where_clause)
-            arcpy.ChangeVersion_management(self.name, 'TRANSACTIONAL', self.version,'')
-        return l.getOutput(0)
-
-    def select(self, where_clause=None):
-        self.selection = self._select(where_clause)
+        arcpy.ReconcileVersions_management(self.workspace,
+                                           "ALL_VERSIONS",
+                                           "SDE.Default",
+                                           [self.version],
+                                           "LOCK_ACQUIRED",
+                                           "NO_ABORT",
+                                           "BY_OBJECT",
+                                           "FAVOR_TARGET_VERSION",
+                                           "POST",
+                                           "DELETE_VERSION"
+                                           #, "c:\RecLog.txt"
+                                           )
 
     def update(self):
-
 
         self.delete_features()
 
@@ -222,6 +221,10 @@ class VectorLayer(Layer):
             arcpy.MakeFeatureLayer_management(self.src, "source_layer")
 
         self.append_features("source_layer")
+
+        self.update_gfwid()
+
+        self.post_version()
 
     def update_field(self, field, expression, language=None):
         if language is None:
@@ -252,3 +255,25 @@ class VectorLayer(Layer):
                                                    "   hash = hashlib.md5()\n"
                                                    "   hash.update(shape)\n"
                                                    "   return hash.hexdigest()")
+
+    def _select(self, where_clause=None):
+        if where_clause is None:
+            l = arcpy.MakeFeatureLayer_management(self.fc, self.name)
+            arcpy.ChangeVersion_management(self.name, 'TRANSACTIONAL', self.version, '')
+        else:
+            l = arcpy.MakeFeatureLayer_management(self.fc, self.name, where_clause)
+            arcpy.ChangeVersion_management(self.name, 'TRANSACTIONAL', self.version, '')
+        return l.getOutput(0)
+
+    def select(self, where_clause=None):
+        self.selection = self._select(where_clause)
+
+    def sync_cartodb(self):
+        #TODO: Shapefile needs suffix _prefly
+        cartodb.cartodb_sync(self.wgs84_file, self.name)
+
+        #TODO: Add extra procedure for imazon_sad
+        #layerspec_table="layerspec_nuclear_hazard"
+        #print "update layer spec max date"
+        #sql = "UPDATE %s set maxdate= (SELECT max(date)+1 FROM %s) WHERE table_name='%s'" % (layerspec_table, production_table, production_table )
+        #cartodb.cartodb_sql(sql)
