@@ -2,14 +2,9 @@ import sys
 import getopt
 from settings import *
 
-from layer import Layer
-from vector_layer import VectorLayer
-from raster_layer import RasterLayer
 from s3_vector_layer import S3VectorLayer
-from osm_loggingroads_layer import OSMLoggingRoadsLayer
-from wdpa_layer import WDPALayer
-
-
+#from osm_loggingroads_layer import OSMLoggingRoadsLayer
+#from wdpa_layer import WDPALayer
 
 
 def main(argv):
@@ -45,28 +40,28 @@ def main(argv):
                
     if not len(layers):
         #print len(layers)
-        layers = settings.get_layer_list()
+        layers = get_layer_list()
         print layers
 
     layerdefs = get_layers()
 
     for l in layers:
-        layerdef = layerdefs[l]
+        layerdef = layerdefs[0][l]
         layerdef["name"] = l
 
-        if layerdef["type"] == "s3_vector_layer":
+        if layerdef["type"] == "s3_vector":
             layer = S3VectorLayer(layerdef)
-        elif layerdef["type"] == "wdpa_layer":
-            layer = WDPALayer(layerdef)
-        elif layerdef["type"] == "osm_loggingroads_layer":
-            layer = OSMLoggingRoadsLayer(layerdef)
-        elif layerdef["type"] == "wdpa_layer":
-            layer = WDPALayer(layerdef)
+       # elif layerdef["type"] == "wdpa":
+       #     layer = WDPALayer(layerdef)
+       # elif layerdef["type"] == "osm_loggingroads":
+       #     layer = OSMLoggingRoadsLayer(layerdef)
+       # elif layerdef["type"] == "wdpa_layer":
+       #     layer = WDPALayer(layerdef)
         else:
             raise RuntimeError("Layer type unknown")
 
-        layer.update()
-        
+        #layer.update()
+
 
 def usage():
     layers = settings.get_layer_list()

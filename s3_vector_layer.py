@@ -10,10 +10,10 @@ class S3VectorLayer(VectorLayer):
         self.type = "S3Layer"
 
         self._src_bucket = None
-        self.src_bucket = layerdef['src']['bucket']
+        self.src_bucket = layerdef['source']['bucket']
 
         self._src_path = None
-        self.src_path = layerdef['src']['path']
+        self.src_path = layerdef['source']['path']
 
         self._bucket_drive = settings["bucket_drives"][self.src_bucket]
 
@@ -55,4 +55,15 @@ class S3VectorLayer(VectorLayer):
     def src(self, s):
         if not os.path.exists(s):
             warnings.warn("Cannot find source file", Warning)
-        self._src_path = p
+        self._src_path = s
+
+
+class S3CountryVectorLayer(S3VectorLayer):
+
+    def __init__(self, layerdef):
+
+        self.type = "S3CountryVectorLayer"
+
+        self._workspace = None
+        self.workspace = settings['sde_connections']['gfw_countries']
+        super(S3CountryVectorLayer, self).__init__(layerdef)

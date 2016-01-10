@@ -24,14 +24,11 @@ class Layer(object):
         self._alias = None
         self.alias = layerdef['alias']
 
-        self._workspace = None
-        self.workspace = layerdef['workspace']
-
         self._scratch_workspace = None
         self.scratch_workspace = os.path.join(settings['paths']['scratch_workspace'], self.name)
 
         self._zip_workspace = None
-        self.zip_workspace = os.path.join(self.workspace, "zip")
+        self.zip_workspace = os.path.join(self.scratch_workspace, "zip")
 
         self.metadata = self.get_metadata()
 
@@ -107,6 +104,8 @@ class Layer(object):
     def workspace(self, w):
         if not w:
             warnings.warn("Workspace cannot be empty", Warning)
+        elif not arcpy.Exists(w):
+            warnings.warn("Workspace does not exist", Warning)
         else:
             desc = arcpy.Describe(w)
             if desc.dataType != "Workspace" or desc.dataType != "Folder":

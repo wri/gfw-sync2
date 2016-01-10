@@ -6,6 +6,7 @@ from layer import Layer
 import warnings
 from datetime import datetime
 import cartodb
+from settings import settings
 
 
 class VectorLayer(Layer):
@@ -16,6 +17,10 @@ class VectorLayer(Layer):
     def __init__(self, layerdef):
 
         super(VectorLayer, self).__init__(layerdef)
+
+        if not hasattr(self, 'workspace'):
+            self._workspace = None
+            self.workspace = settings['sde_connections']['gfw']
 
         self._dataset = None
         self.dataset = layerdef['dataset']
@@ -44,6 +49,8 @@ class VectorLayer(Layer):
 
         self.wgs84_file = None
         self.export_file = None
+
+
 
     # Validate dataset
     @property
