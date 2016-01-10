@@ -7,6 +7,14 @@ import os
 import glob
 import arcpy
 
+from vector_layer import VectorLayer
+
+class OSMLoggingRoadsLayer(VectorLayer):
+
+    def __init__(self, layerdef):
+        super(OSMLoggingRoadsLayer, self).__init__(layerdef)
+
+
 def get_auth_key():
     return "d2cf58f46fd21ad1e4c21d300fc0d3c9c3292a78"
 

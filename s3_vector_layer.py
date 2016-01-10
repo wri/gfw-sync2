@@ -3,7 +3,7 @@ from settings import *
 import warnings
 
 
-class S3Layer(VectorLayer):
+class S3VectorLayer(VectorLayer):
 
     def __init__(self, layerdef):
 
@@ -20,7 +20,7 @@ class S3Layer(VectorLayer):
         self._src = None
         self.src = os.path.join(self._bucket_drive, self.src_path)
 
-        super(S3Layer, self).__init__(layerdef)
+        super(S3VectorLayer, self).__init__(layerdef)
 
     # Validate bucket
     @property
