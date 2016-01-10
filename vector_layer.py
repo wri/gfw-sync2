@@ -4,7 +4,8 @@ import os
 import arcpy
 from layer import Layer
 import warnings
-from datetime import datetime
+import time
+#from datetime import datetime
 import cartodb
 from settings import settings
 
@@ -45,7 +46,7 @@ class VectorLayer(Layer):
             self.where_clause = None
 
         self._version = None
-        self.version = self.name + " " + str(datetime.now())
+        self.version = self.name + "_" + str(int(time.time()))
 
         self.wgs84_file = None
         self.export_file = None
@@ -74,9 +75,11 @@ class VectorLayer(Layer):
 
     @fc.setter
     def fc(self, f):
+        if not arcpy.Exists(f):
+            warnings.warn("Feature class %s does not exists" % f, Warning)
         desc = arcpy.Describe(f)
         if desc.datasetType != 'FeatureClass':
-            warnings.warn("Dataset is not a FeatureClass", Warning)
+            warnings.warn("Dataset %s is not a FeatureClass" %f, Warning)
         self._fc = f
 
     @property
@@ -85,6 +88,7 @@ class VectorLayer(Layer):
 
     @version.setter
     def version(self, v):
+        print v
         arcpy.CreateVersion_management(self.workspace, "sde.DEFAULT", v, "PRIVATE")
         self._version = v
 

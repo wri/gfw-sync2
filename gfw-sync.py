@@ -2,7 +2,7 @@ import sys
 import getopt
 from settings import *
 
-from s3_vector_layer import S3VectorLayer
+from s3_vector_layer import *
 #from osm_loggingroads_layer import OSMLoggingRoadsLayer
 #from wdpa_layer import WDPALayer
 
@@ -51,6 +51,8 @@ def main(argv):
 
         if layerdef["type"] == "s3_vector":
             layer = S3VectorLayer(layerdef)
+        elif layerdef["type"] == "s3_country_vector":
+            layer = S3CountryVectorLayer(layerdef)
        # elif layerdef["type"] == "wdpa":
        #     layer = WDPALayer(layerdef)
        # elif layerdef["type"] == "osm_loggingroads":

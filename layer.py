@@ -105,11 +105,12 @@ class Layer(object):
         if not w:
             warnings.warn("Workspace cannot be empty", Warning)
         elif not arcpy.Exists(w):
-            warnings.warn("Workspace does not exist", Warning)
+            warnings.warn("Workspace %s does not exist" % w, Warning)
         else:
             desc = arcpy.Describe(w)
-            if desc.dataType != "Workspace" or desc.dataType != "Folder":
-                warnings.warn("Not a Workspace", Warning)
+            if desc.dataType != "Workspace" and desc.dataType != "Folder":
+                print desc.dataType
+                warnings.warn("%s is not a Workspace" % w, Warning)
         self._workspace = w
 
     # Validate source
