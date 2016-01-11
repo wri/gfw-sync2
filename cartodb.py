@@ -3,11 +3,12 @@ import subprocess
 import os
 import util
 import json
+from settings import settings
 
 
 def cartodb_sql(sql, raise_error=True):
-    key = util.get_token('cartodb')
-    result = urllib.urlopen("http://wri-01.cartodb.com:80/api/v2/sql?api_key=%s&q=%s" % (key, sql))
+    key = util.get_token(settings['cartodb']['token'])
+    result = urllib.urlopen("%s?api_key=%s&q=%s" % (settings["cartodb"]["sql_api"], key, sql))
     json_result = json.loads(result.readlines()[0])
     if raise_error and "error" in json_result.keys():
         raise SyntaxError("Wrong SQL syntax.\n %s" % json_result['error'])
@@ -15,7 +16,7 @@ def cartodb_sql(sql, raise_error=True):
 
 
 def cartodb_create(file_name, raise_error=True):
-    key = util.get_token('cartodb')
+    key = util.get_token(settings['cartodb']['token'])
     result = subprocess.check_call([r'ogr2ogr',
                                     '--config', 'CARTODB_API_KEY', key,
                                     '-progress', '-skipfailures',
@@ -27,7 +28,7 @@ def cartodb_create(file_name, raise_error=True):
 
 
 def cartodb_append(file_name, raise_error=True):
-    key = util.get_token('cartodb')
+    key = util.get_token(settings['cartodb']['token'])
     result = subprocess.check_call([r'C:\Program Files\GDAL\ogr2ogr.exe',
                                     '--config', 'CARTODB_API_KEY', key,
                                     '-append', '-progress', '-skipfailures',

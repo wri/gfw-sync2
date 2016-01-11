@@ -46,7 +46,8 @@ class VectorLayer(Layer):
             self.where_clause = None
 
         self._version = None
-        self.version = self.name + "_" + str(int(time.time()))
+        self.version = None
+        self.create_version()
 
         self.wgs84_file = None
         self.export_file = None
@@ -154,6 +155,9 @@ class VectorLayer(Layer):
 
         return
 
+    def create_version(self):
+        self.version = self.name + "_" + str(int(time.time()))
+
     def delete_features(self, where_clause=None):
         """ Delete Features from Vector Layer
         :param where_clause: SQL Where statement
@@ -163,6 +167,22 @@ class VectorLayer(Layer):
         arcpy.DeleteFeatures_management(self.selection.name)
 
         return
+
+    def delete_version(self, v=None):
+        if v is None:
+            v = self.version
+        # Set the workspace environment
+        arcpy.env.workspace = self.workspace
+
+        # Use a list comprehension to get a list of version names where the owner
+        # is the current user and make sure sde.default is not selected.
+        ver_list = [ver.name for ver in arcpy.da.ListVersions() if ver.isOwner
+                   is True and ver.name.lower() != 'sde.default']
+
+        if v in ver_list:
+            arcpy.DeleteVersion_management(self.workspace, v)
+        else:
+            raise RuntimeError("Version %s does not exist" % v)
 
     def export_2_shp(self, wgs84=True, simplify=False):
         """ Export Vector Layer to Shapefile
@@ -237,6 +257,12 @@ class VectorLayer(Layer):
 
         self.post_version()
 
+        self.export_2_shp()
+
+        self.archive()
+
+        self.sync_cartodb()
+
     def update_field(self, field, expression, language=None):
         if language is None:
             arcpy.CalculateField_management(self.selection.name, field, "'%s'" % expression, "PYTHON")
@@ -287,4 +313,4 @@ class VectorLayer(Layer):
         #layerspec_table="layerspec_nuclear_hazard"
         #print "update layer spec max date"
         #sql = "UPDATE %s set maxdate= (SELECT max(date)+1 FROM %s) WHERE table_name='%s'" % (layerspec_table, production_table, production_table )
-        #cartodb.cartodb_sql(sql)
+        #cartodb@wri-01.cartodb_sql(sql)

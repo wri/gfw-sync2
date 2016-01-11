@@ -6,7 +6,9 @@ import shutil
 import time
 from datetime import datetime
 import archive
-
+import json
+import arcpy_metadata
+import util
 
 class Layer(object):
 
@@ -30,7 +32,7 @@ class Layer(object):
         self._zip_workspace = None
         self.zip_workspace = os.path.join(self.scratch_workspace, "zip")
 
-        self.metadata = self.get_metadata()
+        self.metadata = self._get_metadata()
 
         self._s3_bucket = None
         self.s3_bucket = layerdef['s3']['bucket']
@@ -46,8 +48,6 @@ class Layer(object):
         if not hasattr(self, 'src'):
             self._src = None
             self.src = layerdef['src']
-
-
 
     # Validate name
     @property
@@ -163,7 +163,7 @@ class Layer(object):
     @dst_folder.setter
     def dst_folder(self, d):
         if not os.path.exists(d):
-            warnings.warn("Cannot find source file", Warning)
+            warnings.warn("Cannot find destination folder %s" % d, Warning)
         self._dst_folder = d
 
     def _archive(self, input_file, local=False):
@@ -188,8 +188,42 @@ class Layer(object):
         print "Copy archived ZIP to %s" % archive_folder
         shutil.copy(src, dst)
 
-    def get_metadata(self):
-        return {}
+        input_f = os.path.basename(input_file)
+        arcpy.Copy_management(input_file, os.path.join(input_f, self.dst_folder))
+
+    def _get_metadata(self, layer):
+
+        md = arcpy_metadata.MetadataEditor(layer)
+
+        cache_file = settings['metadata']['cache']
+        with open(cache_file) as c:
+            data = c.read()
+
+        md_gspread = json.loads(data)
+
+        if self.name in md_gspread.keys():
+
+            md.title.set(md_gspread[self.name]["Title"])
+            md.locals['english'].title.set(md_gspread[self.name]["Translated_Title"])
+            md.purpose.set(md_gspread[self.name]["Function"])
+            md.abstract.st(md_gspread[self.name]["Overview"])
+            md.locals['english'].abstract.set(md_gspread[self.name]["Translated Overview"])
+            #  md_gspread[self.name]["category"]
+            md.tags.add(util.csl_to_list(md_gspread[self.name]["Tags"]))
+            md.extent_description.set(md_gspread[self.name]["Geographic Coverage"])
+            md.last_update.set(md_gspread[self.name]["Date of Content"])
+            md.update_frequency_description(md_gspread[self.name]["Frequency of Updates"])
+            #  md.credits.set(md_gspread[self.name]["credits"])
+            md.citation.set(md_gspread[self.name]["Citation"])
+            md.limitation.set(md_gspread[self.name]["License"])
+            md.supplemental_information.set(md_gspread[self.name]["Cautions"])
+            md.source.set(md_gspread[self.name]["Source"])
+            md.scale_resolution.set(md_gspread[self.name]["Resolution"])
+
+        else:
+            raise RuntimeError("No Metadata for layer %s" % self.name)
+
+        return md
 
     def update_metadata(self):
         pass
