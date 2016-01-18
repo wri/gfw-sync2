@@ -1,4 +1,4 @@
-Coment here
+#Coment here
 [tool_info]
 name = GFW Sync Tool
 version = 2.0
@@ -17,12 +17,12 @@ archive_folder = archive
 default_bucket = gfw2-data
 
 [sde_connections]
-gfw = D:\scripts\connections\gfw (gfw@localhost).sde
-gfw_countries = D:\scripts\connections\gfw_countries (gfw@localhost).sde
+gfw = D:\scripts\connections\gfw_test (gfw@localhost).sde
+gfw_countries = D:\scripts\connections\gfw_countries_test (gfw@localhost).sde
 
 [cartodb]
-token = wri-01@cartodb
-sql_api = http://wri-01.cartodb.com:80/api/v2/sql
+token = wri-02@cartodb
+sql_api = http://wri-02.cartodb.com:80/api/v2/sql
 
 [spatial_references]
 default_srs = WGS 1984
