@@ -18,9 +18,10 @@ class OSMLoggingRoadsLayer(VectorLayer):
 def get_auth_key():
     return "d2cf58f46fd21ad1e4c21d300fc0d3c9c3292a78"
 
+
 def rerun_job(job_uid):
-    authKey = get_auth_key()
-    headers = {"Content-Type":"application/json", "Authorization":"Token " + authKey}
+    auth_key = get_auth_key()
+    headers = {"Content-Type":"application/json", "Authorization":"Token " + auth_key}
     url = "http://export.hotosm.org/api/rerun?job_uid=%s" % job_uid
     request = urllib2.Request(url)
 
@@ -31,8 +32,8 @@ def rerun_job(job_uid):
 
 
 def get_job(job_uid):
-    authKey = get_auth_key()
-    headers = {"Content-Type":"application/json", "Authorization":"Token " + authKey}
+    auth_key = get_auth_key()
+    headers = {"Content-Type":"application/json", "Authorization":"Token " + auth_key}
     url = "http://export.hotosm.org/api/runs?job_uid=%s" % job_uid
 
     request = urllib2.Request(url)

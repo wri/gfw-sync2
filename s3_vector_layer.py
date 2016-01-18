@@ -1,7 +1,7 @@
 from vector_layer import VectorLayer
-from settings import *
+from settings import settings
 import warnings
-
+import os
 
 class S3VectorLayer(VectorLayer):
 

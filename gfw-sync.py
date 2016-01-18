@@ -1,6 +1,8 @@
 import sys
 import getopt
-from settings import *
+import settings
+from settings import settings
+
 
 from s3_vector_layer import S3VectorLayer
 #from osm_loggingroads_layer import OSMLoggingRoadsLayer
@@ -38,12 +40,12 @@ def main(argv):
         if opt in ("-c", "--country"):
             countries.append(arg.upper())
                
-    if not len(layers):
+    if not layers:
         #print len(layers)
-        layers = get_layer_list()
+        layers = settings.get_layer_list()
         print layers
 
-    layerdefs = get_layers()
+    layerdefs = settings.get_layers()
 
     for l in layers:
         layerdef = layerdefs[0][l]

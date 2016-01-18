@@ -119,12 +119,12 @@ class VectorLayer(Layer):
 
     @where_clause.setter
     def where_clause(self, w):
-        if self.src is not None:
-            if w is not None:
-                try:
-                    arcpy.MakeFeatureLayer_management(self.src, self.name, w)
-                except:
-                    warnings.warn("Where clause '%s' is invalide" % self.where_clause)
+        if self.src is not None and w is not None:
+
+            try:
+                arcpy.MakeFeatureLayer_management(self.src, self.name, w)
+            except:
+                warnings.warn("Where clause '%s' is invalide" % self.where_clause)
         self._where_clause = w
 
     def archive(self):
