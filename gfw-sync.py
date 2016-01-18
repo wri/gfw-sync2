@@ -1,16 +1,16 @@
 import sys
 import getopt
 import settings
-from settings import settings
 
+from s3_vector_layer import S3VectorLayer
+from s3_vector_layer import S3CountryVectorLayer
 
-from s3_vector_layer import *
 #from osm_loggingroads_layer import OSMLoggingRoadsLayer
 #from wdpa_layer import WDPALayer
 
 
 def main(argv):
-    print "{0!s} v{1!s}".format(settings['tool_info']['name'], settings['tool_info']['version'])
+    print "{0!s} v{1!s}".format(settings.settings['tool_info']['name'], settings.settings['tool_info']['version'])
     print ""
 
     layers = []
