@@ -28,7 +28,6 @@ def add_to_zip(fname, zf):
 
     return
 
-
 def zip_file(src, dst, local):
 
     basepath, fname, base_fname = gen_paths(src)
@@ -49,3 +48,5 @@ def zip_file(src, dst, local):
             add_to_zip(f, zf)
 
     zf.close()
+
+    return zip_name

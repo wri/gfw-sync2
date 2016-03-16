@@ -16,28 +16,22 @@ class VectorLayer(Layer):
     """
 
     def __init__(self, layerdef):
+        print 'starting vectorlayer'
 
         super(VectorLayer, self).__init__(layerdef)
 
-        if not hasattr(self, 'workspace'):
-            self._workspace = None
-            self.workspace = settings['sde_connections']['gfw']
+        self._fc = None
+        self.fc = self.esri_service_output
 
         self._dataset = None
-        self.dataset = layerdef['dataset']
+        self.dataset = os.path.dirname(self.esri_service_output)
 
-        self._fc = None
-        self.fc = os.path.join(self.workspace, self.dataset, self.name)
+        self._sde_workspace = None
+        self.sde_workspace = os.path.dirname(self.dataset)
 
         self.selection = None
 
         self.fields = self._get_fields()
-
-        self._transformation = None
-        if "transformation" in layerdef:
-            self.transformation = layerdef['transformation']
-        else:
-            self.transformation = None
 
         self._where_clause = None
         if "where_clause" in layerdef:
@@ -46,13 +40,26 @@ class VectorLayer(Layer):
             self.where_clause = None
 
         self._version = None
-        self.version = None
         self.create_version()
 
         self.wgs84_file = None
         self.export_file = None
 
+    # Validate sde_workspace
+    @property
+    def sde_workspace(self):
+        return self._sde_workspace
 
+    @sde_workspace.setter
+    def sde_workspace(self, s):
+        print 'workspace: ' + s
+        if not s:
+            self._sde_workspace = ""
+        else:
+            if arcpy.Exists(s) and os.path.splitext(s)[1] == '.sde':
+                self._sde_workspace = s
+            else:
+                warnings.warn("sde_workspace path is invalid", Warning)
 
     # Validate dataset
     @property
@@ -63,8 +70,9 @@ class VectorLayer(Layer):
     def dataset(self, d):
         if not d:
             self._dataset = ""
+            warnings.warn("There is no dataset specified", Warning)
         else:
-            desc = arcpy.Describe(os.path.join(self.workspace, d))
+            desc = arcpy.Describe(d)
             if desc.datasetType != 'FeatureDataset':
                 warnings.warn("Dataset is not a FeatureDataset", Warning)
             self._dataset = d
@@ -77,7 +85,7 @@ class VectorLayer(Layer):
     @fc.setter
     def fc(self, f):
         if not arcpy.Exists(f):
-            warnings.warn("Feature class {0!s} does not exists".format(f), Warning)
+            warnings.warn("Feature class {0!s} does not exist".format(f), Warning)
         desc = arcpy.Describe(f)
         if desc.datasetType != 'FeatureClass':
             warnings.warn("Dataset {0!s} is not a FeatureClass".format(f), Warning)
@@ -89,32 +97,8 @@ class VectorLayer(Layer):
 
     @version.setter
     def version(self, v):
-        print v
-        arcpy.CreateVersion_management(self.workspace, "sde.DEFAULT", v, "PRIVATE")
+        arcpy.CreateVersion_management(self.sde_workspace, "sde.DEFAULT", v, "PRIVATE")
         self._version = v
-
-
-    # Validate transformation
-    @property
-    def transformation(self):
-        return self._transformation
-
-    @transformation.setter
-    def transformation(self, t):
-        if self.src is not None:
-            from_desc = arcpy.Describe(self.src)
-            from_srs = from_desc.spatialReference
-            to_desc = arcpy.Describe(self.fc)
-            to_srs = to_desc.spatialReference
-            if from_srs.GCS != to_srs.GCS:
-                if t is None:
-                    warnings.warn("No transformation defined", Warning)
-                else:
-                    extent = from_desc.extent
-                    transformations = arcpy.ListTransformations(from_srs, to_srs, extent)
-                    if self.transformation not in transformations:
-                        warnings.warn("Transformation {0!s}: not compatible with in- and output spatial reference or extent".format(self.transformation), Warning)
-        self._transformation = t
 
     # Validate where clause
     @property
@@ -123,12 +107,19 @@ class VectorLayer(Layer):
 
     @where_clause.setter
     def where_clause(self, w):
-        if self.src is not None and w is not None:
+        if self.source is not None and w != '':
                 try:
-                    arcpy.MakeFeatureLayer_management(self.src, self.name, w)
+                    arcpy.MakeFeatureLayer_management(self.source, self.name, w)
+                    
+                    #Clean up temporary feature layer after we create it
+                    arcpy.Delete_management(self.name)
                 except:
-                    warnings.warn("Where clause '{0!s}' is invalide".format(self.where_clause))
+                    warnings.warn("Where clause '{0!s}' is invalide or delete FL failed".format(self.where_clause))
+                    
         self._where_clause = w
+
+    def project_to_wgs84(self):
+        self._project_to_wgs84()
 
     def archive(self):
         if self.export_file is not None:
@@ -151,6 +142,9 @@ class VectorLayer(Layer):
         else:
             arcpy.Append_management(input_layer, self.selection.name, "NO_TEST", fms, "")
 
+        #Delete temporary FC from self.select
+        arcpy.Delete_management(self.name)
+
         return
 
     def create_version(self):
@@ -163,6 +157,9 @@ class VectorLayer(Layer):
         """
         self.select(where_clause)
         arcpy.DeleteFeatures_management(self.selection.name)
+        
+        #Delete temporary FC from self.select
+        arcpy.Delete_management(self.name)
 
         return
 
@@ -170,21 +167,20 @@ class VectorLayer(Layer):
         if v is None:
             v = self.version
         # Set the workspace environment
-        arcpy.env.workspace = self.workspace
+        arcpy.env.workspace = self.sde_workspace
 
         # Use a list comprehension to get a list of version names where the owner
         # is the current user and make sure sde.default is not selected.
         ver_list = [ver.name for ver in arcpy.da.ListVersions() if ver.isOwner
-                   is True and ver.name.lower() != 'sde.default']
+                   is True and ver.name.lower() != 'sde.DEFAULT']
 
         if v in ver_list:
-            arcpy.DeleteVersion_management(self.workspace, v)
+            arcpy.DeleteVersion_management(self.sde_workspace, v)
         else:
             raise RuntimeError("Version {0!s} does not exist".format(v))
 
-    def export_2_shp(self, wgs84=True, simplify=False):
+    def export_2_shp(self, simplify=False):
         """ Export Vector Layer to Shapefile
-        :param wgs84: Output will be in WGS 1984
         :param simplify: Output features will be simplified (10 meter precision)
         :return: Nothing
         """
@@ -205,16 +201,11 @@ class VectorLayer(Layer):
                                               "0 Unknown",
                                               "RESOLVE_ERRORS",
                                               "KEEP_COLLAPSED_POINTS")
-        if wgs84:
-            wgs84_folder = os.path.join(export_folder, "wgs84")
-            if not os.path.exists(wgs84_folder):
-                os.mkdir(wgs84_folder)
-            self.wgs84_file = os.path.join(wgs84_folder, self.name + ".shp")
 
-            if self.transformation is None:
-                arcpy.Project_management(self.export_file, self.wgs84_file, "WGS_1984")
-            else:
-                arcpy.Project_management(self.export_file, self.wgs84_file, "WGS_1984", self.transformation)
+        if self.isWGS84(self.export_file):
+            self.wgs84_file = self.export_file
+        else:
+            self.project_to_wgs84()
 
         return
 
@@ -222,18 +213,13 @@ class VectorLayer(Layer):
         return arcpy.ListFields(self.fc)
 
     def post_version(self):
-        arcpy.ReconcileVersions_management(self.workspace,
-                                           "ALL_VERSIONS",
-                                           "SDE.Default",
-                                           [self.version],
-                                           "LOCK_ACQUIRED",
-                                           "NO_ABORT",
-                                           "BY_OBJECT",
-                                           "FAVOR_TARGET_VERSION",
-                                           "POST",
-                                           "DELETE_VERSION"
-                                           #, "c:\RecLog.txt"
-                                           )
+        #TODO -- figure out why version is not being deleted
+        #and check that correct version is being POSTed
+
+        #For some reason I'm unable to invoke the DELETE_VERSION option in
+        #ReconcileVersions_management. hence calling DeleteVersion right after
+        arcpy.ReconcileVersions_management(self.sde_workspace, "ALL_VERSIONS", "sde.DEFAULT",  self.version, "LOCK_ACQUIRED", "NO_ABORT", "BY_OBJECT", "FAVOR_TARGET_VERSION", "POST", "KEEP_VERSION")
+        arcpy.DeleteVersion_management(self.sde_workspace, self.version)
 
     def update(self):
 
@@ -245,9 +231,9 @@ class VectorLayer(Layer):
             arcpy.env.geographicTransformations = ""
 
         if self.where_clause:
-            arcpy.MakeFeatureLayer_management(self.src, "source_layer", self.where_clause)
+            arcpy.MakeFeatureLayer_management(self.source, "source_layer", self.where_clause)
         else:
-            arcpy.MakeFeatureLayer_management(self.src, "source_layer")
+            arcpy.MakeFeatureLayer_management(self.source, "source_layer")
 
         self.append_features("source_layer")
 
@@ -259,7 +245,7 @@ class VectorLayer(Layer):
 
         self.archive()
 
-        self.sync_cartodb()
+        self.sync_cartodb(where_clause=None)
 
     def update_field(self, field, expression, language=None):
         if language is None:
@@ -291,21 +277,24 @@ class VectorLayer(Layer):
                                                    "   hash.update(shape)\n"
                                                    "   return hash.hexdigest()")
 
+        #Delete temporary FC from self.select
+        arcpy.Delete_management(self.name)
+
     def _select(self, where_clause=None):
-        if where_clause is None:
+        if where_clause is None and where_clause != '':
             l = arcpy.MakeFeatureLayer_management(self.fc, self.name)
-            arcpy.ChangeVersion_management(self.name, 'TRANSACTIONAL', self.version, '')
+            arcpy.ChangeVersion_management(self.name, 'TRANSACTIONAL', 'gfw.' + self.version, '')
         else:
             l = arcpy.MakeFeatureLayer_management(self.fc, self.name, where_clause)
-            arcpy.ChangeVersion_management(self.name, 'TRANSACTIONAL', self.version, '')
+            arcpy.ChangeVersion_management(self.name, 'TRANSACTIONAL', 'gfw.' + self.version, '')
         return l.getOutput(0)
 
     def select(self, where_clause=None):
         self.selection = self._select(where_clause)
 
-    def sync_cartodb(self):
+    def sync_cartodb(self, where_clause):
         #TODO: Shapefile needs suffix _prefly
-        cartodb.cartodb_sync(self.wgs84_file, self.name)
+        cartodb.cartodb_sync(self.wgs84_file, self.name, where_clause)
 
         #TODO: Add extra procedure for imazon_sad
         #layerspec_table="layerspec_nuclear_hazard"

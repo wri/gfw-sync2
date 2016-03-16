@@ -1,6 +1,7 @@
 import os
 import arcpy
 import json
+import requests
 
 def byteify(unicode_string):
     if isinstance(unicode_string, dict):
@@ -29,13 +30,24 @@ def get_token(token_file):
     abspath = os.path.abspath(__file__)
     dir_name = os.path.dirname(abspath)
     token_path = os.path.join(dir_name, r"tokens\{0!s}".format(token_file))
-    if not os.path.exists(token_file):
+
+    if not os.path.exists(token_path):
         raise IOError('Cannot find any token for {0!s}\n Make sure there is a file called {1!s} in the tokens directory'.format(token_file, token_file))
     else:
-        if os.path.splitext(token_file)[1] == '.json':
+        if os.path.splitext(token_path)[1] == '.json':
             return json.load(open(token_path))
         else:
             with open(token_path, "r") as f:
                 for row in f:
                     return row
+
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
 
