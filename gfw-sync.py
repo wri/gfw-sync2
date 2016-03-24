@@ -2,8 +2,15 @@ import sys
 import getopt
 import settings
 
-from s3_vector_layer import S3VectorLayer
-from s3_vector_layer import S3CountryVectorLayer
+from vector_layer import VectorLayer
+from raster_layer import RasterLayer
+from glad_raster_layer import GLADRasterLayer
+
+from imazon_datasource import ImazonDataSource
+##import s3_vector_layer
+
+##from s3_vector_layer import S3VectorLayer
+##from s3_vector_layer import S3CountryVectorLayer
 
 #from osm_loggingroads_layer import OSMLoggingRoadsLayer
 #from wdpa_layer import WDPALayer
@@ -19,11 +26,19 @@ def main(argv):
     verbose = True
     logging = True
     try:
-        opts, args = getopt.getopt(argv, "hl:c:", ["help", "layers=", "country="])
+        opts, remainder = getopt.gnu_getopt(argv, "hl:c:", ["help", "layers=", "country="])
+
+        #Check that we're using the correct options and argument
+        if remainder:
+            raise getopt.GetoptError("Bad argument: unclear what {0} is. Be sure to prefix it with an option listed below".format(remainder))
+            usage()
+            sys.exit(2)
+
     except getopt.GetoptError:
         print "Error: Invalide argument"
         usage()
         sys.exit(2)
+        
     for opt, arg in opts:
         if opt in ("-h", "--help"):
             usage()
@@ -36,25 +51,40 @@ def main(argv):
         if opt in ("-g", "--nolog"):
             logging = False
         if opt in ("-l", "--layers"):
-            layers.append(arg.lower())
+            layers += arg.lower().split(',')
+##            layers.append(arg.lower())
         if opt in ("-c", "--country"):
-            countries.append(arg.upper())
-               
-    if not layers:
-        #print len(layers)
-        layers = settings.get_layer_list()
-        print layers
+            countries += arg.upper().split(',')
 
-    layerdefs = settings.get_layers()
+    try:
+        layer_config_dict = settings.get_layer_config_dict(layers)
+    except KeyError:
+        print 'Unknown layer(s) specified {0}'.format(layers)
+        print r'Check the gfw-sync2 config table for a list of options: https://docs.google.com/spreadsheets/d/1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI/edit#gid=0'
+        sys.exit(2)
+        
 
-    for l in layers:
-        layerdef = layerdefs[0][l]
-        layerdef["name"] = l
+    for layerName, layerdef in layer_config_dict.iteritems():
 
-        if layerdef["type"] == "s3_vector":
-            layer = S3VectorLayer(layerdef)
-        elif layerdef["type"] == "s3_country_vector":
-            layer = S3CountryVectorLayer(layerdef)
+        layerdef['name'] = layerName
+
+        if layerdef["type"] == "simple_vector":
+            layer = VectorLayer(layerdef)
+            
+        elif layerdef["type"] == "raster":
+            layer = RasterLayer(layerdef)
+            
+        elif layerdef["type"] == "imazon_vector":
+            datasource = ImazonDataSource(layerdef)
+            layer = VectorLayer(datasource.merge_imazon_layers())
+                
+        elif layerdef["type"] == "glad_raster":
+            layer = GLADRasterLayer(layerdef)
+            
+##        elif layerdef["type"] == "s3_vector":
+##            layer = S3VectorLayer(layerdef)
+##        elif layerdef["type"] == "s3_country_vector":
+##            layer = S3CountryVectorLayer(layerdef)
        # elif layerdef["type"] == "wdpa":
        #     layer = WDPALayer(layerdef)
        # elif layerdef["type"] == "osm_loggingroads":
@@ -64,11 +94,13 @@ def main(argv):
         else:
             raise RuntimeError("Layer type unknown")
 
-        #layer.update()
+        layer.update()
+
+        #Check if second level of inheritance exists
 
 
 def usage():
-    layers = settings.get_layer_list()
+    layers = settings.get_layer_config_dict().keys()
 
     print "Usage: gfw-sync.py [options]"
     print "Options:"
