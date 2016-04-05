@@ -63,12 +63,12 @@ class DataSource(object):
     @source.setter
     def source(self, s):
         if s is not None:
-            isURL = False
+
             try:
                 validators.url(s)
                 isURL = True
             except:
-                pass
+                isURL = False
 
             if isURL:
                 self.data_source_type = 'URL'
