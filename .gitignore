@@ -62,3 +62,6 @@ tokens/
 
 #pycharm
 .idea/
+
+#logs
+logs/

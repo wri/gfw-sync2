@@ -6,8 +6,6 @@ import arcpy
 import warnings
 import shutil
 import validators
-from bs4 import BeautifulSoup
-from urllib2 import urlopen
 
 import settings
 
@@ -25,12 +23,14 @@ class DataSource(object):
         self._name = None
         self.name = layerdef['tech_title']
 
-        self._download_workspace = None
-        self.download_workspace = os.path.join(settings.settings['paths']['download_workspace'], self.name)
-
         self._source = None
         self.source = layerdef['source']
 
+        self._gfw_env = None
+        self.gfw_env = layerdef['gfw_env']
+
+        self._download_workspace = None
+        self.download_workspace = os.path.join(settings.get_settings(self.gfw_env)['paths']['download_workspace'], self.name)
 
     # Validate name
     @property
@@ -43,17 +43,17 @@ class DataSource(object):
             warnings.warn("Name cannot be empty", Warning)
         self._name = n
 
-    # Validate Download workspace
+    # Validate download workspace
     @property
     def download_workspace(self):
         return self._download_workspace
 
     @download_workspace.setter
-    def download_workspace(self, s):
-        if os.path.exists(s):
-            shutil.rmtree(s)
-        os.mkdir(s)
-        self._download_workspace = s
+    def download_workspace(self, d):
+        if os.path.exists(d):
+            shutil.rmtree(d)
+        os.mkdir(d)
+        self._download_workspace = d
         
     # Validate source
     @property
@@ -80,7 +80,7 @@ class DataSource(object):
 
         self._source = s
 
-    def download_zipfile(self, url, output_dir):
+    def download_file(self, url, output_dir):
         fname = os.path.split(url)[1]
         path = os.path.join(output_dir, fname)
 
@@ -127,6 +127,44 @@ class DataSource(object):
 
         print fieldName, fieldVal
         arcpy.CalculateField_management(fc, fieldName, fieldVal, "PYTHON")
+
+
+    def unzip_and_find_data(self, in_zipfile):
+        self.unzip(in_zipfile, self.download_workspace)
+
+        shp_list = [x for x in os.listdir(self.download_workspace) if os.path.splitext(x)[1] == '.shp']
+        tif_list = [x for x in os.listdir(self.download_workspace) if os.path.splitext(x)[1] == '.tif']
+
+        if len(shp_list) == 1:
+            source_file = os.path.join(self.download_workspace, shp_list[0])
+
+        elif len(tif_list) == 1:
+            source_file = os.path.join(self.download_workspace, tif_list[0])
+
+        else:
+            print 'Unknown output from zip file, {0} shps, {1} tifs'.format(len(shp_list), len(tif_list))
+            print 'May need to define a custom function to unpack this data source. Exiting now.'
+            sys.exit(2)
+
+        return source_file
+
+    def get_layer(self):
+
+        if self.data_source_type == 'URL':
+
+            local_file = self.download_file(self.source, self.download_workspace)
+
+            if os.path.splitext(local_file)[1] == '.zip':
+                self.source = self.unzip_and_find_data(local_file)
+
+            else:
+                self.source = local_file
+
+        else:
+            print 'Data source type is not URL, why is the datasource module being called?'
+            print 'Data source type is {0}'.format(self.data_source_type)
+            sys.exit(1)
+
 
 
 

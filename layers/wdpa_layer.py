@@ -1,9 +1,12 @@
-from vector_layer import VectorLayer
 import os
-import warnings
 import urllib
+import warnings
+
 import arcpy
-import util
+
+from utilities import util
+from vector_layer import VectorLayer
+
 
 class WDPALayer(VectorLayer):
     def __init__(self, layerdef):

@@ -2,7 +2,6 @@ __author__ = 'Charlie.Hofmann'
 
 import os
 import sys
-import copy
 import arcpy
 import datetime
 import shutil
@@ -11,8 +10,6 @@ import calendar
 from bs4 import BeautifulSoup
 from urllib2 import urlopen
 
-import cartodb
-import archive
 from datasource import DataSource
 
 class ImazonDataSource(DataSource):
@@ -78,6 +75,8 @@ class ImazonDataSource(DataSource):
 
         imazon_dir_list = os.listdir(self.imazon_archive_folder)
 
+        print self.imazon_archive_folder
+
         imazon_zip_files = [x for x in imazon_dir_list if os.path.splitext(x)[1] == '.zip']
 
         for url in urlList:
@@ -95,13 +94,13 @@ class ImazonDataSource(DataSource):
             if not 'http://' in url:
                 url = 'http://imazongeo.org.br{0!s}'.format(url)
 
-            z = self.download_zipfile(url, self.download_workspace)
+            z = self.download_file(url, self.download_workspace)
             
             output_zip_name = os.path.basename(z)
             imazon_source_path = os.path.join(self.imazon_archive_folder, output_zip_name)
 
             print 'Copying archive to ' + self.imazon_archive_folder
-##            shutil.copy2(z, imazon_source_path)
+            shutil.copy2(z, imazon_source_path)
 
             unzip_list.append(z)
 
@@ -185,7 +184,7 @@ class ImazonDataSource(DataSource):
 
         return cleaned_shp_list
 
-    def get_layers(self):
+    def build_all_imazon_layers(self):
         
         layerdef_list = []
 
@@ -195,19 +194,19 @@ class ImazonDataSource(DataSource):
 
         return cleaned_source_list
 
-    def merge_imazon_layers(self):
+    def get_layer(self):
 
-        input_layers = self.get_layers()
+        input_layers = self.build_all_imazon_layers()
 
         print 'merging datasets: {0}'.format(', '.join(input_layers))
 
         output_dataset = os.path.join(self.download_workspace, 'imazon_sad.shp')
-        print 'output dataset: ' + output_dataset
+        print 'output dataset: {0}\n'.format(output_dataset)
 
         arcpy.Merge_management(input_layers, output_dataset)
 
-        #overwrite properties from original layerdef read
-        #from the gfw-sync2 config Google Doc
+        # overwrite properties from original layerdef read
+        # from the gfw-sync2 config Google Doc
         self.layerdef['source'] = output_dataset
 
         return self.layerdef

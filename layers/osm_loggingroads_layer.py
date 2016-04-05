@@ -1,13 +1,13 @@
-import urllib
-import urllib2
-import json
-import time
-import zipfile
-import os
 import glob
+import json
+import os
+import time
+import urllib2
+
 import arcpy
 
-from vector_layer import VectorLayer
+from layers.vector_layer import VectorLayer
+
 
 class OSMLoggingRoadsLayer(VectorLayer):
 

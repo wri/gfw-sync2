@@ -4,9 +4,11 @@
 # enable debugging
 
 import json
+
 import gspread
-import util
 from oauth2client.client import SignedJwtAssertionCredentials
+
+import util
 from settings import settings
 
 
