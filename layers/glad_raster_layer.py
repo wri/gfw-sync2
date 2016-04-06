@@ -1,8 +1,7 @@
 __author__ = 'Thomas.Maschler'
 
 import arcpy
-
-arcpy.CheckOutExtension("Spatial")
+import logging
 
 from layers.raster_layer import RasterLayer
 
@@ -12,7 +11,7 @@ class GLADRasterLayer(RasterLayer):
     """
 
     def __init__(self, layerdef):
-        print 'starting glad_raster_layer'
+        logging.debug('starting glad_raster_layer')
         super(GLADRasterLayer, self).__init__(layerdef)
 
         # self._year_aoi = None

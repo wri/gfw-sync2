@@ -5,12 +5,13 @@ import sys
 import arcpy
 import datetime
 import shutil
-import warnings
 import calendar
+import logging
 from bs4 import BeautifulSoup
 from urllib2 import urlopen
 
 from datasource import DataSource
+from utilities import util
 
 class ImazonDataSource(DataSource):
     """
@@ -18,7 +19,7 @@ class ImazonDataSource(DataSource):
     """
 
     def __init__(self, layerdef):
-        print 'starting imazon_datasource'
+        logging.debug('starting imazon_datasource')
 
         super(ImazonDataSource, self).__init__(layerdef)
 
@@ -36,7 +37,7 @@ class ImazonDataSource(DataSource):
     @imazon_archive_folder.setter
     def imazon_archive_folder(self, i):
         if not i:
-            warnings.warn("No imazon archive folder listed", Warning)
+            logging.debug("No imazon archive folder listed")
         self._imazon_archive_folder = i
 
     def recent_file(self, min_date, url):
@@ -75,8 +76,6 @@ class ImazonDataSource(DataSource):
 
         imazon_dir_list = os.listdir(self.imazon_archive_folder)
 
-        print self.imazon_archive_folder
-
         imazon_zip_files = [x for x in imazon_dir_list if os.path.splitext(x)[1] == '.zip']
 
         for url in urlList:
@@ -99,7 +98,7 @@ class ImazonDataSource(DataSource):
             output_zip_name = os.path.basename(z)
             imazon_source_path = os.path.join(self.imazon_archive_folder, output_zip_name)
 
-            print 'Copying archive to ' + self.imazon_archive_folder
+            logging.debug('Copying archive to ' + self.imazon_archive_folder)
             shutil.copy2(z, imazon_source_path)
 
             unzip_list.append(z)
@@ -113,7 +112,11 @@ class ImazonDataSource(DataSource):
         to_download = self.check_imazon_already_downloaded(sad_urls)
 
         if not to_download:
-            print 'No new data on the imazon site'
+            logging.info('No new data on the imazon site')
+
+            # Important for the script that reads the log file and sends an email
+            # Including this 'Checked' message will show that we checked the layer but it didn't need updating
+            logging.critical('Checked:{0}'.format(self.name))
             sys.exit(0)
             
         else:
@@ -137,7 +140,7 @@ class ImazonDataSource(DataSource):
         elif 'desmatamento' in shpName:
             data_type = 'defor'
         else:
-            warnings.warn("Unknown data type for {0}".format(shpName), Warning)
+            logging.error("Unknown data type for {0} Exiting now.".format(shpName))
             sys.exit(1)
 
         return data_type
@@ -163,22 +166,25 @@ class ImazonDataSource(DataSource):
             
             singlePartPath = os.path.join(os.path.dirname(shp), shpName.replace('.shp','') + '_singlepart.shp')
 
-            print 'Starting multipart to singlepart for ' + shpName
+            logging.info('Starting multipart to singlepart for ' + shpName)
             arcpy.MultipartToSinglepart_management(shp, singlePartPath)
 
             arcpy.RepairGeometry_management(singlePartPath, "DELETE_NULL")
 
-            orig_oid_field = 'orig_oid'
-            arcpy.AddField_management(singlePartPath, orig_oid_field, 'TEXT', '255')
-            arcpy.CalculateField_management(singlePartPath, orig_oid_field, '!FID!', 'PYTHON_9.3')
+            # orig_oid_field = 'orig_oid'
+            # arcpy.AddField_management(singlePartPath, orig_oid_field, 'TEXT', '255')
+            # arcpy.CalculateField_management(singlePartPath, orig_oid_field, '!FID!', 'PYTHON_9.3')
 
+            # Must have one field before we delete all the other ones. So says arcgis anyway
+            orig_oid_field = 'orig_oid'
+            util.add_field_and_calculate(singlePartPath, orig_oid_field, 'Text', '255', '!FID!', self.gfw_env)
             self.remove_all_fields_except(singlePartPath, keep_field_list=[orig_oid_field])
 
             imazon_date_str = self.get_date_from_filename(os.path.basename(shp))
 
-            self.add_field_and_calculate(singlePartPath, 'Date', 'DATE', "", imazon_date_str)
-            self.add_field_and_calculate(singlePartPath, 'data_type', 'TEXT', "255", self.data_type(shp))
-            self.add_field_and_calculate(singlePartPath, 'orig_fname', 'TEXT', "255", shpName)
+            util.add_field_and_calculate(singlePartPath, 'Date', 'DATE', "", imazon_date_str, self.gfw_env)
+            util.add_field_and_calculate(singlePartPath, 'data_type', 'TEXT', "255", self.data_type(shp), self.gfw_env)
+            util.add_field_and_calculate(singlePartPath, 'orig_fname', 'TEXT', "255", shpName, self.gfw_env)
 
             cleaned_shp_list.append(singlePartPath)
 
@@ -198,10 +204,10 @@ class ImazonDataSource(DataSource):
 
         input_layers = self.build_all_imazon_layers()
 
-        print 'merging datasets: {0}'.format(', '.join(input_layers))
+        logging.info('merging datasets: {0}'.format(', '.join(input_layers)))
 
         output_dataset = os.path.join(self.download_workspace, 'imazon_sad.shp')
-        print 'output dataset: {0}\n'.format(output_dataset)
+        logging.debug('output dataset: {0}\n'.format(output_dataset))
 
         arcpy.Merge_management(input_layers, output_dataset)
 

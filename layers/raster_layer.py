@@ -1,8 +1,9 @@
 __author__ = 'Thomas.Maschler'
 
 import arcpy
+import logging
 
-arcpy.CheckOutExtension("Spatial")
+# arcpy.CheckOutExtension("Spatial")
 
 from layer import Layer
 
@@ -15,13 +16,14 @@ class RasterLayer(Layer):
     """
 
     def __init__(self, layerdef):
-        print 'starting raster_layer'
+        logging.debug('starting raster_layer')
         super(RasterLayer, self).__init__(layerdef)
 
         # self.wgs84_file = None
         # self.export_file = None
 
     def archive(self):
+        logging.info('Starting raster_layer.archive')
         self._archive(self.source, self.download_output, self.archive_output, False)
 
     #
@@ -32,7 +34,8 @@ class RasterLayer(Layer):
     #     cartodb.cartodb_sync(self.wgs84_file, self.cartodb_service_output, where_clause)
 
     def copy_to_esri_output(self):
-        print 'Starting to copy from {0} to esri_service_output: {1}'.format(self.source, self.esri_service_output)
+        logging.info('Starting to copy from {0} to esri_service_output: {1}'.format(self.source,
+                                                                                    self.esri_service_output))
         arcpy.CopyRaster_management(self.source, self.esri_service_output)
         
 
@@ -60,6 +63,7 @@ class RasterLayer(Layer):
 
 
     def update(self):
+        logging.info('Starting raster_layer.update for {0}'.format(self.name))
 
         #Creates timestamped backup and download from source
         self.archive() 

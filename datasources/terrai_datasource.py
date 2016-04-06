@@ -2,6 +2,7 @@ __author__ = 'Charlie.Hofmann'
 
 import arcpy
 import datetime
+import logging
 
 from datasource import DataSource
 
@@ -11,7 +12,7 @@ class TerraiDataSource(DataSource):
     """
 
     def __init__(self, layerdef):
-        print 'starting terrai datasource'
+        logging.debug('starting terrai datasource')
 
         super(TerraiDataSource, self).__init__(layerdef)
 
@@ -20,14 +21,14 @@ class TerraiDataSource(DataSource):
 
     def build_table(self):
 
-        print "building attribute table"
+        logging.debug("building attribute table")
 
         arcpy.BuildRasterAttributeTable_management(self.source, "Overwrite")
         arcpy.AddField_management(self.source, "date", "DATE")
 
     def calculate_dates(self):
 
-        print "calculating dates"
+        logging.debug("calculating dates")
 
         with arcpy.da.UpdateCursor(self.source, ['Value','date']) as cursor:
             for row in cursor:

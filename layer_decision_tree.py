@@ -1,4 +1,5 @@
 import sys
+import logging
 
 from layers.raster_layer import RasterLayer
 from layers.vector_layer import VectorLayer
@@ -34,28 +35,30 @@ def build_layer(layerdef, google_sheet):
             # This is important because if we updated gab_logging, we also need to updated gfw_logging
             global_layerdef = google_sheet.get_layerdef(layerdef['global_layer'])
 
-            print 'Found a value for global_layer. Validating this input using the VectorLayer schema'
+            logging.debug('Found a value for global_layer. Validating this input using the VectorLayer schema')
 
             # Use the output value as the source so that all the tests (validating that the "source" exists etc pass
             # This allows us to leave the source field in the google spreadsheet blank for this dataset, which makes
             # sense. The source for a global layer is made up of a bunch of smaller country layers
             global_layerdef['source'] = global_layerdef['esri_service_output']
+
             VectorLayer(global_layerdef)
-            print 'Global layer validation complete\n'
+            logging.debug('Global layer validation complete')
 
             layer = CountryVectorLayer(layerdef)
 
         else:
-            print 'Expecting to find global_layer associated with country_vector but did not. If no global_layer' \
-                  'associated, this should be classified as simple_vector. Exiting.'
+            logging.error('Expecting to find global_layer associated with country_vector but did not.'
+                          'If no global_layer associated, this should be classified as simple_vector. Exiting.')
             sys.exit(1)
 
     elif layerdef["type"] == "global_vector":
-        print 'Please update global vector data by updating a country_vector dataset and specifying ' \
-              'the global layer in the global_layer column \n Exiting now.'
+        logging.error('Please update global vector data by updating a country_vector dataset and specifying ' \
+              'the global layer in the global_layer column \n Exiting now.')
         sys.exit(1)
 
     else:
-        raise RuntimeError("Layer type {0} unknown".format(layerdef["type"]))
+        logging.error("Layer type {0} unknown".format(layerdef["type"]))
+        sys.exit(1)
 
     return layer

@@ -36,7 +36,7 @@ class GoogleSheet(object):
 
         return wks
 
-    def sheet_to_dict(self, key_column):
+    def sheet_to_dict(self):
         wks = self._open_spreadsheet()
 
         gdocAsLists = wks.get_all_values()
@@ -55,7 +55,7 @@ class GoogleSheet(object):
             rowAsDict = {k: v for (k, v) in zip(headerRow, dataRow)}
 
             # Grab the technical title (what we know the layer as)
-            layerName = rowAsDict[key_column]
+            layerName = rowAsDict['tech_title']
 
             # Add that as a key to the larger outDict dictionary
             sheet_as_dict[layerName] = {}
@@ -68,7 +68,7 @@ class GoogleSheet(object):
 
     def get_layerdef(self, layer_name):
 
-        layerdef = self.sheet_to_dict('tech_title')[layer_name]
+        layerdef = self.sheet_to_dict()[layer_name]
 
         layerdef['name'] = layerdef['tech_title']
         layerdef['gfw_env'] = self.sheet_name

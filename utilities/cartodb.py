@@ -1,18 +1,19 @@
 import json
+import logging
 import os
 import subprocess
+import sys
 import urllib
 from collections import OrderedDict
-
 import arcpy
 
-import settings
 import util
+import settings
 
 
 def run_ogr2ogr(cmd):
 
-    print 'Running OGR:\r\n' + ' '.join(cmd)
+    logging.debug('Running OGR:\n' + ' '.join(cmd))
 
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
@@ -26,10 +27,11 @@ def run_ogr2ogr(cmd):
 
     #If ogr2ogr has complained, and ERROR in one of the messages, exit
     if subprocessList and 'error' in str(subprocessList).lower():
-        raise RuntimeError("OGR2OGR threw an error: " + '\r\n'.join(subprocessList))
+        logging.error("OGR2OGR threw an error: " + '\n'.join(subprocessList))
+        sys.exit(1)
 
     elif subprocessList:
-        print '\r\n'.join(subprocessList)
+        logging.debug('\n'.join(subprocessList))
 
 def generate_where_clause(start_id, end_id, transaction_row_limit, where_field_name):
 
@@ -42,13 +44,14 @@ def generate_where_clause(start_id, end_id, transaction_row_limit, where_field_n
 
 def cartodb_sql(sql, gfw_env, raise_error=True):
 
+    logging.debug(sql)
+
     key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
 
-    print sql + '\n'
     result = urllib.urlopen("{0!s}?api_key={1!s}&q={2!s}".format(settings.get_settings(gfw_env)["cartodb"]["sql_api"], key, sql))
     json_result = json.loads(result.readlines()[0], object_pairs_hook=OrderedDict)
     if raise_error and "error" in json_result.keys():
-        raise SyntaxError("Wrong SQL syntax.\n {0!s}".format(json_result['error']))
+        raise SyntaxError("Wrong SQL syntax. {0!s}".format(json_result['error']))
     return json_result
 
 def is_shp(file_name):
@@ -162,29 +165,29 @@ def cartodb_sync(shp, production_table, where_clause, gfw_env, scratch_workspace
     basename = os.path.basename(shp)
     staging_table = os.path.splitext(basename)[0] + '_staging'
 
-    print "delete staging if it exists"
+    logging.debug("delete staging if it exists")
     sql = 'DROP TABLE IF EXISTS {0!s} CASCADE'.format(staging_table)
     cartodb_sql(sql, gfw_env)
 
-    print "upload data from {0} to staging table {1}".format(shp, staging_table)
+    logging.debug("upload data from {0} to staging table {1}".format(shp, staging_table))
     cartodb_create(shp, staging_table, gfw_env)
 
-    print "repair geometry"
+    logging.debug("repair geometry")
     sql = 'UPDATE {0!s} SET the_geom = ST_MakeValid(the_geom), the_geom_webmercator = ' \
           'ST_MakeValid(the_geom_webmercator) WHERE ST_IsValid(the_geom) = false'.format(staging_table)
 
     cartodb_sql(sql, gfw_env)
 
-    print "delete or truncate rows from production table"
+    logging.debug("delete or truncate rows from production table")
     if where_clause:
         sql = 'DELETE FROM {0!s} WHERE {1}'.format(production_table, where_clause)
     else:
         sql = 'TRUNCATE {0!s};'.format(production_table)
     cartodb_sql(sql, gfw_env)
 
-    print "push staging to production table: {0}".format(production_table)
+    logging.debug("push staging to production table: {0}".format(production_table))
     cartodb_push_to_production(staging_table, production_table, gfw_env)
 
-    print "delete staging"
+    logging.debug("delete staging")
     sql = 'DROP TABLE IF EXISTS {0!s} CASCADE'.format(staging_table)
     cartodb_sql(sql, gfw_env)

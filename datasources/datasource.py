@@ -1,13 +1,16 @@
+import logging
 import os
-import sys
-import zipfile
-import requests
-import arcpy
-import warnings
 import shutil
+import sys
+import warnings
+import zipfile
+
+import arcpy
+import requests
 import validators
 
-import settings
+from utilities import settings
+
 
 class DataSource(object):
 
@@ -16,7 +19,7 @@ class DataSource(object):
         :param layerdef: A Layer definition dictionary
         :return:
         """
-        print 'starting datasource class'
+        logging.debug('Starting datasource class')
         
         self.type = "DataSource"
 
@@ -89,18 +92,18 @@ class DataSource(object):
 
         r = requests.get(url, stream=True)
 
-        print "Downloading {0!s} to {1}".format(url, path)
+        logging.info("Downloading {0!s} to {1}".format(url, path))
         with open(path, 'wb') as f:
             for chunk in r.iter_content(chunk_size=1024):
                 f.write(chunk)
                 f.flush
-        print "Download complete."
+        logging.debug("Download complete.")
         return path
 
     def unzip(self, filename, folder):
-        print filename
+
         if zipfile.is_zipfile(filename):
-            print 'Unzipping {0} to directory {1}'.format(filename, folder)
+            logging.debug('Unzipping {0} to directory {1}'.format(filename, folder))
             zf = zipfile.ZipFile(filename, 'r')
             zf.extractall(folder)
             return zf.namelist()
@@ -118,16 +121,6 @@ class DataSource(object):
 
         return
 
-    def add_field_and_calculate(self, fc, fieldName, fieldType, fieldPrecision, fieldVal):
-        
-        arcpy.AddField_management(fc, fieldName, fieldType, fieldPrecision)
-
-        if fieldType in ['TEXT', 'DATE']:
-            fieldVal = "'{0}'".format(fieldVal)
-
-        print fieldName, fieldVal
-        arcpy.CalculateField_management(fc, fieldName, fieldVal, "PYTHON")
-
 
     def unzip_and_find_data(self, in_zipfile):
         self.unzip(in_zipfile, self.download_workspace)
@@ -142,9 +135,9 @@ class DataSource(object):
             source_file = os.path.join(self.download_workspace, tif_list[0])
 
         else:
-            print 'Unknown output from zip file, {0} shps, {1} tifs'.format(len(shp_list), len(tif_list))
-            print 'May need to define a custom function to unpack this data source. Exiting now.'
-            sys.exit(2)
+            logging.error('Unknown output from zip file, {0} shps, {1} tifs.\nMay need to define a custom function to '
+                          'unpack this data source. Exiting now.'.format(len(shp_list), len(tif_list)))
+            sys.exit(1)
 
         return source_file
 
@@ -161,8 +154,8 @@ class DataSource(object):
                 self.source = local_file
 
         else:
-            print 'Data source type is not URL, why is the datasource module being called?'
-            print 'Data source type is {0}'.format(self.data_source_type)
+            logging.error('Data source type is not URL, why is the datasource module being called?'
+            '\nData source type is {0}'.format(self.data_source_type))
             sys.exit(1)
 
 

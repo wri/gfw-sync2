@@ -1,7 +1,10 @@
 __author__ = 'Thomas.Maschler'
 
+import logging
+
 from utilities import google_sheet
 from vector_layer import VectorLayer
+
 
 class CountryVectorLayer(VectorLayer):
     """
@@ -9,7 +12,7 @@ class CountryVectorLayer(VectorLayer):
     """
 
     def __init__(self, layerdef):
-        print 'starting country_vector_layer'
+        logging.debug('starting country_vector_layer')
         super(CountryVectorLayer, self).__init__(layerdef)
 
     def update(self):
@@ -32,6 +35,7 @@ class CountryVectorLayer(VectorLayer):
         # Append our country-specific data to the global output
         self.sync_cartodb(self.esri_service_output, global_layerdef['cartodb_service_output'],
                           global_layerdef['cartodb_merge_where_field'])
+
 
 
 

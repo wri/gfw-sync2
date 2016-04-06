@@ -9,7 +9,7 @@ import gspread
 from oauth2client.client import SignedJwtAssertionCredentials
 
 import util
-from settings import settings
+from utilities.settings import settings
 
 
 def open_spreadsheet():

@@ -1,39 +1,28 @@
-import os
-import time
 import argparse
-import settings
-import logging
-
-from utilities import google_sheet
 
 import layer_decision_tree
+from utilities import google_sheet
+from utilities import logger, settings
+
 
 def main():
 
     # Parse commandline arguments
     parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('--environment', '-e',
-                       help='the environment/config files to use for this run', default='DEV', choices=('DEV', 'PROD'))
+    parser.add_argument('--environment', '-e', default='DEV', choices=('DEV', 'PROD'),
+                       help='the environment/config files to use for this run')
     parser.add_argument('--layer', '-l', required=True,
                        help='the data layer to process; must match a value for tech_title in the config')
-    parser.add_argument('--verbose', '-v', default='debug', choices=('debug', 'warning', 'error'),
+    parser.add_argument('--verbose', '-v', default='debug', choices=('debug', 'info', 'warning', 'error'),
                        help='set verbosity level to print and write to file')
     args = parser.parse_args()
 
-    # Setting logging parameters
-    log_file = os.path.join(os.getcwd(), 'logs', time.strftime("%Y%m%d"))
-    logging.basicConfig(filename=log_file, level=args.verbose.upper())
+    logging = logger.build_logger(args.verbose)
 
-    console = logging.StreamHandler()
-    console.setLevel(args.verbose.upper())
+    logging.info("\n{0}\n{1} v{2}\n{0}\n".format('*' * 50, settings.get_settings(args.environment)['tool_info']['name'],
+                                                 settings.get_settings(args.environment)['tool_info']['version']))
 
-    logging.getLogger('').addHandler(console)
-
-    # oauth2client logs automatically; set to only show critical messages
-    logging.getLogger('oauth2client').setLevel(logging.CRITICAL)
-
-    logging.critical("{0!s} v{1!s}\n".format(settings.get_settings(args.environment)['tool_info']['name'],
-                                settings.get_settings(args.environment)['tool_info']['version']))
+    logging.critical('Starting:{0}'.format(args.layer))
 
     # Get the layerdef from the Google Doc config based on the args supplied
     # Google Doc: https://docs.google.com/spreadsheets/d/1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI/edit#gid=0
@@ -48,6 +37,8 @@ def main():
 
     # Update the last-updated timestamp in the Google Sheet
     gs.update_gs_timestamp(args.layer)
+
+    logging.critical('Finished:{0}'.format(args.layer))
 
     # TODO add cleanup method (layer.cleanup() to delete scratch workspaces, etc
     # TODO add cleanup method for datasource too . . . maybe in the layer module?
