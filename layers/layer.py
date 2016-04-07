@@ -228,12 +228,6 @@ class Layer(object):
 
     @source.setter
     def source(self, s):
-        try:
-            # TODO remove this and find a better solution . . . ie why are there so many connections always?
-            arcpy.ClearWorkspaceCache_management(r'Database Connections\gfw_test (gfw@localhost).sde')
-        except:
-            logging.debug('Failed to clear workspace cache')
-
         if not arcpy.Exists(s):
             logging.error("Cannot find source {0!s}. Exiting".format(s))
             sys.exit(1)

@@ -8,7 +8,7 @@ import util
 
 
 def send_summary():
-    root_dir = os.path.dirname(os.getcwd())
+    root_dir = os.getcwd()
     log_file = os.path.join(root_dir, 'logs', time.strftime("%Y%m%d") + '.log')
 
     result_text = read_log_to_result_text(log_file)

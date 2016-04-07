@@ -1,0 +1,55 @@
+import os
+import sys
+import logging
+import arcpy
+
+from datasource import DataSource
+
+
+class WDPADatasource(DataSource):
+    def __init__(self, layerdef):
+        logging.debug('starting simple_datasource')
+
+        super(WDPADatasource, self).__init__(layerdef)
+
+        self.layerdef = layerdef
+
+    def download_wpda_to_gdb(self):
+
+        local_file = self.download_file(self.source, self.download_workspace)
+
+        self.unzip(local_file, self.download_workspace)
+
+        for item in os.walk(self.download_workspace):
+            dirname = item[0]
+
+            if os.path.splitext(dirname)[1] == '.gdb':
+                unzipped_gdb = dirname
+                break
+                
+        try:
+            arcpy.env.workspace = unzipped_gdb
+        except:
+            logging.error("Expected to find GDB somewhere in the unzipped dirs, but didn't. Exiting")
+            sys.exit(1)
+
+        poly_list = [x for x in arcpy.ListFeatureClasses() if arcpy.Describe(x).shapeType == 'Polygon']
+
+        if len(poly_list) != 1:
+            logging.error("Expected one polygon FC in the wdpa gdb. Found {0}. Exiting now.".format(len(poly_list)))
+            sys.exit(1)
+        else:
+            self.source = os.path.join(unzipped_gdb, poly_list[0])
+
+    def prep_source_fc(self):
+        arcpy.RepairGeometry_management(self.source, "DELETE_NULL")
+
+    def get_layer(self):
+
+        self.download_wpda_to_gdb()
+
+        self.prep_source_fc()
+
+        self.layerdef['source'] = self.source
+
+        return self.layerdef

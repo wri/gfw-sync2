@@ -87,4 +87,4 @@ class GoogleSheet(object):
 
     def update_gs_timestamp(self, layername):
 
-        self.update_value(layername, 'last_updated', time.strftime("%d/%m/%Y"))
+        self.update_value(layername, 'last_updated', time.strftime("%m/%d/%Y"))

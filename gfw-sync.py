@@ -2,13 +2,14 @@ import argparse
 
 import layer_decision_tree
 from utilities import google_sheet
-from utilities import logger, settings
+from utilities import logger
+from utilities import settings
 
 
 def main():
 
     # Parse commandline arguments
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description='Get layer name, environment and verbosity for gfw-sync.')
     parser.add_argument('--environment', '-e', default='DEV', choices=('DEV', 'PROD'),
                        help='the environment/config files to use for this run')
     parser.add_argument('--layer', '-l', required=True,

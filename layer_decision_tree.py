@@ -8,6 +8,8 @@ from layers.glad_raster_layer import GLADRasterLayer
 
 from datasources.imazon_datasource import ImazonDataSource
 from datasources.terrai_datasource import TerraiDataSource
+from datasources.wdpa_datasource import WDPADatasource
+from datasources.hot_osm_export_datasource import HotOsmExportDataSource
 
 
 def build_layer(layerdef, google_sheet):
@@ -27,6 +29,14 @@ def build_layer(layerdef, google_sheet):
 
     elif layerdef["type"] == "glad_raster":
         layer = GLADRasterLayer(layerdef)
+
+    elif layerdef["type"] == "hot_osm_export":
+        datasource = HotOsmExportDataSource(layerdef)
+        layer = VectorLayer(datasource.get_layer())
+
+    elif layerdef["type"] == "wdpa_vector":
+        datasource = WDPADatasource(layerdef)
+        layer = VectorLayer(datasource.get_layer())
 
     elif layerdef["type"] == "country_vector":
         if layerdef['global_layer']:
