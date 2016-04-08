@@ -20,16 +20,18 @@ class WDPADatasource(DataSource):
 
         self.unzip(local_file, self.download_workspace)
 
+        unzipped_gdb = None
+
         for item in os.walk(self.download_workspace):
             dirname = item[0]
 
             if os.path.splitext(dirname)[1] == '.gdb':
                 unzipped_gdb = dirname
                 break
-                
-        try:
+
+        if unzipped_gdb:
             arcpy.env.workspace = unzipped_gdb
-        except:
+        else:
             logging.error("Expected to find GDB somewhere in the unzipped dirs, but didn't. Exiting")
             sys.exit(1)
 
@@ -42,6 +44,7 @@ class WDPADatasource(DataSource):
             self.source = os.path.join(unzipped_gdb, poly_list[0])
 
     def prep_source_fc(self):
+        logging.debug("Starting repair_geometry")
         arcpy.RepairGeometry_management(self.source, "DELETE_NULL")
 
     def get_layer(self):

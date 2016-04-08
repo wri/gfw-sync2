@@ -36,6 +36,7 @@ def gen_paths_shp(src):
 
     return basepath, fname, base_fname
 
+
 def list_network_drives():
     drive_bitmask = ctypes.cdll.kernel32.GetLogicalDrives()
     all_drives = list(itertools.compress(string.ascii_uppercase, map(lambda x:ord(x) - ord('0'), bin(drive_bitmask)[:1:-1])))
@@ -115,6 +116,7 @@ def mkdir_p(path):
         else:
             raise
 
+
 def add_field_and_calculate(fc, fieldName, fieldType, fieldLength, fieldVal, gfw_env):
     logging.debug("add_field_and_calculate: Adding field {0} and calculating to {1}".format(fieldName, fieldVal))
 
@@ -125,6 +127,7 @@ def add_field_and_calculate(fc, fieldName, fieldType, fieldLength, fieldVal, gfw
         fieldVal = "'{0}'".format(fieldVal)
 
     arcpy.CalculateField_management(fc, fieldName, fieldVal, "PYTHON")
+
 
 def list_fields(input_dataset, gfw_env):
     logging.debug('starting layer.list_fields')
@@ -137,7 +140,72 @@ def list_fields(input_dataset, gfw_env):
 
     else:
         logging.error('Input dataset type for list_fields unknown. Does not appear to be an esri fc, and '
-              'does not exist in cartodb. Exiting.')
+                      'does not exist in cartodb. Exiting.')
         sys.exit(1)
 
     return fieldList
+
+
+def build_field_map(in_fc_list, in_field_dict):
+
+    # in_field_dict example:
+    # {
+    #   'field1': {'out_name':'field77', 'out_length': 23},
+    #   'field2': {'out_length':17}
+    #   'field3': {'out_name': 'field1214'}
+    # }
+
+    # Thank goodness for this help page
+    # http://pro.arcgis.com/en/pro-app/arcpy/classes/fieldmap.htm
+    # Field maps suck!
+
+    # Create our field mappings object
+    fms = arcpy.FieldMappings()
+
+    # Iterate over all the fields we're interested in bringing to the next fc
+    for field_name in in_field_dict.keys():
+
+        # Create a fieldmap object
+        fm = arcpy.FieldMap()
+
+        # Iterate over all of our FCs of interest to see if they have that field
+        # If they do, we'll add it to the field map for that field
+        for fc in in_fc_list:
+
+            # Pull out the field object if it exists. We'll modify this to set a new name and length
+            # and then push it back to the field mapping
+            current_field = [f for f in arcpy.ListFields(fc) if f.name == field_name][0]
+
+            # If this field exists in the fc of interest
+            if current_field:
+
+                # Add the field from this FC to the list of fields to be merged in the output dataset
+                fm.addInputField(fc, field_name)
+
+                # If we've specified an new name, set it
+                try:
+                    current_field.name = in_field_dict[field_name]['out_name']
+                except KeyError:
+                    pass
+
+                # If we've specified an out length, set it
+                # Otherwise will go with default
+                try:
+                    current_field.length = in_field_dict[field_name]['out_length']
+                except KeyError:
+                    pass
+
+                # Set the output field to the updated field definition
+                fm.outputField = current_field
+
+        # CRITICAL NOTE
+        # Only add the fieldmap object to the field mappings object once! This is key-- otherwise
+        # will get duplicate field names. Make sure you know where it is in the for loop-- one field map
+        # per field of interest (duh)
+        fms.addFieldMap(fm)
+
+    return fms
+
+
+
+

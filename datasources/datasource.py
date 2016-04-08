@@ -153,8 +153,7 @@ class DataSource(object):
                 self.source = local_file
 
         else:
-            logging.error('Data source type is not URL, why is the datasource module being called? '
-                          '\nData source type is {0}'.format(self.data_source_type))
+            logging.error('Data source type is not URL, why is the datasource module being called? \nData source type is {0}'.format(self.data_source_type))
             sys.exit(1)
 
 

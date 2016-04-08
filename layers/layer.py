@@ -232,24 +232,45 @@ class Layer(object):
             logging.error("Cannot find source {0!s}. Exiting".format(s))
             sys.exit(1)
 
-        # We can assume that the source is local if it's in SDE, and os.path.splitdrive
-        # does not handle those pathnames well
-        # TODO change this to check for off-site SDE databases
-        if s[0:20] == 'Database Connections':
+        # This could be a folder, a gdb/mdb, a featuredataset, or an SDE database
+        source_dirname = os.path.dirname(s)
+
+        # we want to simply determine if this is local/not local so we can copy the datasource
+        # first determine if our source dataset is within a featuredataset
+        try:
+
+            # Calling the .datasetType property will fail for folders, etc
+            dir_data_type = arcpy.Describe(source_dirname).datasetType
+
+            # If it doesn't fail, and it is a FeatureDatset, grab the actual source dir
+            if dir_data_type == 'FeatureDataset':
+
+                # source_dirname is actually one level up
+                 source_dirname = os.path.dirname(os.path.dirname(s))
+
+        except AttributeError:
+            # Likely a folder; so we've already found our source_dirname
             pass
 
-        else:
-            #Split the drive from the path returns (Letter and :), then take only the letter and lower it
+        # Test if it's an SDE database
+        try:
+            server_address = arcpy.Describe(source_dirname).connectionProperties.server
+
+            if server_address == 'localhost':
+                source_is_local = True
+            else:
+                 s = self.copy_to_scratch_workspace(self.source)
+
+        # Otherwise, just look at the drive letter to determine if it's local or not
+        except AttributeError:
+
+            # Split the drive from the path returns (Letter and :), then take only the letter and lower it
             drive = os.path.splitdrive(s)[0][0].lower()
 
             if drive in util.list_network_drives():
-                out_data = os.path.join(self.scratch_workspace, os.path.basename(s))
-                logging.info('Input data source is in S3-- copying to {0}\r\n'.format(out_data))
+                s = self.copy_to_scratch_workspace(self.source)
 
-                arcpy.Copy_management(s, out_data)
-                s = out_data
-
-            elif drive not in ['c','d']:
+            elif drive not in ['c', 'd']:
                 logging.info("Are you sure the source dataset is local to this machine? \
                 It's not on drives C or D . . .")
 
@@ -356,6 +377,25 @@ class Layer(object):
         archive.zip_file(input_fc, self.scratch_workspace, download_output, archive_output, sr_is_local)
 
         return
+
+    def copy_to_scratch_workspace(self, input_fc):
+        logging.info('Input data is not local-- copying to {0}\r\n'.format(out_data))
+
+        fc_name = os.path.basename(input_fc)
+
+        # input_fc has an extension (.tif, .shp, etc)
+        # can be copied directly to a dir
+        if os.path.splitext(input_fc):
+            out_data = os.path.join(self.scratch_workspace, fc_name)
+
+        else:
+            gdb_name = "source_data"
+            arcpy.CreateFileGDB_management(self.scratch_workspace, gdb_name)
+            out_data = os.path.join(self.scratch_workspace, gdb_name, fc_name)
+
+        arcpy.Copy_management(input_fc, out_data)
+
+        return out_data
 
     def isWGS84(self, inputDataset):
         logging.debug('starting layer.isWGS84')

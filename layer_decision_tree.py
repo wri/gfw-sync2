@@ -63,8 +63,8 @@ def build_layer(layerdef, google_sheet):
             sys.exit(1)
 
     elif layerdef["type"] == "global_vector":
-        logging.error('Please update global vector data by updating a country_vector dataset and specifying ' \
-              'the global layer in the global_layer column \n Exiting now.')
+        logging.error('Please update global vector data by updating a country_vector dataset and specifying '
+                      'the global layer in the global_layer column \n Exiting now.')
         sys.exit(1)
 
     else:

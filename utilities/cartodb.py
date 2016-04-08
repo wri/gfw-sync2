@@ -17,21 +17,22 @@ def run_ogr2ogr(cmd):
 
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
-    subprocessList = []
+    subprocess_list = []
 
-    #ogr2ogr doesn't properly fail on an error, just displays error messages
-    #as a result, we need to read this output as it happens
-    #http://stackoverflow.com/questions/1606795/catching-stdout-in-realtime-from-subprocess
+    # ogr2ogr doesn't properly fail on an error, just displays error messages
+    # as a result, we need to read this output as it happens
+    # http://stackoverflow.com/questions/1606795/catching-stdout-in-realtime-from-subprocess
     for line in iter(p.stdout.readline, b''):
-        subprocessList.append(line.strip())
+        subprocess_list.append(line.strip())
 
-    #If ogr2ogr has complained, and ERROR in one of the messages, exit
-    if subprocessList and 'error' in str(subprocessList).lower():
-        logging.error("OGR2OGR threw an error: " + '\n'.join(subprocessList))
+    # If ogr2ogr has complained, and ERROR in one of the messages, exit
+    if subprocess_list and 'error' in str(subprocess_list).lower():
+        logging.error("OGR2OGR threw an error: " + '\n'.join(subprocess_list))
         sys.exit(1)
 
-    elif subprocessList:
-        logging.debug('\n'.join(subprocessList))
+    elif subprocess_list:
+        logging.debug('\n'.join(subprocess_list))
+
 
 def generate_where_clause(start_id, end_id, transaction_row_limit, where_field_name):
 
@@ -41,6 +42,7 @@ def generate_where_clause(start_id, end_id, transaction_row_limit, where_field_n
         yield "{0} >= {1} and {0} < {2}".format(where_field_name, current_max_id, current_max_id + transaction_row_limit)
 
         current_max_id += transaction_row_limit
+
 
 def cartodb_sql(sql, gfw_env, raise_error=True):
 
@@ -54,59 +56,53 @@ def cartodb_sql(sql, gfw_env, raise_error=True):
         raise SyntaxError("Wrong SQL syntax. {0!s}".format(json_result['error']))
     return json_result
 
+
 def is_shp(file_name):
     if os.path.splitext(file_name)[1] == '.shp':
         return True
     else:
         return False
 
-def cartodb_create(file_name, out_cartodb_name, gfw_env, raise_error=True):
-    key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
-    accountName = settings.get_settings(gfw_env)['cartodb']['token'].split('@')[0]
 
-    cmd = [r'ogr2ogr',
-        '--config', 'CARTODB_API_KEY', key,
-        '-progress', '-skipfailures',
-        '-t_srs', 'EPSG:4326',
-        '-f', 'CartoDB', '-nln', out_cartodb_name,
-        'CartoDB:{0}'.format(accountName)]
+def cartodb_create(file_name, out_cartodb_name, gfw_env):
+    key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
+    account_name = settings.get_settings(gfw_env)['cartodb']['token'].split('@')[0]
+
+    cmd = ['ogr2ogr', '--config', 'CARTODB_API_KEY', key, '-progress', '-skipfailures', '-t_srs', 'EPSG:4326',
+           '-f', 'CartoDB', '-nln', out_cartodb_name, 'CartoDB:{0}'.format(account_name)]
 
     if is_shp(file_name):
         cmd += [file_name]
     else:
         cmd += [os.path.dirname(file_name), os.path.basename(file_name)]
 
-    rowCount = int(arcpy.GetCount_management(file_name).getOutput(0))
-    rowAppendLimit = 500000
+    row_count = int(arcpy.GetCount_management(file_name).getOutput(0))
+    row_append_limit = 10000
 
-    #Had issues with cartoDB server timing out
-    if rowCount > rowAppendLimit:
+    # Had issues with cartoDB server timing out
+    if row_count > row_append_limit:
 
         cmd.insert(1, '-where')
-        cmd.insert(2, "FID >= 0 and FID < {0}".format(rowAppendLimit))
+        cmd.insert(2, "FID >= 0 and FID < {0}".format(row_append_limit))
 
-        #Run the initial command to create the fc, using FIDs 0 - rowAppendLimit
+        # Run the initial command to create the fc, using FIDs 0 - rowAppendLimit
         run_ogr2ogr(cmd)
 
-        for wc in generate_where_clause(rowAppendLimit, rowCount, rowAppendLimit, 'FID'):
+        for wc in generate_where_clause(row_append_limit, row_count, row_append_limit, 'FID'):
 
-            #Build all where_clauses and pass them to cartodb_append
-            cartodb_append(file_name, wc, accountName)
-        
+            # Build all where_clauses and pass them to cartodb_append
+            cartodb_append(file_name, wc, account_name)
 
     else:
         run_ogr2ogr(cmd)
 
-def cartodb_append(file_name, gfw_env, where_clause=None, raise_error=True):
-    key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
-    accountName = settings.get_settings(gfw_env)['cartodb']['token'].split('@')[0]
 
-    cmd = [r'ogr2ogr',
-            '--config', 'CARTODB_API_KEY', key,
-            '-append', '-progress', '-skipfailures',
-            '-t_srs', 'EPSG:4326',
-            '-f', 'CartoDB',
-            'CartoDB:{0}'.format(accountName)]
+def cartodb_append(file_name, gfw_env, where_clause=None):
+    key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
+    account_name = settings.get_settings(gfw_env)['cartodb']['token'].split('@')[0]
+
+    cmd = ['ogr2ogr', '--config', 'CARTODB_API_KEY', key, '-append', '-progress', '-skipfailures', '-t_srs',
+           'EPSG:4326', '-f', 'CartoDB', 'CartoDB:{0}'.format(account_name)]
 
     if is_shp(file_name):
         cmd += [file_name]
@@ -119,29 +115,33 @@ def cartodb_append(file_name, gfw_env, where_clause=None, raise_error=True):
 
     run_ogr2ogr(cmd)
 
+
 def cartodb_check_exists(table_name, gfw_env):
     sql = "SELECT * FROM {0} LIMIT 1".format(table_name)
 
-    tableExists = False
+    table_exists = False
+
     try:
         cartodb_sql(sql, gfw_env)
-        tableExists = True
+        table_exists = True
     except:
-        tableExists = False
+        table_exists = False
 
-    return tableExists
+    return table_exists
+
 
 def get_column_order(table_name, gfw_env):
     sql = 'SELECT * FROM {0} LIMIT 1'.format(table_name)
 
     return cartodb_sql(sql, gfw_env)['fields'].keys()
 
+
 def cartodb_push_to_production(staging_table, production_table, gfw_env):
 
     sql = "SELECT COUNT(*) FROM {0}".format(staging_table)
-    rowCount = int(cartodb_sql(sql, gfw_env)['rows'][0]['count'])
+    row_count = int(cartodb_sql(sql, gfw_env)['rows'][0]['count'])
 
-    rowAppendLimit = 500000
+    row_append_limit = 10000
 
     prod_columns = get_column_order(production_table, gfw_env)
     staging_columns = get_column_order(staging_table, gfw_env)
@@ -151,7 +151,7 @@ def cartodb_push_to_production(staging_table, production_table, gfw_env):
     final_columns = [x for x in prod_columns if x in staging_columns if x != 'cartodb_id']
     final_columns_sql = ', '.join(final_columns)
 
-    for wc in generate_where_clause(0, rowCount, rowAppendLimit, 'cartodb_id'):
+    for wc in generate_where_clause(0, row_count, row_append_limit, 'cartodb_id'):
         sql = 'INSERT INTO {0} ({1}) SELECT {1} FROM {2} WHERE {3}'.format(production_table, final_columns_sql, staging_table, wc)
         cartodb_sql(sql, gfw_env)
 
