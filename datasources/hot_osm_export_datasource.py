@@ -136,7 +136,7 @@ class HotOsmExportDataSource(DataSource):
     def process_downloaded_data(self, input_fc_list):
 
         if len(input_fc_list) == 1:
-            dissolved_fc = input_fc_list[0]
+            single_part_fc = input_fc_list[0]
 
         else:
             field_max_dict = self.get_max_len_all_fields(input_fc_list)
@@ -147,14 +147,17 @@ class HotOsmExportDataSource(DataSource):
             merged_fc = os.path.join(self.download_workspace, 'merged_output.shp')
             arcpy.Merge_management(input_fc_list, merged_fc, fms)
 
-            dissolved_fc = os.path.join(self.download_workspace, 'dissolved_final.shp')
+            dissolved_fc = os.path.join(self.download_workspace, 'dissolved.shp')
             out_fields = ['osm_id', 'access', 'bridge', 'end_date', 'ferry', 'ford', 'highway', 'informal',
                           'maxspeed', 'name', 'oneway', 'opening_ho', 'operator', 'ref', 'route', 'seasonal',
                           'smoothness', 'source', 'start_date', 'surface', 'trail_visi', 'tunnel', 'width']
 
             arcpy.Dissolve_management(merged_fc, dissolved_fc, ';'.join(out_fields), "", "MULTI_PART", "DISSOLVE_LINES")
 
-        self.source = dissolved_fc
+            single_part_fc = os.path.join(self.download_workspace, 'single_part_final.shp')
+            arcpy.MultipartToSinglepart_management(dissolved_fc, single_part_fc)
+
+        self.source = single_part_fc
 
     def get_layer(self):
 

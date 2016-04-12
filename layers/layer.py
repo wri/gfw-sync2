@@ -34,6 +34,9 @@ class Layer(object):
         self._type = None
         self.type = layerdef['type']
 
+        self._field_map = None
+        self.field_map = layerdef['field_map']
+
         self._source = None
         self.source = layerdef['source']
 
@@ -148,7 +151,6 @@ class Layer(object):
             m = None
         self._esri_merge_where_field = m
 
-
     # Validate cartodb_merge_where_field
     @property
     def cartodb_merge_where_field(self):
@@ -204,8 +206,9 @@ class Layer(object):
                 try:
                         arcpy.MakeFeatureLayer_management(self.source, self.name, f)
 
-                        #Clean up temporary feature layer after we create it
+                        # Clean up temporary feature layer after we create it
                         arcpy.Delete_management(self.name)
+
                 except:
                     logging.error("delete_features_input_where_clause '{0!s}' is invalide or delete FL failed".format(f))
                     sys.exit(1)
@@ -221,6 +224,31 @@ class Layer(object):
     def type(self, t):
         self._type = t
 
+    # Validate layer field_map
+    @property
+    def field_map(self):
+        return self._field_map
+
+    @field_map.setter
+    def field_map(self, m):
+
+        if m:
+
+            ini_file = os.path.dirname(m)
+            ini_key = os.path.basename(m)
+
+            if os.path.exists(ini_file) and os.path.splitext(ini_file)[1] == '.ini':
+                m = settings.get_ini_file(os.path.dirname(ini_file), os.path.basename(ini_file))[ini_key]
+
+            else:
+                logging.error("Invalid field map .ini file found. Exiting")
+                sys.exit(1)
+
+        else:
+            m = None
+
+        self._field_map = m
+
     # Validate source
     @property
     def source(self):
@@ -232,47 +260,54 @@ class Layer(object):
             logging.error("Cannot find source {0!s}. Exiting".format(s))
             sys.exit(1)
 
-        # This could be a folder, a gdb/mdb, a featuredataset, or an SDE database
-        source_dirname = os.path.dirname(s)
+        # If there's a field map, use it as an input to the FeatureClassToFeatureClass tool and copy the data locally
+        if self.field_map:
+            s = util.ini_fieldmap_to_fc(s, self.field_map, self.scratch_workspace)
 
-        # we want to simply determine if this is local/not local so we can copy the datasource
-        # first determine if our source dataset is within a featuredataset
-        try:
+        # If there's not a field map, need to figure out what type of data source it is, and if it's local or not
+        else:
+            # This could be a folder, a gdb/mdb, a featuredataset, or an SDE database
+            source_dirname = os.path.dirname(s)
 
-            # Calling the .datasetType property will fail for folders, etc
-            dir_data_type = arcpy.Describe(source_dirname).datasetType
+            # we want to simply determine if this is local/not local so we can copy the datasource
+            # first determine if our source dataset is within a featuredataset
+            try:
 
-            # If it doesn't fail, and it is a FeatureDatset, grab the actual source dir
-            if dir_data_type == 'FeatureDataset':
+                # Calling the .datasetType property will fail for folders, etc
+                dir_data_type = arcpy.Describe(source_dirname).datasetType
 
-                # source_dirname is actually one level up
-                 source_dirname = os.path.dirname(os.path.dirname(s))
+                # If it doesn't fail, and it is a FeatureDatset, grab the actual source dir
+                if dir_data_type == 'FeatureDataset':
 
-        except AttributeError:
-            # Likely a folder; so we've already found our source_dirname
-            pass
+                    # source_dirname is actually one level up
+                    source_dirname = os.path.dirname(os.path.dirname(s))
 
-        # Test if it's an SDE database
-        try:
-            server_address = arcpy.Describe(source_dirname).connectionProperties.server
+            except AttributeError:
+                # Likely a folder; so we've already found our source_dirname
+                pass
 
-            if server_address == 'localhost':
-                source_is_local = True
-            else:
-                 s = self.copy_to_scratch_workspace(self.source)
+            # Test if it's an SDE database
+            try:
+                server_address = arcpy.Describe(source_dirname).connectionProperties.server
 
-        # Otherwise, just look at the drive letter to determine if it's local or not
-        except AttributeError:
+                # If source SDE is localhost, don't need to worry about copying anywhere
+                if server_address == 'localhost':
+                    pass
+                else:
+                    s = util.copy_to_scratch_workspace(self.source, self.scratch_workspace)
 
-            # Split the drive from the path returns (Letter and :), then take only the letter and lower it
-            drive = os.path.splitdrive(s)[0][0].lower()
+            # Otherwise, just look at the drive letter to determine if it's local or not
+            except AttributeError:
 
-            if drive in util.list_network_drives():
-                s = self.copy_to_scratch_workspace(self.source)
+                # Split the drive from the path returns (Letter and :), then take only the letter and lower it
+                drive = os.path.splitdrive(s)[0][0].lower()
 
-            elif drive not in ['c', 'd']:
-                logging.info("Are you sure the source dataset is local to this machine? \
-                It's not on drives C or D . . .")
+                if drive in util.list_network_drives():
+                    s = util.copy_to_scratch_workspace(self.source, self.scratch_workspace)
+
+                elif drive not in ['c', 'd']:
+                    logging.info("Are you sure the source dataset is local to this machine? \
+                    It's not on drives C or D . . .")
 
         self._source = s
 
@@ -378,25 +413,6 @@ class Layer(object):
 
         return
 
-    def copy_to_scratch_workspace(self, input_fc):
-        logging.info('Input data is not local-- copying to {0}\r\n'.format(out_data))
-
-        fc_name = os.path.basename(input_fc)
-
-        # input_fc has an extension (.tif, .shp, etc)
-        # can be copied directly to a dir
-        if os.path.splitext(input_fc):
-            out_data = os.path.join(self.scratch_workspace, fc_name)
-
-        else:
-            gdb_name = "source_data"
-            arcpy.CreateFileGDB_management(self.scratch_workspace, gdb_name)
-            out_data = os.path.join(self.scratch_workspace, gdb_name, fc_name)
-
-        arcpy.Copy_management(input_fc, out_data)
-
-        return out_data
-
     def isWGS84(self, inputDataset):
         logging.debug('starting layer.isWGS84')
         srAsString = arcpy.Describe(inputDataset).spatialReference.exporttostring()
@@ -424,11 +440,11 @@ class Layer(object):
         if self.name in md_gspread.keys():
 
             md.title.set(md_gspread[self.name]["Title"])
-##            md.locals['english'].title.set(md_gspread[self.name]["Translated_Title"])
+          # md.locals['english'].title.set(md_gspread[self.name]["Translated_Title"])
             md.title.set(md_gspread[self.name]["Translated_Title"])
             md.purpose.set(md_gspread[self.name]["Function"])
             md.abstract.set(md_gspread[self.name]["Overview"])
-##            md.locals['english'].abstract.set(md_gspread[self.name]["Translated Overview"])
+            # md.locals['english'].abstract.set(md_gspread[self.name]["Translated Overview"])
             md.abstract.set(md_gspread[self.name]["Translated Overview"])
             #  md_gspread[self.name]["category"]
             md.tags.add(util.csl_to_list(md_gspread[self.name]["Tags"]))
@@ -443,9 +459,9 @@ class Layer(object):
             md.scale_resolution.set(md_gspread[self.name]["Resolution"])
 
         else:
-##            raise RuntimeError("No Metadata for layer {0!s}".format(self.name))
+            # raise RuntimeError("No Metadata for layer {0!s}".format(self.name))
             logging.debug("No Metadata for layer {0!s}".format(self.name))
-##            md = None
+            # md = None
 
         return md
 

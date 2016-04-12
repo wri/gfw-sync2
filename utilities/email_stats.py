@@ -20,7 +20,7 @@ def parse_line_add_result(input_line, input_dict):
 
     # Pull only lines with the critical flag
     if input_line[0:8] == 'CRITICAL':
-        split_line = input_line.split(':')
+        split_line = input_line.split('|')
 
         # Format CRITICAL:logname:status:layername
         if len(split_line) == 4:
@@ -32,7 +32,7 @@ def parse_line_add_result(input_line, input_dict):
             # Otherwise create the key
             try:
                 input_dict[layername].append(result)
-            except:
+            except KeyError:
                 input_dict[layername] = [result]
 
     return input_dict

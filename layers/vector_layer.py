@@ -121,30 +121,20 @@ class VectorLayer(Layer):
 
         return
 
-
     def build_update_where_clause(self, input_field):
 
         if input_field:
             # Get unique values in specified where_clause field
-            uniqueValues = list(set([x[0] for x in arcpy.da.SearchCursor(self.source, [input_field])]))
+            unique_values = list(set([x[0] for x in arcpy.da.SearchCursor(self.source, [input_field])]))
 
-            uniqueValues_SQL = "'" + "', '".join(uniqueValues) + "'"
+            unique_values_sql = "'" + "', '".join(unique_values) + "'"
 
-            where_clause = """{0} IN ({1})""".format(input_field, uniqueValues_SQL)
+            where_clause = """{0} IN ({1})""".format(input_field, unique_values_sql)
 
         else:
             where_clause = None
 
         return where_clause
-
-            # arcpy.SimplifyPolygon_cartography(final_dataset,
-            #                       self.export_file,
-            #                       "POINT_REMOVE",
-            #                       "10 Meters",
-            #                       "0 Unknown",
-            #                       "RESOLVE_ERRORS",
-            #                       "KEEP_COLLAPSED_POINTS")
-
 
     def archive_source(self):
         logging.info('Starting vector_layer.archive source for {0}'.format(self.name))
@@ -157,35 +147,32 @@ class VectorLayer(Layer):
         src_archive_output = os.path.join(archive_src_dir, os.path.basename(self.archive_output))
         self._archive(self.source, None, src_archive_output, False)
 
-
     def create_archive_and_download_zip(self):
         logging.info('Starting vector_layer.create_archive_and_download_zip for {0}'.format(self.name))
 
         # if source is in local projection, create separate download
         if not self.isWGS84(self.source):
 
-            source_with_download_name = os.path.join(os.path.dirname(self.source), self.name + '.shp')
+            download_basename = self.name + '.shp'
+            if os.path.basename(self.source) == download_basename:
+                local_coords_source = self.source
 
-            if self.source == source_with_download_name:
-                pass
-
+            # If the name of the .shp is not correct (or it's not even a .shp; create it then zip
             else:
-                arcpy.CopyFeatures_management(self.source, source_with_download_name)
-                # self.source = source_with_download_name
+                local_coords_source = os.path.join(self.scratch_workspace, download_basename)
+                arcpy.CopyFeatures_management(self.source, local_coords_source)
 
             # Create a separate _local.zip download file
-            self._archive(source_with_download_name, self.download_output, None, True)
+            self._archive(local_coords_source, self.download_output, None, True)
 
         # Create an archive and a download file for final dataset (esri_service_output)
         self._archive(self.esri_service_output, self.download_output, self.archive_output, False)
-
 
     def add_country_code(self):
         if self.add_country_value:
             logging.info('Starting vector_layer.add_country_value for {0}, '
                          'country val {1}'.format(self.name, self._add_country_value))
             util.add_field_and_calculate(self.source, "country", 'TEXT', 3, self.add_country_value, self.gfw_env)
-
 
     def filter_source_dataset(self, input_wc):
 
@@ -211,10 +198,8 @@ class VectorLayer(Layer):
         else:
             logging.debug('No input where_clause found to filter source dataset')
 
-
     def update(self):
         self._update()
-
 
     def update_gfwid(self):
         logging.debug('starting vector_layer.update_gfwid for {0}'.format(self.name))
@@ -232,14 +217,12 @@ class VectorLayer(Layer):
                                                    "   hash.update(shape)\n"
                                                    "   return hash.hexdigest()")
 
-
     def update_layerspec_maxdate(self):
 
         if self.layerspec_maxdate_field_source:
             logging.debug("update layer spec max date")
             sql = "UPDATE layerspec set maxdate = (SELECT max({0}) FROM {1}) WHERE table_name='{1}'".format(self.layerspec_maxdate_field_source,self.cartodb_service_output)
             cartodb.cartodb_sql(sql, self.gfw_env)
-
 
     def sync_cartodb(self, input_fc, cartodb_output_fc, input_where_field):
         logging.info('Starting vector_layer.sync_cartodb for {0}. Output {1}, '
@@ -250,7 +233,6 @@ class VectorLayer(Layer):
         cartodb.cartodb_sync(input_fc, cartodb_output_fc, cartodb_where_clause, self.gfw_env, self.scratch_workspace)
 
         self.update_layerspec_maxdate()
-
 
     def _update(self):
 

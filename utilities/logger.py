@@ -2,11 +2,13 @@ import logging
 import os
 import time
 
+
 def build_logger(verbosity):
 
     # Setting logging parameters
     log_file = os.path.join(os.getcwd(), 'logs', time.strftime("%Y%m%d") + '.log')
-    logging.basicConfig(filename=log_file, level=verbosity.upper())
+    logging.basicConfig(filename=log_file, level=verbosity.upper(), format='%(levelname)s | %(asctime)s | %(message)s',
+                        datefmt='%H:%M:%S')
 
     console = logging.StreamHandler()
     console.setLevel(verbosity.upper())
