@@ -116,7 +116,7 @@ class ImazonDataSource(DataSource):
 
             # Important for the script that reads the log file and sends an email
             # Including this 'Checked' message will show that we checked the layer but it didn't need updating
-            logging.critical('Checked:{0}'.format(self.name))
+            logging.critical('Checked | {0}'.format(self.name))
             sys.exit(0)
             
         else:

@@ -42,10 +42,6 @@ class VectorLayer(Layer):
 
     def append_to_esri_source(self, input_fc, esri_output_fc, input_where_field, fms=None):
 
-        """  Append new features to Vector Layer
-        :param fms: an arcpy fieldmap
-        :return: Nothing
-        """
         logging.info('Starting vector_layer.append_to_esri_source for {0}'.format(self.name))
 
         # Check if source SR matches esri_service_output SR
@@ -82,8 +78,8 @@ class VectorLayer(Layer):
         esri_where_clause = self.build_update_where_clause(input_where_field)
 
         if esri_where_clause:
-            logging.debug('Deleting features from esri_service_output based on input_where_field. ' \
-                  'SQL statement: {0}'.format(esri_where_clause))
+            logging.debug('Deleting features from esri_service_output based on input_where_field. '
+                          'SQL statement: {0}'.format(esri_where_clause))
 
             arcpy.SelectLayerByAttribute_management("esri_service_output_fl", "NEW_SELECTION", esri_where_clause)
 
@@ -144,6 +140,8 @@ class VectorLayer(Layer):
         if not os.path.exists(archive_src_dir):
             os.mkdir(archive_src_dir)
 
+        print self.source
+
         src_archive_output = os.path.join(archive_src_dir, os.path.basename(self.archive_output))
         self._archive(self.source, None, src_archive_output, False)
 
@@ -177,26 +175,24 @@ class VectorLayer(Layer):
     def filter_source_dataset(self, input_wc):
 
         if input_wc:
-            logging.info('Starting to vector_layer.filter_source_dataset for {0} with wc {1}'.format(self.name, input_wc))
+            logging.info('Starting vector_layer.filter_source_dataset for {0} with wc {1}'.format(self.name, input_wc))
 
             # If we are going to filter the source feature class, copy to a new location before deleting records
             # from it
-            output_fc = os.path.join(self.scratch_workspace, os.path.basename(self.source))
+            out_filename = os.path.splitext(os.path.basename(self.source))[0] + '.shp'
+            output_fc = os.path.join(self.scratch_workspace, out_filename)
             arcpy.CopyFeatures_management(self.source, output_fc)
 
-            # Change input_fc to the fc we just created
-            # Also set source to this fc, so that we use this from here on out and leave
-            # the actual source data FC alone
-            input_fc = output_fc
-            self.source = output_fc
-
-            # Make a feature layer from the input FC and delete any rows to filter using the input_wc
-            arcpy.MakeFeatureLayer_management(self.source, "input_fl", input_wc)
+            # Delete records from this copied FC based on the input where clause
+            arcpy.MakeFeatureLayer_management(output_fc, "input_fl", input_wc)
             arcpy.DeleteRows_management("input_fl")
             arcpy.Delete_management("input_fl")
 
+            # Set the source to this new fc
+            self.source = output_fc
+
         else:
-            logging.debug('No input where_clause found to filter source dataset')
+            pass
 
     def update(self):
         self._update()
@@ -236,7 +232,7 @@ class VectorLayer(Layer):
 
     def _update(self):
 
-        self.archive_source()
+        # self.archive_source()
 
         self.filter_source_dataset(self.delete_features_input_where_clause)
 
@@ -246,6 +242,6 @@ class VectorLayer(Layer):
 
         self.append_to_esri_source(self.source, self.esri_service_output, self.esri_merge_where_field)
 
-        self.create_archive_and_download_zip()
+        # self.create_archive_and_download_zip()
 
         self.sync_cartodb(self.source, self.cartodb_service_output, self.cartodb_merge_where_field)

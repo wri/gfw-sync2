@@ -47,6 +47,15 @@ class WDPADatasource(DataSource):
         logging.debug("Starting repair_geometry")
         arcpy.RepairGeometry_management(self.source, "DELETE_NULL")
 
+        simplified_fc = self.source + '_simplified'
+
+        logging.debug("Starting simplify_polygon")
+        arcpy.SimplifyPolygon_cartography(self.source, simplified_fc, algorithm="POINT_REMOVE", tolerance="10 Meters",
+                                          minimum_area="0 Unknown", error_option="NO_CHECK",
+                                          collapsed_point_option="NO_KEEP")
+
+        self.source = simplified_fc
+
     def get_layer(self):
 
         self.download_wpda_to_gdb()

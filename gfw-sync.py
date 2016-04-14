@@ -23,7 +23,7 @@ def main():
     logging.info("\n{0}\n{1} v{2}\n{0}\n".format('*' * 50, settings.get_settings(args.environment)['tool_info']['name'],
                                                  settings.get_settings(args.environment)['tool_info']['version']))
 
-    logging.critical('Starting|{0}'.format(args.layer))
+    logging.critical('Starting | {0}'.format(args.layer))
 
     # Get the layerdef from the Google Doc config based on the args supplied
     # Google Doc: https://docs.google.com/spreadsheets/d/1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI/edit#gid=0
@@ -39,7 +39,7 @@ def main():
     # Update the last-updated timestamp in the Google Sheet
     gs.update_gs_timestamp(args.layer)
 
-    logging.critical('Finished|{0}'.format(args.layer))
+    logging.critical('Finished | {0}'.format(args.layer))
 
     # TODO add cleanup method (layer.cleanup() to delete scratch workspaces, etc
     # TODO add cleanup method for datasource too . . . maybe in the layer module?

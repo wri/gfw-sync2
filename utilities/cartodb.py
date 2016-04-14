@@ -78,17 +78,18 @@ def cartodb_create(file_name, out_cartodb_name, gfw_env):
 
     row_count = int(arcpy.GetCount_management(file_name).getOutput(0))
     row_append_limit = 10000
+    oid_field = util.get_oid_field(file_name)
 
     # Had issues with cartoDB server timing out
     if row_count > row_append_limit:
 
         cmd.insert(1, '-where')
-        cmd.insert(2, "FID >= 0 and FID < {0}".format(row_append_limit))
+        cmd.insert(2, "{1} >= 0 and {1} < {0}".format(row_append_limit, oid_field))
 
         # Run the initial command to create the fc, using FIDs 0 - rowAppendLimit
         run_ogr2ogr(cmd)
 
-        for wc in generate_where_clause(row_append_limit, row_count, row_append_limit, 'FID'):
+        for wc in generate_where_clause(row_append_limit, row_count, row_append_limit, oid_field):
 
             # Build all where_clauses and pass them to cartodb_append
             cartodb_append(file_name, wc, account_name)

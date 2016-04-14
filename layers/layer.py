@@ -10,6 +10,7 @@ import arcpy_metadata
 from utilities import archive
 from utilities import cartodb, settings
 from utilities import util
+from utilities import field_map
 
 
 class Layer(object):
@@ -234,15 +235,14 @@ class Layer(object):
 
         if m:
 
-            ini_file = os.path.dirname(m)
-            ini_key = os.path.basename(m)
-
-            if os.path.exists(ini_file) and os.path.splitext(ini_file)[1] == '.ini':
-                m = settings.get_ini_file(os.path.dirname(ini_file), os.path.basename(ini_file))[ini_key]
+            # Insert this so that global_vector layers can pass validation checks
+            # These layers may have fieldmaps associated, but they are really for the
+            # input country vector datasets to use in meeting the schema of the global layers
+            if self.type == 'global_vector':
+                m = None
 
             else:
-                logging.error("Invalid field map .ini file found. Exiting")
-                sys.exit(1)
+                m = field_map.get_ini_dict(m)
 
         else:
             m = None
@@ -256,13 +256,14 @@ class Layer(object):
 
     @source.setter
     def source(self, s):
+
         if not arcpy.Exists(s):
-            logging.error("Cannot find source {0!s}. Exiting".format(s))
+            logging.error("Cannot find source {0!s} Exiting".format(s))
             sys.exit(1)
 
         # If there's a field map, use it as an input to the FeatureClassToFeatureClass tool and copy the data locally
         if self.field_map:
-            s = util.ini_fieldmap_to_fc(s, self.field_map, self.scratch_workspace)
+            s = field_map.ini_fieldmap_to_fc(s, self.field_map, self.scratch_workspace)
 
         # If there's not a field map, need to figure out what type of data source it is, and if it's local or not
         else:
@@ -271,20 +272,10 @@ class Layer(object):
 
             # we want to simply determine if this is local/not local so we can copy the datasource
             # first determine if our source dataset is within a featuredataset
-            try:
 
-                # Calling the .datasetType property will fail for folders, etc
-                dir_data_type = arcpy.Describe(source_dirname).datasetType
-
-                # If it doesn't fail, and it is a FeatureDatset, grab the actual source dir
-                if dir_data_type == 'FeatureDataset':
-
-                    # source_dirname is actually one level up
-                    source_dirname = os.path.dirname(os.path.dirname(s))
-
-            except AttributeError:
-                # Likely a folder; so we've already found our source_dirname
-                pass
+            desc = arcpy.Describe(source_dirname)
+            if hasattr(desc, "datasetType") and desc.datasetType == 'FeatureDataset':
+                source_dirname = os.path.dirname(source_dirname)
 
             # Test if it's an SDE database
             try:
@@ -424,47 +415,4 @@ class Layer(object):
         else:
             return False
 
-    # TODO figure out metadata update process/requirements
-    # TODO when should we call this??
-    def _get_metadata(self, layer):
-        logging.debug('_get_metadata')
-
-        md = arcpy_metadata.MetadataEditor(layer)
-
-        cache_file = settings.get_settings(self.gfw_env)['metadata']['cache']
-        with open(cache_file) as c:
-            data = c.read()
-
-        md_gspread = json.loads(data)
-
-        if self.name in md_gspread.keys():
-
-            md.title.set(md_gspread[self.name]["Title"])
-          # md.locals['english'].title.set(md_gspread[self.name]["Translated_Title"])
-            md.title.set(md_gspread[self.name]["Translated_Title"])
-            md.purpose.set(md_gspread[self.name]["Function"])
-            md.abstract.set(md_gspread[self.name]["Overview"])
-            # md.locals['english'].abstract.set(md_gspread[self.name]["Translated Overview"])
-            md.abstract.set(md_gspread[self.name]["Translated Overview"])
-            #  md_gspread[self.name]["category"]
-            md.tags.add(util.csl_to_list(md_gspread[self.name]["Tags"]))
-            md.extent_description.set(md_gspread[self.name]["Geographic Coverage"])
-            md.last_update.set(md_gspread[self.name]["Date of Content"])
-            md.update_frequency_description.set(md_gspread[self.name]["Frequency of Updates"])
-            #  md.credits.set(md_gspread[self.name]["credits"])
-            md.citation.set(md_gspread[self.name]["Citation"])
-            md.limitation.set(md_gspread[self.name]["License"])
-            md.supplemental_information.set(md_gspread[self.name]["Cautions"])
-            md.source.set(md_gspread[self.name]["Source"])
-            md.scale_resolution.set(md_gspread[self.name]["Resolution"])
-
-        else:
-            # raise RuntimeError("No Metadata for layer {0!s}".format(self.name))
-            logging.debug("No Metadata for layer {0!s}".format(self.name))
-            # md = None
-
-        return md
-
-    def update_metadata(self):
-        pass
 

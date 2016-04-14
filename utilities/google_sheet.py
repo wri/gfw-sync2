@@ -1,6 +1,9 @@
 import gspread
 import time
+import sys
+import logging
 from oauth2client.service_account import ServiceAccountCredentials
+
 
 class GoogleSheet(object):
     """
@@ -13,25 +16,20 @@ class GoogleSheet(object):
         :return:
         """
 
-        self._spreadsheet_file = None
         self.spreadsheet_file = r'D:\scripts\gfw-sync2\tokens\spreadsheet.json'
-
-        self._spreadsheet_key = None
         self.spreadsheet_key = r'1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI'
-
-        self._sheet_name = None
         self.sheet_name = gfw_env
 
     def _open_spreadsheet(self):
 
-        #Updated for oauth2client
-        #http://gspread.readthedocs.org/en/latest/oauth2.html
+        # Updated for oauth2client
+        # http://gspread.readthedocs.org/en/latest/oauth2.html
         credentials = ServiceAccountCredentials.from_json_keyfile_name(self.spreadsheet_file, ['https://spreadsheets.google.com/feeds'])
 
-        #authorize oauth2client credentials
+        # authorize oauth2client credentials
         gc = gspread.authorize(credentials)
 
-        #open the spreadsheet by key
+        # open the spreadsheet by key
         wks = gc.open_by_key(self.spreadsheet_key).worksheet(self.sheet_name)
 
         return wks
@@ -68,12 +66,17 @@ class GoogleSheet(object):
 
     def get_layerdef(self, layer_name):
 
-        layerdef = self.sheet_to_dict()[layer_name]
+        try:
+            layerdef = self.sheet_to_dict()[layer_name]
 
-        layerdef['name'] = layerdef['tech_title']
-        layerdef['gfw_env'] = self.sheet_name
+            layerdef['name'] = layerdef['tech_title']
+            layerdef['gfw_env'] = self.sheet_name
 
-        return layerdef
+            return layerdef
+
+        except KeyError:
+            logging.error('Unable to find the specified layer in the Google Sheet. Exiting now.')
+            sys.exit(1)
 
     def update_value(self, layername, colname, update_value):
 

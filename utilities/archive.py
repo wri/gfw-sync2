@@ -147,7 +147,6 @@ def zip_file(input_fc, temp_zip_dir, download_output=False, archive_output=False
 
         shutil.copy(temp_zip, dst)
 
-
     # Cleanup
     shutil.rmtree(temp_dir)
 
