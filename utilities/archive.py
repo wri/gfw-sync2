@@ -21,7 +21,7 @@ def add_to_zip(fname, zf):
 
     bname = os.path.basename(fname)
     ending = os.path.splitext(bname)[1]
-    if not ending ==  ".lock" and not ending == ".zip":
+    if not ending == ".lock" and not ending == ".zip":
         zf.write(fname, bname)
 
     return
@@ -71,11 +71,11 @@ def zip_tif(input_tif):
     return zip_path
 
 
-def dir_less_than_2GB(input_dir):
+def dir_less_than_2gb(input_dir):
     file_size_list = []
 
-    for file in os.listdir(input_dir):
-        file_size = os.path.getsize(os.path.join(input_dir, file))
+    for list_file in os.listdir(input_dir):
+        file_size = os.path.getsize(os.path.join(input_dir, list_file))
         file_size_list.append(file_size)
 
     total_size = sum(file_size_list)
@@ -88,7 +88,7 @@ def dir_less_than_2GB(input_dir):
     return dir_is_smaller
 
 
-def zip_file(input_fc, temp_zip_dir, download_output=False, archive_output=False, sr_is_local=False):
+def zip_file(input_fc, temp_zip_dir, download_output=None, archive_output=None, sr_is_local=False):
     logging.debug('Starting archive.zip_file')
 
     basepath, fname, base_fname = util.gen_paths_shp(input_fc)
@@ -104,7 +104,7 @@ def zip_file(input_fc, temp_zip_dir, download_output=False, archive_output=False
         out_shp = os.path.join(temp_dir, fname)
 
         # If the dir with the shapefile is < 2GB, zip the shapefile
-        if dir_less_than_2GB(temp_dir):
+        if dir_less_than_2gb(temp_dir):
             temp_zip = zip_shp(out_shp)
 
         # In case this process fails-- zip file is too large etc
@@ -149,4 +149,3 @@ def zip_file(input_fc, temp_zip_dir, download_output=False, archive_output=False
 
     # Cleanup
     shutil.rmtree(temp_dir)
-

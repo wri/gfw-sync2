@@ -13,6 +13,7 @@ from urllib2 import urlopen
 
 from datasource import DataSource
 from utilities import util
+from utilities import cartodb
 
 
 class ImazonDataSource(DataSource):
@@ -41,7 +42,8 @@ class ImazonDataSource(DataSource):
             logging.debug("No imazon archive folder listed")
         self._imazon_archive_folder = i
 
-    def recent_file(self, min_date, url):
+    @staticmethod
+    def recent_file(min_date, url):
         try:
             yrmo = url.split('_')[3]
             year, month = [int(i) for i in yrmo.split('-')]
@@ -134,7 +136,8 @@ class ImazonDataSource(DataSource):
 
         return source_list
 
-    def data_type(self, shp_name):
+    @staticmethod
+    def data_type(shp_name):
         if 'degradacao' in shp_name:
             data_type = 'degrad'
         elif 'desmatamento' in shp_name:
@@ -145,7 +148,8 @@ class ImazonDataSource(DataSource):
 
         return data_type
 
-    def get_date_from_filename(self, filename):
+    @staticmethod
+    def get_date_from_filename(filename):
         parts = filename.split('_')
         date_obj = datetime.datetime.strptime(parts[3], '%Y-%m')
         year = date_obj.year
@@ -156,24 +160,26 @@ class ImazonDataSource(DataSource):
         
         return imazon_date_text
 
+    def update_layerspec_maxdate(self):
+
+        logging.debug("update layer spec max date")
+        sql = "UPDATE layerspec set maxdate = (SELECT max(date) FROM imazon_sad) WHERE table_name='imazon_sad'"
+        cartodb.cartodb_sql(sql, self.gfw_env)
+
     def clean_source_shps(self, shp_list):
 
         cleaned_shp_list = []
 
         for shp in shp_list:
             
-            shp_name = os.path.basename(shp).replace('-','_')
+            shp_name = os.path.basename(shp).replace('-', '_')
             
-            single_part_path = os.path.join(os.path.dirname(shp), shp_name.replace('.shp','') + '_singlepart.shp')
+            single_part_path = os.path.join(os.path.dirname(shp), shp_name.replace('.shp', '') + '_singlepart.shp')
 
             logging.info('Starting multipart to singlepart for ' + shp_name)
             arcpy.MultipartToSinglepart_management(shp, single_part_path)
 
             arcpy.RepairGeometry_management(single_part_path, "DELETE_NULL")
-
-            # orig_oid_field = 'orig_oid'
-            # arcpy.AddField_management(singlePartPath, orig_oid_field, 'TEXT', '255')
-            # arcpy.CalculateField_management(singlePartPath, orig_oid_field, '!FID!', 'PYTHON_9.3')
 
             # Must have one field before we delete all the other ones. So says arcgis anyway
             orig_oid_field = 'orig_oid'
@@ -183,7 +189,8 @@ class ImazonDataSource(DataSource):
             imazon_date_str = self.get_date_from_filename(os.path.basename(shp))
 
             util.add_field_and_calculate(single_part_path, 'Date', 'DATE', "", imazon_date_str, self.gfw_env)
-            util.add_field_and_calculate(single_part_path, 'data_type', 'TEXT', "255", self.data_type(shp), self.gfw_env)
+            util.add_field_and_calculate(single_part_path, 'data_type', 'TEXT', "255", self.data_type(shp),
+                                         self.gfw_env)
             util.add_field_and_calculate(single_part_path, 'orig_fname', 'TEXT', "255", shp_name, self.gfw_env)
 
             cleaned_shp_list.append(single_part_path)
@@ -209,9 +216,13 @@ class ImazonDataSource(DataSource):
 
         arcpy.Merge_management(input_layers, output_dataset)
 
+        # Update the layerspec table to reflect that we are about to update the data source
+        # TODO | move this to post-update . . . need to understand what the other layers require in terms of updating
+        # TODO | other tables after they've been processed
+        self.update_layerspec_maxdate()
+
         # overwrite properties from original layerdef read
         # from the gfw-sync2 config Google Doc
         self.layerdef['source'] = output_dataset
 
         return self.layerdef
-

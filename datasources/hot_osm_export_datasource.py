@@ -6,6 +6,7 @@ import logging
 import arcpy
 
 from utilities import util
+from utilities import field_map
 from datasource import DataSource
 
 
@@ -19,7 +20,8 @@ class HotOsmExportDataSource(DataSource):
 
         self.job_dict = {x: {} for x in self.source.split(',')}
 
-    def run_job(self, job_uid, job_type):
+    @staticmethod
+    def run_job(job_uid, job_type):
         auth_key = util.get_token('thomas.maschler@hot_export')
         headers = {"Content-Type": "application/json", "Authorization": "Token " + auth_key}
         url = "http://export.hotosm.org/api/{0}?job_uid={1}".format(job_type, job_uid)
@@ -75,7 +77,6 @@ class HotOsmExportDataSource(DataSource):
                 else:
                     logging.debug("job {0} has failed {1} times. we'll skip it "
                                   "for now".format(job_uid, self.job_dict[job_uid]['extract_attempts']))
-                    pass
 
     def start_job(self, job_uid):
         data = json.load(self.run_job(job_uid,  'rerun'))
@@ -118,7 +119,8 @@ class HotOsmExportDataSource(DataSource):
 
         return shp_list
 
-    def get_max_len_all_fields(self, fc_list):
+    @staticmethod
+    def get_max_len_all_fields(fc_list):
 
         field_dict = {}
 
@@ -142,7 +144,7 @@ class HotOsmExportDataSource(DataSource):
             field_max_dict = self.get_max_len_all_fields(input_fc_list)
 
             fm_dict = {k: {'out_length': v} for k, v in field_max_dict.iteritems()}
-            fms = util.build_field_map(input_fc_list, fm_dict)
+            fms = field_map.build_field_map(input_fc_list, fm_dict)
 
             merged_fc = os.path.join(self.download_workspace, 'merged_output.shp')
             arcpy.Merge_management(input_fc_list, merged_fc, fms)
@@ -157,7 +159,7 @@ class HotOsmExportDataSource(DataSource):
             single_part_fc = os.path.join(self.download_workspace, 'single_part_final.shp')
             arcpy.MultipartToSinglepart_management(dissolved_fc, single_part_fc)
 
-        self.source = single_part_fc
+        self.data_source = single_part_fc
 
     def get_layer(self):
 
@@ -167,6 +169,6 @@ class HotOsmExportDataSource(DataSource):
 
         self.process_downloaded_data(all_unzipped_fcs)
 
-        self.layerdef['source'] = self.source
+        self.layerdef['source'] = self.data_source
 
         return self.layerdef

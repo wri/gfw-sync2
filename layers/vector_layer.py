@@ -75,7 +75,7 @@ class VectorLayer(Layer):
         arcpy.ChangeVersion_management("esri_service_output_fl", 'TRANSACTIONAL', 'gfw.' + version_name, '')
 
         # Build where clause
-        esri_where_clause = self.build_update_where_clause(input_where_field)
+        esri_where_clause = self.build_update_where_clause(input_fc, input_where_field)
 
         if esri_where_clause:
             logging.debug('Deleting features from esri_service_output based on input_where_field. '
@@ -117,11 +117,12 @@ class VectorLayer(Layer):
 
         return
 
-    def build_update_where_clause(self, input_field):
+    @staticmethod
+    def build_update_where_clause(in_fc, input_field):
 
         if input_field:
             # Get unique values in specified where_clause field
-            unique_values = list(set([x[0] for x in arcpy.da.SearchCursor(self.source, [input_field])]))
+            unique_values = list(set([x[0] for x in arcpy.da.SearchCursor(in_fc, [input_field])]))
 
             unique_values_sql = "'" + "', '".join(unique_values) + "'"
 
@@ -213,26 +214,18 @@ class VectorLayer(Layer):
                                                    "   hash.update(shape)\n"
                                                    "   return hash.hexdigest()")
 
-    def update_layerspec_maxdate(self):
-
-        if self.layerspec_maxdate_field_source:
-            logging.debug("update layer spec max date")
-            sql = "UPDATE layerspec set maxdate = (SELECT max({0}) FROM {1}) WHERE table_name='{1}'".format(self.layerspec_maxdate_field_source,self.cartodb_service_output)
-            cartodb.cartodb_sql(sql, self.gfw_env)
-
     def sync_cartodb(self, input_fc, cartodb_output_fc, input_where_field):
+
         logging.info('Starting vector_layer.sync_cartodb for {0}. Output {1}, '
                      'wc {2}'.format(os.path.basename(input_fc), cartodb_output_fc, input_where_field))
 
-        cartodb_where_clause = self.build_update_where_clause(input_where_field)
+        cartodb_where_clause = self.build_update_where_clause(input_fc, input_where_field)
 
         cartodb.cartodb_sync(input_fc, cartodb_output_fc, cartodb_where_clause, self.gfw_env, self.scratch_workspace)
 
-        self.update_layerspec_maxdate()
-
     def _update(self):
 
-        # self.archive_source()
+        self.archive_source()
 
         self.filter_source_dataset(self.delete_features_input_where_clause)
 
@@ -242,6 +235,6 @@ class VectorLayer(Layer):
 
         self.append_to_esri_source(self.source, self.esri_service_output, self.esri_merge_where_field)
 
-        # self.create_archive_and_download_zip()
+        self.create_archive_and_download_zip()
 
         self.sync_cartodb(self.source, self.cartodb_service_output, self.cartodb_merge_where_field)

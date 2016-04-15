@@ -1,4 +1,3 @@
-import logging
 import os
 import shutil
 import sys
@@ -19,20 +18,19 @@ class DataSource(object):
         :return:
         """
         logging.debug('Starting datasource class')
-        
-        self.type = "DataSource"
 
         self._name = None
         self.name = layerdef['tech_title']
 
-        self._source = None
-        self.source = layerdef['source']
+        self._data_source = None
+        self.data_source = layerdef['source']
 
         self._gfw_env = None
         self.gfw_env = layerdef['gfw_env']
 
         self._download_workspace = None
-        self.download_workspace = os.path.join(settings.get_settings(self.gfw_env)['paths']['download_workspace'], self.name)
+        self.download_workspace = os.path.join(settings.get_settings(self.gfw_env)['paths']['download_workspace'],
+                                               self.name)
 
     # Validate name
     @property
@@ -57,32 +55,29 @@ class DataSource(object):
         os.mkdir(d)
         self._download_workspace = d
         
-    # Validate source
+    # Validate data_source
     @property
-    def source(self):
-        return self._source
+    def data_source(self):
+        return self._data_source
 
-    @source.setter
-    def source(self, s):
-        if s is not None:
+    @data_source.setter
+    def data_source(self, d):
+        if d is not None:
 
-            try:
-                validators.url(s)
-                isURL = True
-            except:
-                isURL = False
+            if validators.url(d):
+                pass
 
-            if isURL:
-                self.data_source_type = 'URL'
             else:
-                if os.path.exists(s):
-                    self.data_source_type = 'network_location'
+                if arcpy.Exists(d):
+                    pass
                 else:
-                    warnings.warn("Cannot find source {0!s}".format(s), Warning)
+                    logging.error("Data source {0} is not a URL and arcpy can't find it. Exiting.".format(d))
+                    sys.exit(1)
 
-        self._source = s
+        self._data_source = d
 
-    def download_file(self, url, output_dir):
+    @staticmethod
+    def download_file(url, output_dir):
         fname = os.path.split(url)[1]
         path = os.path.join(output_dir, fname)
 
@@ -95,11 +90,13 @@ class DataSource(object):
         with open(path, 'wb') as f:
             for chunk in r.iter_content(chunk_size=1024):
                 f.write(chunk)
-                f.flush
+                # f.flush # apparently has no effect
+                # http://stackoverflow.com/questions/16694907/how-to-download-large-file-in-python-with-requests-py
         logging.debug("Download complete.")
         return path
 
-    def unzip(self, filename, folder):
+    @staticmethod
+    def unzip(filename, folder):
 
         if zipfile.is_zipfile(filename):
             logging.debug('Unzipping {0} to directory {1}'.format(filename, folder))
@@ -109,7 +106,8 @@ class DataSource(object):
         else:
             return []
 
-    def remove_all_fields_except(self, fc, keep_field_list):
+    @staticmethod
+    def remove_all_fields_except(fc, keep_field_list):
         field_list = [f.name for f in arcpy.ListFields(fc) if not f.required]
 
         for field in field_list:
@@ -141,21 +139,10 @@ class DataSource(object):
 
     def get_layer(self):
 
-        if self.data_source_type == 'URL':
+        local_file = self.download_file(self.data_source, self.download_workspace)
 
-            local_file = self.download_file(self.source, self.download_workspace)
-
-            if os.path.splitext(local_file)[1] == '.zip':
-                self.source = self.unzip_and_find_data(local_file)
-
-            else:
-                self.source = local_file
+        if os.path.splitext(local_file)[1] == '.zip':
+            self.data_source = self.unzip_and_find_data(local_file)
 
         else:
-            logging.error('Data source type is not URL, why is the datasource module being called? \nData source type is {0}'.format(self.data_source_type))
-            sys.exit(1)
-
-
-
-
-
+            self.data_source = local_file

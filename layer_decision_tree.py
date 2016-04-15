@@ -10,6 +10,7 @@ from datasources.imazon_datasource import ImazonDataSource
 from datasources.terrai_datasource import TerraiDataSource
 from datasources.wdpa_datasource import WDPADatasource
 from datasources.hot_osm_export_datasource import HotOsmExportDataSource
+from datasources.forest_atlas_datasource import ForestAtlasDataSource
 
 
 def build_layer(layerdef, google_sheet):
@@ -37,6 +38,10 @@ def build_layer(layerdef, google_sheet):
     elif layerdef["type"] == "wdpa_vector":
         datasource = WDPADatasource(layerdef)
         layer = VectorLayer(datasource.get_layer())
+
+    elif layerdef["type"] == "forest_atlas_vector":
+        datasource = ForestAtlasDataSource(layerdef)
+        layer = CountryVectorLayer(datasource.get_layer())
 
     elif layerdef["type"] == "country_vector":
         if layerdef['global_layer']:

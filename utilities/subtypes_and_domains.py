@@ -1,6 +1,4 @@
 import arcpy
-import logging
-import sys
 
 
 def extract_subtype(in_fc, in_field_name):

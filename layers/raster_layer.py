@@ -61,24 +61,14 @@ class RasterLayer(Layer):
 #
 #         return
 
-
     def update(self):
         logging.info('Starting raster_layer.update for {0}'.format(self.name))
 
-        #Creates timestamped backup and download from source
+        # Creates timestamped backup and download from source
         self.archive() 
 
-        #Exports to WGS84 if current dataset isn't already
+        # Exports to WGS84 if current dataset isn't already
         # self.export_2_shp()
 
-        #Moves to esri output destination-- basis for image services etc
+        # Moves to esri output destination-- basis for image services etc
         self.copy_to_esri_output()
-
-    
-
-    
-
-    
-
-
-

@@ -15,7 +15,7 @@ import uuid
 
 def byteify(unicode_string):
     if isinstance(unicode_string, dict):
-        return {byteify(key):byteify(value) for key, value in unicode_string.iteritems()}
+        return {byteify(key): byteify(value) for key, value in unicode_string.iteritems()}
     elif isinstance(unicode_string, list):
         return [byteify(element) for element in unicode_string]
     elif isinstance(unicode_string, unicode):
@@ -40,7 +40,8 @@ def gen_paths_shp(src):
 
 def list_network_drives():
     drive_bitmask = ctypes.cdll.kernel32.GetLogicalDrives()
-    all_drives = list(itertools.compress(string.ascii_uppercase, map(lambda x:ord(x) - ord('0'), bin(drive_bitmask)[:1:-1])))
+    all_drives = list(itertools.compress(string.ascii_uppercase, map(lambda x: ord(x) - ord('0'),
+                                                                     bin(drive_bitmask)[:1:-1])))
 
     network_drive_list = []
 
@@ -125,9 +126,12 @@ def add_field_and_calculate(fc, field_name, field_type, field_length, field_val,
         arcpy.AddField_management(fc, field_name, field_type, "", "", field_length)
 
     if field_type in ['TEXT', 'DATE']:
-        fieldVal = "'{0}'".format(field_val)
+        field_val = "'{0}'".format(field_val)
 
-    arcpy.CalculateField_management(fc, field_name, fieldVal, "PYTHON")
+    if field_val in list_fields(fc, gfw_env):
+        field_val = '!{0}!'.format(field_val)
+
+    arcpy.CalculateField_management(fc, field_name, field_val, "PYTHON")
 
 
 def list_fields(input_dataset, gfw_env):
@@ -146,8 +150,14 @@ def list_fields(input_dataset, gfw_env):
     return field_list
 
 
-def get_oid_field(input_dataset):
-    return [f.name for f in arcpy.ListFields(input_dataset) if f.type == 'OID'][0]
+def create_temp_id_field(input_dataset, in_gfw_env):
+
+    temp_id_fieldname = 'temp__cartodb__id'
+    oid_field = [f.name for f in arcpy.ListFields(input_dataset) if f.type == 'OID'][0]
+
+    add_field_and_calculate(input_dataset, temp_id_fieldname, 'LONG', "", oid_field, in_gfw_env)
+
+    return temp_id_fieldname
 
 
 def replace_dict_value(in_dict, in_val, new_val):
@@ -186,7 +196,3 @@ def copy_to_scratch_workspace(input_fc, output_workspace, field_mappings=None):
         arcpy.Copy_management(input_fc, out_copied_fc)
 
     return out_copied_fc
-
-
-
-

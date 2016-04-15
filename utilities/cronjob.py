@@ -1,4 +1,3 @@
-import os
 import subprocess
 import datetime
 import argparse
@@ -31,6 +30,9 @@ def parse_update_freq(field_text):
             else:
                 day_list_text = field_text.split(',')
                 day_list = [int(x.strip()) for x in day_list_text]
+
+        else:
+            day_list = []
 
         # Check to see if today's date is in the list we just built
         # If so, update this layer

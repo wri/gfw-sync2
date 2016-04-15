@@ -22,6 +22,3 @@ def get_settings(input_env):
 
 def get_country_iso3_list():
     return get_ini_file('country_iso3.ini', 'config')
-
-
-

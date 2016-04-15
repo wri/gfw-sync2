@@ -470,12 +470,10 @@ def get_ini_dict(path):
     return ini_dict
 
 
-def ini_fieldmap_to_fc(in_fc, ini_path, out_workspace):
+def ini_fieldmap_to_fc(in_fc, dataset_name, ini_dict, out_workspace):
 
     if not os.path.exists(out_workspace):
         os.mkdir(out_workspace)
-
-    ini_dict = get_ini_dict(ini_path)
 
     # Check to see if the field map is valid before we go through the process
     # This is important because if we reset self.source of a layer, and it has a fieldmap
@@ -484,31 +482,33 @@ def ini_fieldmap_to_fc(in_fc, ini_path, out_workspace):
         field_mapped_fc = in_fc
 
     else:
-        arcpy.MakeFeatureLayer_management(in_fc, 'temp_join_fl')
+
+        dataset_fl = dataset_name + '_fl'
+        arcpy.MakeFeatureLayer_management(in_fc, dataset_fl)
 
         # Set workspace so it's easy to find full names of tables listed in join
         # i.e. "concessions" is actually cmr_open_data_en.CMR.concessions
-        set_workspace_from_fl('temp_join_fl')
+        set_workspace_from_fl(dataset_fl)
 
         if '__joins__' in ini_dict:
 
             # Join the fields to the temporary FL
-            _join_ini_fields('temp_join_fl', ini_dict['__joins__'])
+            _join_ini_fields(dataset_fl, ini_dict['__joins__'])
 
         # Convert the ini file into a list of field objects
         # These objects have properties to determine how to treat the fields
-        field_list = _parse_ini_file('temp_join_fl', ini_dict)
+        field_list = _parse_ini_file(dataset_fl, ini_dict)
 
         # Convert this to the dict format required by the build_field_map functiono
         # This function is used by other modules-- need a consistent format
         fms_dict = _field_list_to_fms_dict(field_list)
 
         # Convert to a field map
-        fms = build_field_map(['temp_join_fl'], fms_dict)
+        fms = build_field_map([dataset_fl], fms_dict)
 
         # Copy the source FC out based on the fieldmap
-        out_fc = util.copy_to_scratch_workspace('temp_join_fl', out_workspace, fms)
-        arcpy.Delete_management('temp_join_fl')
+        out_fc = util.copy_to_scratch_workspace(dataset_fl, out_workspace, fms)
+        arcpy.Delete_management(dataset_fl)
 
         # Add additional string or calculated fields to the copied-out fc
         _post_process_fields(out_fc, field_list)

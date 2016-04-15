@@ -5,7 +5,7 @@
 This is a suite of tools used to synchronize data for all websites in the GFW platform, including but not limited to the [GFW Flagship](globalforestwatch.org/map), [GFW Commodities](http://commodities.globalforestwatch.org), [the Open Data Portal](http://data.globalforestwatch.org) and various [CartoDB](https://wri-01.cartodb.com/me) and [ArcGIS Server](http://gis-gfw.wri.org/arcgis/rest/) endpoints.
 
 ## Updating a Layer
-The data update process is driven by `layers`. Each `layer` has configuration options defined in the [gfw-sync2 config table](https://docs.google.com/spreadsheets/d/1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI/edit#gid=0). When we have new source data for a layer (i.e. tiger conservation landscapes), we can update it across the platform by running: \
+The data update process is driven by `layers`. Each `layer` has configuration options defined in the [gfw-sync2 config table](https://docs.google.com/spreadsheets/d/1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI/edit#gid=0). When we have new source data for a layer (i.e. tiger conservation landscapes), we can update it across the platform by running:
 
 `python gfw-sync2 -e PROD -l tiger_conservation_landscapes`
 

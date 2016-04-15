@@ -30,8 +30,8 @@ class Layer(object):
         self.scratch_workspace = os.path.join(settings.get_settings(self.gfw_env)['paths']['scratch_workspace'],
                                               self.name)
 
-        self._type = None
-        self.type = layerdef['type']
+        self._layer_type = None
+        self.layer_type = layerdef['type']
 
         self._field_map = None
         self.field_map = layerdef['field_map']
@@ -62,9 +62,6 @@ class Layer(object):
 
         self._transformation = None
         self.transformation = layerdef['transformation']
-
-        self._layerspec_maxdate_field_source = None
-        self.layerspec_maxdate_field_source = layerdef['layerspec_maxdate_field_source']
 
         self._global_layer = None
         self.global_layer = layerdef['global_layer']
@@ -172,21 +169,6 @@ class Layer(object):
             c = None
         self._cartodb_merge_where_field = c
 
-    # Validate layerspec_maxdate_field_source
-    @property
-    def layerspec_maxdate_field_source(self):
-        return self._layerspec_maxdate_field_source
-
-    @layerspec_maxdate_field_source.setter
-    def layerspec_maxdate_field_source(self, l):
-        if l:
-            if l not in util.list_fields(self.source, self.gfw_env):
-                logging.debug("Date field {0} specified for layerspec_maxdate_field_source but "
-                              "field not in source dataset".format(l))
-        else:
-            l = None
-        self._layerspec_maxdate_field_source = l
-
     # Validate delete_features_input_where_clause
     @property
     def delete_features_input_where_clause(self):
@@ -208,21 +190,21 @@ class Layer(object):
                         # Clean up temporary feature layer after we create it
                         arcpy.Delete_management(self.name)
 
-                except:
+                except arcpy.ExecuteError:
                     logging.error("delete_features_input_where_clause '{0!s}' is invalide "
                                   "or delete FL failed".format(f))
                     sys.exit(1)
 
         self._delete_features_input_where_clause = f
 
-    # Validate layer type
+    # Validate layer_type
     @property
-    def type(self):
-        return self._type
+    def layer_type(self):
+        return self._layer_type
 
-    @type.setter
-    def type(self, t):
-        self._type = t
+    @layer_type.setter
+    def layer_type(self, t):
+        self._layer_type = t
 
     # Validate layer field_map
     @property
@@ -237,7 +219,7 @@ class Layer(object):
             # Insert this so that global_vector layers can pass validation checks
             # These layers may have fieldmaps associated, but they are really for the
             # input country vector datasets to use in meeting the schema of the global layers
-            if self.type == 'global_vector':
+            if self.layer_type == 'global_vector':
                 m = None
 
             else:
@@ -262,7 +244,7 @@ class Layer(object):
 
         # If there's a field map, use it as an input to the FeatureClassToFeatureClass tool and copy the data locally
         if self.field_map:
-            s = field_map.ini_fieldmap_to_fc(s, self.field_map, self.scratch_workspace)
+            s = field_map.ini_fieldmap_to_fc(s, self.name, self.field_map, self.scratch_workspace)
 
         # If there's not a field map, need to figure out what type of data source it is, and if it's local or not
         else:
@@ -391,7 +373,7 @@ class Layer(object):
             try:
                 settings.get_country_iso3_list()[c]
 
-            except:
+            except KeyError:
                 logging.error("Country code {0} specified but not found in iso country list\n Exiting now".format(c))
                 sys.exit(1)
 
@@ -403,7 +385,8 @@ class Layer(object):
 
         return
 
-    def is_wgs_84(self, input_dataset):
+    @staticmethod
+    def is_wgs_84(input_dataset):
         logging.debug('starting layer.isWGS84')
         sr_as_string = arcpy.Describe(input_dataset).spatialReference.exporttostring()
 
