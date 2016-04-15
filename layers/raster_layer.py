@@ -50,7 +50,7 @@ class RasterLayer(Layer):
 #
 #         arcpy.RasterToPoint_conversion(self.source, self.export_file, "VALUE")
 #
-#         if self.isWGS84(self.export_file):
+#         if self.is_wgs_84(self.export_file):
 #             self.wgs84_file = self.export_file
 #
 #         else:

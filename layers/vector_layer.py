@@ -149,7 +149,7 @@ class VectorLayer(Layer):
         logging.info('Starting vector_layer.create_archive_and_download_zip for {0}'.format(self.name))
 
         # if source is in local projection, create separate download
-        if not self.isWGS84(self.source):
+        if not self.is_wgs_84(self.source):
 
             download_basename = self.name + '.shp'
             if os.path.basename(self.source) == download_basename:

@@ -7,11 +7,13 @@ import datetime
 import shutil
 import calendar
 import logging
+
 from bs4 import BeautifulSoup
 from urllib2 import urlopen
 
 from datasource import DataSource
 from utilities import util
+
 
 class ImazonDataSource(DataSource):
     """
@@ -27,7 +29,6 @@ class ImazonDataSource(DataSource):
         self.imazon_archive_folder = r'F:\forest_change\imazon_sad'
 
         self.layerdef = layerdef
-
 
     # Validate name
     @property
@@ -71,26 +72,26 @@ class ImazonDataSource(DataSource):
 
         return [x for x in deforest_degrade_urls if self.recent_file(mindate, x)]
 
-    def check_imazon_already_downloaded(self, urlList):
-        toDownloadList = []
+    def check_imazon_already_downloaded(self, url_list):
+        to_download_list = []
 
         imazon_dir_list = os.listdir(self.imazon_archive_folder)
 
         imazon_zip_files = [x for x in imazon_dir_list if os.path.splitext(x)[1] == '.zip']
 
-        for url in urlList:
+        for url in url_list:
             url_zip_file = os.path.basename(url)
 
             if url_zip_file not in imazon_zip_files:
-                toDownloadList.append(url)
+                to_download_list.append(url)
 
-        return toDownloadList
+        return to_download_list
 
     def download_sad_zipfiles(self, to_download_list):
         unzip_list = []
         
         for url in to_download_list:
-            if not 'http://' in url:
+            if 'http://' not in url:
                 url = 'http://imazongeo.org.br{0!s}'.format(url)
 
             z = self.download_file(url, self.download_workspace)
@@ -104,7 +105,6 @@ class ImazonDataSource(DataSource):
             unzip_list.append(z)
 
         return unzip_list
-
 
     def download_new_source_data(self):
         sad_urls = self.list_sad_urls()
@@ -122,25 +122,25 @@ class ImazonDataSource(DataSource):
         else:
             source_list = []
 
-            for file in self.download_sad_zipfiles(to_download):
-                outdir = os.path.dirname(file)
+            for download_file in self.download_sad_zipfiles(to_download):
+                outdir = os.path.dirname(download_file)
                 
-                self.unzip(file, outdir)
+                self.unzip(download_file, outdir)
 
-                outfilename = os.path.splitext(os.path.basename(file))[0] + '.shp'
+                outfilename = os.path.splitext(os.path.basename(download_file))[0] + '.shp'
                 outfilepath = os.path.join(outdir, outfilename)
                 
                 source_list.append(outfilepath)
 
         return source_list
 
-    def data_type(self, shpName):
-        if 'degradacao' in shpName:
+    def data_type(self, shp_name):
+        if 'degradacao' in shp_name:
             data_type = 'degrad'
-        elif 'desmatamento' in shpName:
+        elif 'desmatamento' in shp_name:
             data_type = 'defor'
         else:
-            logging.error("Unknown data type for {0} Exiting now.".format(shpName))
+            logging.error("Unknown data type for {0} Exiting now.".format(shp_name))
             sys.exit(1)
 
         return data_type
@@ -151,25 +151,25 @@ class ImazonDataSource(DataSource):
         year = date_obj.year
         month = date_obj.month
         day = calendar.monthrange(year, month)[1]
-        imazon_date = datetime.date (year, month, day)
+        imazon_date = datetime.date(year, month, day)
         imazon_date_text = imazon_date.strftime("%m/%d/%Y")
         
         return imazon_date_text
 
-    def clean_source_shps(self, shpList):
+    def clean_source_shps(self, shp_list):
 
         cleaned_shp_list = []
 
-        for shp in shpList:
+        for shp in shp_list:
             
-            shpName = os.path.basename(shp).replace('-','_')
+            shp_name = os.path.basename(shp).replace('-','_')
             
-            singlePartPath = os.path.join(os.path.dirname(shp), shpName.replace('.shp','') + '_singlepart.shp')
+            single_part_path = os.path.join(os.path.dirname(shp), shp_name.replace('.shp','') + '_singlepart.shp')
 
-            logging.info('Starting multipart to singlepart for ' + shpName)
-            arcpy.MultipartToSinglepart_management(shp, singlePartPath)
+            logging.info('Starting multipart to singlepart for ' + shp_name)
+            arcpy.MultipartToSinglepart_management(shp, single_part_path)
 
-            arcpy.RepairGeometry_management(singlePartPath, "DELETE_NULL")
+            arcpy.RepairGeometry_management(single_part_path, "DELETE_NULL")
 
             # orig_oid_field = 'orig_oid'
             # arcpy.AddField_management(singlePartPath, orig_oid_field, 'TEXT', '255')
@@ -177,22 +177,20 @@ class ImazonDataSource(DataSource):
 
             # Must have one field before we delete all the other ones. So says arcgis anyway
             orig_oid_field = 'orig_oid'
-            util.add_field_and_calculate(singlePartPath, orig_oid_field, 'Text', '255', '!FID!', self.gfw_env)
-            self.remove_all_fields_except(singlePartPath, keep_field_list=[orig_oid_field])
+            util.add_field_and_calculate(single_part_path, orig_oid_field, 'Text', '255', '!FID!', self.gfw_env)
+            self.remove_all_fields_except(single_part_path, keep_field_list=[orig_oid_field])
 
             imazon_date_str = self.get_date_from_filename(os.path.basename(shp))
 
-            util.add_field_and_calculate(singlePartPath, 'Date', 'DATE', "", imazon_date_str, self.gfw_env)
-            util.add_field_and_calculate(singlePartPath, 'data_type', 'TEXT', "255", self.data_type(shp), self.gfw_env)
-            util.add_field_and_calculate(singlePartPath, 'orig_fname', 'TEXT', "255", shpName, self.gfw_env)
+            util.add_field_and_calculate(single_part_path, 'Date', 'DATE', "", imazon_date_str, self.gfw_env)
+            util.add_field_and_calculate(single_part_path, 'data_type', 'TEXT', "255", self.data_type(shp), self.gfw_env)
+            util.add_field_and_calculate(single_part_path, 'orig_fname', 'TEXT', "255", shp_name, self.gfw_env)
 
-            cleaned_shp_list.append(singlePartPath)
+            cleaned_shp_list.append(single_part_path)
 
         return cleaned_shp_list
 
     def build_all_imazon_layers(self):
-        
-        layerdef_list = []
 
         source_list = self.download_new_source_data()
 
@@ -216,15 +214,4 @@ class ImazonDataSource(DataSource):
         self.layerdef['source'] = output_dataset
 
         return self.layerdef
-
-
-            
-
-    
-
-    
-
-    
-
-
 

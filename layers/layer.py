@@ -1,11 +1,8 @@
-import json
 import logging
 import os
 import shutil
 import sys
-
 import arcpy
-import arcpy_metadata
 
 from utilities import archive
 from utilities import cartodb, settings
@@ -30,7 +27,8 @@ class Layer(object):
         self.gfw_env = layerdef['gfw_env']
 
         self._scratch_workspace = None
-        self.scratch_workspace = os.path.join(settings.get_settings(self.gfw_env)['paths']['scratch_workspace'], self.name)
+        self.scratch_workspace = os.path.join(settings.get_settings(self.gfw_env)['paths']['scratch_workspace'],
+                                              self.name)
 
         self._type = None
         self.type = layerdef['type']
@@ -201,7 +199,7 @@ class Layer(object):
                 logging.debug("delete_features_input_where_clause {0} doesn't have quoted strings. "
                               "It probably should.".format(f))
 
-            where_clause_field_name = f.split()[0].replace("'","").replace('"',"")
+            where_clause_field_name = f.split()[0].replace("'", "").replace('"', "")
 
             if where_clause_field_name in util.list_fields(self.source, self.gfw_env):
                 try:
@@ -211,7 +209,8 @@ class Layer(object):
                         arcpy.Delete_management(self.name)
 
                 except:
-                    logging.error("delete_features_input_where_clause '{0!s}' is invalide or delete FL failed".format(f))
+                    logging.error("delete_features_input_where_clause '{0!s}' is invalide "
+                                  "or delete FL failed".format(f))
                     sys.exit(1)
 
         self._delete_features_input_where_clause = f
@@ -322,7 +321,7 @@ class Layer(object):
                 transformations = arcpy.ListTransformations(from_srs, to_srs, extent)
                 if self.transformation not in transformations:
                     logging.info("Transformation {0!s}: not compatible with in- and output "
-                                  "spatial reference or extent".format(self.transformation))
+                                 "spatial reference or extent".format(self.transformation))
 
                     t = None
 
@@ -404,15 +403,13 @@ class Layer(object):
 
         return
 
-    def isWGS84(self, inputDataset):
+    def is_wgs_84(self, input_dataset):
         logging.debug('starting layer.isWGS84')
-        srAsString = arcpy.Describe(inputDataset).spatialReference.exporttostring()
+        sr_as_string = arcpy.Describe(input_dataset).spatialReference.exporttostring()
 
-        firstElement = srAsString.split(',')[0]
+        first_element = sr_as_string.split(',')[0]
 
-        if 'GEOGCS' in firstElement and 'GCS_WGS_1984' in firstElement:
+        if 'GEOGCS' in first_element and 'GCS_WGS_1984' in first_element:
             return True
         else:
             return False
-
-

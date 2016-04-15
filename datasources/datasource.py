@@ -2,9 +2,8 @@ import logging
 import os
 import shutil
 import sys
-import warnings
+import logging
 import zipfile
-
 import arcpy
 import requests
 import validators
@@ -43,7 +42,7 @@ class DataSource(object):
     @name.setter
     def name(self, n):
         if not n:
-            warnings.warn("Name cannot be empty", Warning)
+            logging.error("Name cannot be empty", Warning)
         self._name = n
 
     # Validate download workspace

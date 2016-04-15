@@ -11,7 +11,12 @@ def send_summary():
     root_dir = os.getcwd()
     log_file = os.path.join(root_dir, 'logs', time.strftime("%Y%m%d") + '.log')
 
-    result_text = read_log_to_result_text(log_file)
+    try:
+        result_text = read_log_to_result_text(log_file)
+
+    except:
+        result_text = "Attempted to run script, but it failed. Log file may not be written-- " \
+                      "maybe no layers were scheduled? Check if today's log file exists."
 
     send_email(result_text)
 

@@ -39,7 +39,8 @@ def generate_where_clause(start_id, end_id, transaction_row_limit, where_field_n
     current_max_id = start_id
 
     while current_max_id < end_id:
-        yield "{0} >= {1} and {0} < {2}".format(where_field_name, current_max_id, current_max_id + transaction_row_limit)
+        yield "{0} >= {1} and {0} < {2}".format(where_field_name, current_max_id,
+                                                current_max_id + transaction_row_limit)
 
         current_max_id += transaction_row_limit
 
@@ -50,7 +51,8 @@ def cartodb_sql(sql, gfw_env, raise_error=True):
 
     key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
 
-    result = urllib.urlopen("{0!s}?api_key={1!s}&q={2!s}".format(settings.get_settings(gfw_env)["cartodb"]["sql_api"], key, sql))
+    result = urllib.urlopen("{0!s}?api_key={1!s}&q={2!s}".format(settings.get_settings(gfw_env)["cartodb"]["sql_api"],
+                                                                 key, sql))
     json_result = json.loads(result.readlines()[0], object_pairs_hook=OrderedDict)
     if raise_error and "error" in json_result.keys():
         raise SyntaxError("Wrong SQL syntax. {0!s}".format(json_result['error']))
@@ -92,7 +94,7 @@ def cartodb_create(file_name, out_cartodb_name, gfw_env):
         for wc in generate_where_clause(row_append_limit, row_count, row_append_limit, oid_field):
 
             # Build all where_clauses and pass them to cartodb_append
-            cartodb_append(file_name, wc, account_name)
+            cartodb_append(file_name, gfw_env, wc)
 
     else:
         run_ogr2ogr(cmd)
@@ -119,8 +121,6 @@ def cartodb_append(file_name, gfw_env, where_clause=None):
 
 def cartodb_check_exists(table_name, gfw_env):
     sql = "SELECT * FROM {0} LIMIT 1".format(table_name)
-
-    table_exists = False
 
     try:
         cartodb_sql(sql, gfw_env)
@@ -153,7 +153,8 @@ def cartodb_push_to_production(staging_table, production_table, gfw_env):
     final_columns_sql = ', '.join(final_columns)
 
     for wc in generate_where_clause(0, row_count, row_append_limit, 'cartodb_id'):
-        sql = 'INSERT INTO {0} ({1}) SELECT {1} FROM {2} WHERE {3}'.format(production_table, final_columns_sql, staging_table, wc)
+        sql = 'INSERT INTO {0} ({1}) SELECT {1} FROM {2} WHERE {3}'.format(production_table, final_columns_sql,
+                                                                           staging_table, wc)
         cartodb_sql(sql, gfw_env)
 
 

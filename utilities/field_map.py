@@ -1,11 +1,10 @@
 import os
 import arcpy
 import logging
-import sys
 
 import util
-import subtypes_and_domains as sub
 import settings
+import subtypes_and_domains as sub
 
 
 class Field(object):
@@ -417,9 +416,9 @@ def _process_row(in_row, field_obj):
     return in_row
 
 
-def _validate_fieldmap(in_fc, in_ini_file):
+def _validate_fieldmap(in_fc, ini_dict):
 
-    ini_field_list = [k for k in in_ini_file.keys() if k != '__joins__']
+    ini_field_list = [k for k in ini_dict.keys() if k != '__joins__']
 
     fc_field_list = [f.name for f in arcpy.ListFields(in_fc) if not f.required and 'Shape' not in f.name]
 
@@ -435,7 +434,6 @@ def _validate_fieldmap(in_fc, in_ini_file):
 def get_ini_dict(path):
 
     if os.path.splitext(path)[1] == '.ini':
-        ini_path = path
         ini_dict = settings.get_ini_file(path)
 
     else:
@@ -472,13 +470,18 @@ def get_ini_dict(path):
     return ini_dict
 
 
-def ini_fieldmap_to_fc(in_fc, ini_dict, out_workspace):
+def ini_fieldmap_to_fc(in_fc, ini_path, out_workspace):
+
+    if not os.path.exists(out_workspace):
+        os.mkdir(out_workspace)
+
+    ini_dict = get_ini_dict(ini_path)
 
     # Check to see if the field map is valid before we go through the process
     # This is important because if we reset self.source of a layer, and it has a fieldmap
     # listed in the Google Doc, it will run this routine again
     if _validate_fieldmap(in_fc, ini_dict):
-        return in_fc
+        field_mapped_fc = in_fc
 
     else:
         arcpy.MakeFeatureLayer_management(in_fc, 'temp_join_fl')
@@ -510,5 +513,7 @@ def ini_fieldmap_to_fc(in_fc, ini_dict, out_workspace):
         # Add additional string or calculated fields to the copied-out fc
         _post_process_fields(out_fc, field_list)
 
-        return out_fc
+        field_mapped_fc = out_fc
+
+    return field_mapped_fc
 

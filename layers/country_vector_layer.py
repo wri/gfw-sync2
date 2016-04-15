@@ -2,6 +2,7 @@ __author__ = 'Thomas.Maschler'
 
 import logging
 import os
+import sys
 
 from utilities import google_sheet
 from utilities import field_map
@@ -19,7 +20,6 @@ class CountryVectorLayer(VectorLayer):
         super(CountryVectorLayer, self).__init__(layerdef)
 
     def check_country_fields(self, field_list):
-
         result_list = []
 
         for fc in field_list:
@@ -28,6 +28,7 @@ class CountryVectorLayer(VectorLayer):
                 result_list.append(True)
 
             else:
+                print "No country code found for {0}".format(fc)
                 result_list.append(False)
 
         if len(set(result_list)) == 1 and result_list[0]:
@@ -43,8 +44,8 @@ class CountryVectorLayer(VectorLayer):
         if field_map_text:
 
             ini_path = field_map_text.replace('{ISO}', self.add_country_value)
-
             out_dir = os.path.join(self.scratch_workspace, 'country_to_global_fms')
+
             country_src = field_map.ini_fieldmap_to_fc(self.esri_service_output, ini_path, out_dir)
 
         # If no field map, just use the output from the country layer that we just processed
@@ -76,10 +77,14 @@ class CountryVectorLayer(VectorLayer):
             self.sync_cartodb(country_src, global_layerdef['cartodb_service_output'],
                               global_layerdef['cartodb_merge_where_field'])
 
+        else:
+            logging.error("Field country not present in input/output FCs. Exiting now.")
+            sys.exit(1)
+
     def update(self):
 
         # Update the country-specific layer-- same as for a standard vector layer
-        self._update()
+        # self._update()
 
         # Grab the info about the global layer that we need to update
         gs = google_sheet.GoogleSheet(self.gfw_env)

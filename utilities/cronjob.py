@@ -11,6 +11,7 @@ parser.add_argument('--environment', '-e', default='DEV', choices=('DEV', 'PROD'
                     help='the environment/config files to use for this run')
 args = parser.parse_args()
 
+
 def parse_update_freq(field_text):
     update_layer = False
 
@@ -19,7 +20,7 @@ def parse_update_freq(field_text):
 
         # If the field text has brackets, let's examine it
         if field_text[0] == '[' and field_text[-1] == ']':
-            field_text = field_text.replace('[','').replace(']','')
+            field_text = field_text.replace('[', '').replace(']', '')
 
             # If it has '-', assume it's a range and build a list
             if '-' in field_text:
