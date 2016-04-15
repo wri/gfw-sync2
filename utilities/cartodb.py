@@ -79,7 +79,7 @@ def cartodb_create(file_name, out_cartodb_name, gfw_env):
         cmd += [os.path.dirname(file_name), os.path.basename(file_name)]
 
     row_count = int(arcpy.GetCount_management(file_name).getOutput(0))
-    row_append_limit = 10000
+    row_append_limit = 1000
     oid_field = util.get_oid_field(file_name)
 
     # Had issues with cartoDB server timing out
@@ -142,7 +142,7 @@ def cartodb_push_to_production(staging_table, production_table, gfw_env):
     sql = "SELECT COUNT(*) FROM {0}".format(staging_table)
     row_count = int(cartodb_sql(sql, gfw_env)['rows'][0]['count'])
 
-    row_append_limit = 10000
+    row_append_limit = 1000
 
     prod_columns = get_column_order(production_table, gfw_env)
     staging_columns = get_column_order(staging_table, gfw_env)

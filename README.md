@@ -6,6 +6,7 @@ This is a suite of tools used to synchronize data for all websites in the GFW pl
 
 ## Updating a Layer
 The data update process is driven by `layers`. Each `layer` has configuration options defined in the [gfw-sync2 config table](https://docs.google.com/spreadsheets/d/1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI/edit#gid=0). When we have new source data for a layer (i.e. tiger conservation landscapes), we can update it across the platform by running: \
+
 `python gfw-sync2 -e PROD -l tiger_conservation_landscapes`
 
 This will take the options defined on the `PROD` tab of the `config table` and process the layer specified. The script will use the `config table` to do things like copy the data locally, apply a fieldmap, add a country code and then append it to various esri and CartoDB tables.
