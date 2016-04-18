@@ -18,20 +18,18 @@ def main():
                         help='set verbosity level to print and write to file')
     args = parser.parse_args()
 
+    # Instantiate logger; write to {dir}\logs
     logging = logger.build_logger(args.verbose)
-
     logging.info("\n{0}\n{1} v{2}\n{0}\n".format('*' * 50, settings.get_settings(args.environment)['tool_info']['name'],
                                                  settings.get_settings(args.environment)['tool_info']['version']))
-
     logging.critical('Starting | {0}'.format(args.layer))
 
     # Get the layerdef from the Google Doc config based on the args supplied
     # Google Doc: https://docs.google.com/spreadsheets/d/1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI/edit#gid=0
     gs = google_sheet.GoogleSheet(args.environment)
-    layerdef = gs.get_layerdef(args.layer)
 
     # Pass the layerdef and the google sheet object to the build_layer function
-    layer = layer_decision_tree.build_layer(layerdef, gs)
+    layer = layer_decision_tree.build_layer(gs, args.layer)
 
     # Update the layer in the output data sources
     layer.update()
@@ -41,8 +39,8 @@ def main():
 
     logging.critical('Finished | {0}'.format(args.layer))
 
-    # TODO add cleanup method (layer.cleanup() to delete scratch workspaces, etc
-    # TODO add cleanup method for datasource too . . . maybe in the layer module?
+    # Delete scratch workspace
+    layer.cleanup()
 
 if __name__ == "__main__":
     main()

@@ -116,7 +116,7 @@ class CountryVectorLayer(VectorLayer):
 
     def update(self):
 
-        # Update the country-specific layer-- same as for a standard vector layer
+        # # Update the country-specific layer-- same as for a standard vector layer
         self._update()
 
         # Grab the info about the global layer that we need to update

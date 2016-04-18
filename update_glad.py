@@ -33,12 +33,9 @@ for file in files:
     arcpy.CalculateStatistics_management(file)
     print "statistics calculated"
 
-mosaics = [
-r"R:\glad_alerts\glad_alerts.gdb\glad2015",
-r"R:\glad_alerts\glad_alerts.gdb\glad2016",
-]
-
-print "building overviews"
-for mosaic in mosaics:
-	arcpy.BuildOverviews_management(mosaic, "", "NO_DEFINE_MISSING_TILES", "", "", "")
-	print "overviews generated"
+print "generating overviews"
+arcpy.env.workspace = r"R:\glad_alerts"
+arcpy.RemoveRastersFromMosaicDataset_management("glad_alerts.gdb/glad2016", "OBJECTID>3", "UPDATE_BOUNDARY", "MARK_OVERVIEW_ITEMS",  "#", "#", "#", "#")
+print "previous overviews removed"
+arcpy.BuildOverviews_management("test.gdb/test", "", "NO_DEFINE_MISSING_TILES", "GENERATE_OVERVIEWS", "#", "#")
+print "new overviews generated"

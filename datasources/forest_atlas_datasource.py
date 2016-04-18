@@ -11,6 +11,9 @@ from datasource import DataSource
 class ForestAtlasDataSource(DataSource):
     """
     ForestAtlas datasource class. Inherits from DataSource
+    Used to find the max value in the 'last_updated' field of a source dataset and compare this to the
+    date listed in the config table. If the source dataset has been updated, will kick off the update process.
+    Otherwise will exit.
     """
 
     def __init__(self, layerdef):
@@ -30,6 +33,7 @@ class ForestAtlasDataSource(DataSource):
         return max(date_list)
 
     def get_layer(self):
+        """Called by layer_decision_tree.py. If it needs to be updated, returns the layerdef. Otherwise exits"""
         max_fc_date = self.get_update_date_src_fc()
 
         config_table_date = datetime.datetime.strptime(self.layerdef['last_updated'], "%m/%d/%Y")

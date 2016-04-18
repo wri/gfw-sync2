@@ -7,42 +7,43 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 class GoogleSheet(object):
     """
-    GoogleSheet class.
+    A class to access and update a Google Spreadsheet
+    :param gfw_env: Determines the tab to use on the config table(PROD | DEV)
+    :rtype A :class:`GoogleSheet <GoogleSheet>`
     """
 
     def __init__(self, gfw_env):
-        """ A class to access and update a Google Spreadsheet
-        :param gfw_env: The environment that we're executing gfw-sync2 in. This determines the tab to use on
-        from the Google Doc
-        :return:
-        """
 
         self.spreadsheet_file = r'D:\scripts\gfw-sync2\tokens\spreadsheet.json'
         self.spreadsheet_key = r'1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI'
         self.sheet_name = gfw_env
 
     def _open_spreadsheet(self):
+        """
+        Used to open the spreadsheet for read/update
+        :return: a gspread wks object that can be used to edit/update a given sheet
+        """
 
         # Updated for oauth2client
         # http://gspread.readthedocs.org/en/latest/oauth2.html
         credentials = ServiceAccountCredentials.from_json_keyfile_name(self.spreadsheet_file,
                                                                        ['https://spreadsheets.google.com/feeds'])
 
-        # authorize oauth2client credentials
         gc = gspread.authorize(credentials)
-
-        # open the spreadsheet by key
         wks = gc.open_by_key(self.spreadsheet_key).worksheet(self.sheet_name)
 
         return wks
 
     def sheet_to_dict(self):
-        wks = self._open_spreadsheet()
+        """
+        Convert the spreadsheet to a dict with {layername: {colName: colVal, colName2: colVal}
+        :return: a dictionary representing the sheet
+        """
 
-        gdoc_as_lists = wks.get_all_values()
-
-        # Create emtpy spreadsheet dict
         sheet_as_dict = {}
+
+        wks = self._open_spreadsheet()
+        gdoc_as_lists = wks.get_all_values()
 
         # Pull the header row from the Google doc
         header_row = gdoc_as_lists[0]
@@ -67,6 +68,11 @@ class GoogleSheet(object):
         return sheet_as_dict
 
     def get_layerdef(self, layer_name):
+        """
+        Build a layerdef dictionary by specifying the layer of interest
+        :param layer_name: the layer name of interest
+        :return: a dictionary of values that define a layer (layerdef) specified in the config table
+        """
 
         try:
             layerdef = self.sheet_to_dict()[layer_name]
@@ -81,6 +87,12 @@ class GoogleSheet(object):
             sys.exit(1)
 
     def update_value(self, layername, colname, update_value):
+        """ Basic
+        :param layername:
+        :param colname:
+        :param update_value:
+        :return:
+        """
 
         wks = self._open_spreadsheet()
         gdoc_as_lists = wks.get_all_values()
@@ -92,3 +104,9 @@ class GoogleSheet(object):
 
     def update_gs_timestamp(self, layername):
         self.update_value(layername, 'last_updated', time.strftime("%m/%d/%Y"))
+
+        # If the layer is part of a global_layer, update its last_updated timestamp as well
+        associated_global_layer = self.get_layerdef(layername)['global_layer']
+
+        if associated_global_layer:
+            self.update_value(associated_global_layer, 'last_updated', time.strftime("%m/%d/%Y"))

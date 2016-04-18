@@ -396,3 +396,6 @@ class Layer(object):
             return True
         else:
             return False
+
+    def cleanup(self):
+        shutil.rmtree(self.scratch_workspace)

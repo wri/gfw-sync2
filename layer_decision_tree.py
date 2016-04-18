@@ -13,7 +13,15 @@ from datasources.hot_osm_export_datasource import HotOsmExportDataSource
 from datasources.forest_atlas_datasource import ForestAtlasDataSource
 
 
-def build_layer(layerdef, google_sheet):
+def build_layer(google_sheet, layername):
+    """
+    Used to get a layerdef for our layer of interest, then build a layer object based on the type of layer input
+    :param google_sheet: a google sheet object used to layerdef
+    :param layername: the name of the layer to update
+    :return: a layer object to gfw-sync so that it can call the update method
+    """
+    layerdef = google_sheet.get_layerdef(layername)
+
     if layerdef["type"] == "simple_vector":
         layer = VectorLayer(layerdef)
 
@@ -56,8 +64,8 @@ def build_layer(layerdef, google_sheet):
             # This allows us to leave the source field in the google spreadsheet blank for this dataset, which makes
             # sense. The source for a global layer is made up of a bunch of smaller country layers
             global_layerdef['source'] = global_layerdef['esri_service_output']
-
             VectorLayer(global_layerdef)
+
             logging.debug('Global layer validation complete')
 
             layer = CountryVectorLayer(layerdef)

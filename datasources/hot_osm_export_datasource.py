@@ -11,17 +11,27 @@ from datasource import DataSource
 
 
 class HotOsmExportDataSource(DataSource):
+    """
+    HotOsmExport datasource class. Inherits from DataSource
+    Takes a comma separated list of HOT OSM job uids in layerdef['source'] and re-exports them. It then merges the
+    outputs (all logging roads at this point) and then dissolves. This dissolved line FC is used as an input to the
+    layer.update() process
+    """
     def __init__(self, layerdef):
-        logging.debug('starting hot_osm_export_datasource')
-
+        logging.debug('Starting hot_osm_export_datasource')
         super(HotOsmExportDataSource, self).__init__(layerdef)
 
         self.layerdef = layerdef
-
-        self.job_dict = {x: {} for x in self.source.split(',')}
+        self.job_dict = {x: {} for x in self.data_source.split(',')}
 
     @staticmethod
     def run_job(job_uid, job_type):
+        """
+        Used to kick off and monitor job progress
+        :param job_uid: HOT OSM job uid
+        :param job_type: reruns kicks off the job again, runs just monitors job progress
+        :return: return the json output
+        """
         auth_key = util.get_token('thomas.maschler@hot_export')
         headers = {"Content-Type": "application/json", "Authorization": "Token " + auth_key}
         url = "http://export.hotosm.org/api/{0}?job_uid={1}".format(job_type, job_uid)
@@ -31,9 +41,10 @@ class HotOsmExportDataSource(DataSource):
         for key, value in headers.items():
             request.add_header(key, value)
 
-        return urllib2.urlopen(request)
+        return json.load(urllib2.urlopen(request))
 
     def any_jobs_processing(self):
+        """Check if any jobs are processing by looking at the statuses in the job_dict"""
         jobs_processing = {k: v for k, v in self.job_dict.iteritems() if v['status'] == 'SUBMITTED'}.keys()
 
         if jobs_processing:
@@ -44,7 +55,7 @@ class HotOsmExportDataSource(DataSource):
         return status
 
     def execute_all_jobs(self):
-
+        """Start all jobs, then wait for them to finish. If a job fails, restart it"""
         # Start all jobs
         for job_uid in self.job_dict.keys():
             self.start_job(job_uid)
@@ -79,12 +90,14 @@ class HotOsmExportDataSource(DataSource):
                                   "for now".format(job_uid, self.job_dict[job_uid]['extract_attempts']))
 
     def start_job(self, job_uid):
-        data = json.load(self.run_job(job_uid,  'rerun'))
+        data = self.run_job(job_uid,  'rerun')
 
         self.job_dict[job_uid]['status'] = data['status']
 
     def get_job_info(self, job_uid):
-        data = json.load(self.run_job(job_uid, 'runs'))
+        """Check on the job of interest. Update the 'status' key for that job uid
+        in self.job_dict based on the results"""
+        data = self.run_job(job_uid, 'runs')
 
         if data[0]['status'] == 'SUBMITTED':
             self.job_dict[job_uid]['status'] = 'SUBMITTED'
@@ -100,7 +113,10 @@ class HotOsmExportDataSource(DataSource):
                                                          self.job_dict[job_uid]['extract_attempts']))
 
     def download_results(self):
-
+        """
+        Download the zip files for all complete jobs and unzip
+        :return: a list of shapefiles
+        """
         shp_list = []
 
         for job_uid in self.job_dict.keys():
@@ -121,6 +137,10 @@ class HotOsmExportDataSource(DataSource):
 
     @staticmethod
     def get_max_len_all_fields(fc_list):
+        """ Important for field mapping-- OSM exports have different length fields in different shapefiles
+        :param fc_list: a list of input shapefiles
+        :return: a dict of {'fieldname' : maxLength} for each field in the input FCs
+        """
 
         field_dict = {}
 
@@ -136,6 +156,12 @@ class HotOsmExportDataSource(DataSource):
         return {k: max(v) for k, v in field_dict.iteritems()}
 
     def process_downloaded_data(self, input_fc_list):
+        """
+        Defines a field map and uses it to merge the input feature classes (logging road extracts from different
+        regions). Dissolves the output to get rid of duplicate features.
+        :param input_fc_list:
+        :return:
+        """
 
         if len(input_fc_list) == 1:
             single_part_fc = input_fc_list[0]
@@ -162,6 +188,11 @@ class HotOsmExportDataSource(DataSource):
         self.data_source = single_part_fc
 
     def get_layer(self):
+        """
+        Executes all jobs, downloads results, and merges them into one FC.
+        Returns an updated layerdef with this merged FC as the source
+        :return:
+        """
 
         self.execute_all_jobs()
 

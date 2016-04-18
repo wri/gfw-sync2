@@ -11,6 +11,7 @@ import sys
 import cartodb
 import logging
 import uuid
+import urllib2
 
 
 def byteify(unicode_string):
@@ -152,7 +153,7 @@ def list_fields(input_dataset, gfw_env):
 
 def create_temp_id_field(input_dataset, in_gfw_env):
 
-    temp_id_fieldname = 'temp__cartodb__id'
+    temp_id_fieldname = 'c_temp_id'
     oid_field = [f.name for f in arcpy.ListFields(input_dataset) if f.type == 'OID'][0]
 
     add_field_and_calculate(input_dataset, temp_id_fieldname, 'LONG', "", oid_field, in_gfw_env)
@@ -196,3 +197,39 @@ def copy_to_scratch_workspace(input_fc, output_workspace, field_mappings=None):
         arcpy.Copy_management(input_fc, out_copied_fc)
 
     return out_copied_fc
+
+
+def validate_osm_source(osm_source):
+
+    osm_id_list = osm_source.split(',')
+
+    auth_key = get_token('thomas.maschler@hot_export')
+    headers = {"Content-Type": "application/json", "Authorization": "Token " + auth_key}
+    url = "http://export.hotosm.org/api/runs?job_uid={0}"
+
+    is_valid = True
+
+    for osm_id in osm_id_list:
+
+        request = urllib2.Request(url.format(osm_id))
+
+        for key, value in headers.items():
+            request.add_header(key, value)
+
+        try:
+
+            # If the input uid is in the correct format, but doesn't exist, will return an empty list
+            if json.load(urllib2.urlopen(request)):
+                pass
+            else:
+                is_valid = False
+
+        # If formatted improperly/etc, will return a 500 HTTP Error
+        except urllib2.HTTPError:
+            is_valid = False
+
+        if not is_valid:
+            logging.error("HOT OSM job uid {0} is invalid\n".format(osm_id))
+            break
+
+    return is_valid

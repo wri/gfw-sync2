@@ -71,28 +71,26 @@ def zip_tif(input_tif):
     return zip_path
 
 
-def dir_less_than_2gb(input_dir):
-    file_size_list = []
+def all_files_less_than_2gb(input_dir):
+    all_less_than_2gb = True
 
     for list_file in os.listdir(input_dir):
         file_size = os.path.getsize(os.path.join(input_dir, list_file))
-        file_size_list.append(file_size)
 
-    total_size = sum(file_size_list)
+        if file_size / 1e9 < 2.0:
+            pass
+        else:
+            all_less_than_2gb = False
+            break
 
-    if total_size / 1e9 < 2.0:
-        dir_is_smaller = True
-    else:
-        dir_is_smaller = False
-
-    return dir_is_smaller
+    return all_less_than_2gb
 
 
 def zip_file(input_fc, temp_zip_dir, download_output=None, archive_output=None, sr_is_local=False):
     logging.debug('Starting archive.zip_file')
 
     basepath, fname, base_fname = util.gen_paths_shp(input_fc)
-    temp_dir = util.create_temp_dir(os.path.dirname(temp_zip_dir))
+    temp_dir = util.create_temp_dir(temp_zip_dir)
 
     data_type = arcpy.Describe(input_fc).dataType
 
@@ -104,19 +102,18 @@ def zip_file(input_fc, temp_zip_dir, download_output=None, archive_output=None, 
         out_shp = os.path.join(temp_dir, fname)
 
         # If the dir with the shapefile is < 2GB, zip the shapefile
-        if dir_less_than_2gb(temp_dir):
+        if all_files_less_than_2gb(temp_dir):
             temp_zip = zip_shp(out_shp)
 
         # In case this process fails-- zip file is too large etc
         # Try it with GDB and allow > 2GB zip files
         else:
-            logging.debug('trying to zip GDB-----------------')
+            logging.debug('Some components of SHP > 2 GB; now exporting to GDB instead')
 
             # Delete failed shapefile conversion dir and start fresh
-            temp_dir = util.create_temp_dir(os.path.dirname(temp_zip_dir))
+            temp_dir = util.create_temp_dir(temp_zip_dir)
 
-            gdb_fc = util.fc_to_temp_gdb(input_fc, os.path.dirname(temp_zip_dir))
-            logging.debug('THIS IS THE GDB FC --------------' + gdb_fc)
+            gdb_fc = util.fc_to_temp_gdb(input_fc, temp_dir)
             gdb_dir = os.path.dirname(os.path.dirname(gdb_fc))
 
             temp_zip = zip_dir(gdb_dir)
@@ -146,6 +143,3 @@ def zip_file(input_fc, temp_zip_dir, download_output=None, archive_output=None, 
             dst = download_output
 
         shutil.copy(temp_zip, dst)
-
-    # Cleanup
-    shutil.rmtree(temp_dir)

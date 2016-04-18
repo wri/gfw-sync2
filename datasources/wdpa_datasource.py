@@ -7,16 +7,18 @@ from datasource import DataSource
 
 
 class WDPADatasource(DataSource):
+    """
+    WDPA datasource class. Inherits from DataSource
+    Used to download the source GDB, find the polygon FC, repair and simplify geometry
+    """
     def __init__(self, layerdef):
-        logging.debug('starting simple_datasource')
-
+        logging.debug('Starting simple_datasource')
         super(WDPADatasource, self).__init__(layerdef)
 
         self.layerdef = layerdef
 
     def download_wpda_to_gdb(self):
-
-        local_file = self.download_file(self.source, self.download_workspace)
+        local_file = self.download_file(self.data_source, self.download_workspace)
 
         self.unzip(local_file, self.download_workspace)
 
@@ -41,27 +43,31 @@ class WDPADatasource(DataSource):
             logging.error("Expected one polygon FC in the wdpa gdb. Found {0}. Exiting now.".format(len(poly_list)))
             sys.exit(1)
         else:
-            self.source = os.path.join(unzipped_gdb, poly_list[0])
+            self.data_source = os.path.join(unzipped_gdb, poly_list[0])
 
     def prep_source_fc(self):
         logging.debug("Starting repair_geometry")
-        arcpy.RepairGeometry_management(self.source, "DELETE_NULL")
+        arcpy.RepairGeometry_management(self.data_source, "DELETE_NULL")
 
-        simplified_fc = self.source + '_simplified'
+        simplified_fc = self.data_source + '_simplified'
 
         logging.debug("Starting simplify_polygon")
-        arcpy.SimplifyPolygon_cartography(self.source, simplified_fc, algorithm="POINT_REMOVE", tolerance="10 Meters",
-                                          minimum_area="0 Unknown", error_option="NO_CHECK",
+        arcpy.SimplifyPolygon_cartography(self.data_source, simplified_fc, algorithm="POINT_REMOVE",
+                                          tolerance="10 Meters", minimum_area="0 Unknown", error_option="NO_CHECK",
                                           collapsed_point_option="NO_KEEP")
 
-        self.source = simplified_fc
+        self.data_source = simplified_fc
 
     def get_layer(self):
+        """
+        Full process, called in layer_decision_tree.py. Downloads and preps the data
+        :return: Returns and updated layerdef, used in the layer.update() process in layer_decision_tree.py
+        """
 
         self.download_wpda_to_gdb()
 
         self.prep_source_fc()
 
-        self.layerdef['source'] = self.source
+        self.layerdef['source'] = self.data_source
 
         return self.layerdef

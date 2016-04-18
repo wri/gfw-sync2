@@ -22,7 +22,7 @@ class ImazonDataSource(DataSource):
     """
 
     def __init__(self, layerdef):
-        logging.debug('starting imazon_datasource')
+        logging.debug('Starting imazon_datasource')
 
         super(ImazonDataSource, self).__init__(layerdef)
 
@@ -58,9 +58,13 @@ class ImazonDataSource(DataSource):
             return False
 
     def list_sad_urls(self):
+        """
+        Scrape the page at the URL listed in the source field of the config table and return all links > 1/1/2014
+        :return: a list of recent urls
+        """
         mindate = datetime.datetime(2014, 1, 1)
 
-        html = urlopen(r'http://www.imazongeo.org.br/doc/downloads.php').read()
+        html = urlopen(self.layerdef['source']).read()
         bs = BeautifulSoup(html, 'lxml')
 
         # get list elements
@@ -75,10 +79,14 @@ class ImazonDataSource(DataSource):
         return [x for x in deforest_degrade_urls if self.recent_file(mindate, x)]
 
     def check_imazon_already_downloaded(self, url_list):
+        """
+        Compare the list of recent URLs to what we've already downloaded to see if there's new data available
+        :param url_list:
+        :return: a list of URLs to download
+        """
         to_download_list = []
 
         imazon_dir_list = os.listdir(self.imazon_archive_folder)
-
         imazon_zip_files = [x for x in imazon_dir_list if os.path.splitext(x)[1] == '.zip']
 
         for url in url_list:
@@ -90,6 +98,11 @@ class ImazonDataSource(DataSource):
         return to_download_list
 
     def download_sad_zipfiles(self, to_download_list):
+        """
+        Download zip file and copy to the archive directory
+        :param to_download_list:
+        :return:
+        """
         unzip_list = []
         
         for url in to_download_list:
@@ -109,6 +122,10 @@ class ImazonDataSource(DataSource):
         return unzip_list
 
     def download_new_source_data(self):
+        """
+        Find new data on SAD website, download and unzip
+        :return:
+        """
         sad_urls = self.list_sad_urls()
 
         to_download = self.check_imazon_already_downloaded(sad_urls)
@@ -161,13 +178,20 @@ class ImazonDataSource(DataSource):
         return imazon_date_text
 
     def update_layerspec_maxdate(self):
-
+        """
+        Update the date value in the layerspec table-- required for the time slider to work properly
+        :return:
+        """
         logging.debug("update layer spec max date")
         sql = "UPDATE layerspec set maxdate = (SELECT max(date) FROM imazon_sad) WHERE table_name='imazon_sad'"
         cartodb.cartodb_sql(sql, self.gfw_env)
 
     def clean_source_shps(self, shp_list):
-
+        """
+        After the data has been unzipped, repair geometry, remove fields, and add date and orig_fname
+        :param shp_list: list of cleaned shapefiles ready to be appended to final output
+        :return:
+        """
         cleaned_shp_list = []
 
         for shp in shp_list:
@@ -197,20 +221,17 @@ class ImazonDataSource(DataSource):
 
         return cleaned_shp_list
 
-    def build_all_imazon_layers(self):
-
-        source_list = self.download_new_source_data()
-
-        cleaned_source_list = self.clean_source_shps(source_list)
-
-        return cleaned_source_list
-
     def get_layer(self):
-
-        input_layers = self.build_all_imazon_layers()
+        """
+        Get layer method called by layer_decision_tree.py
+        Will perform the entire process of finding the new Imazon URLs, downloading, unzipping, and merging to one dataset
+        that can be used in our layer.update() workflow
+        :return: an updated layerdef pointing ot a local source
+        """
+        source_list = self.download_new_source_data()
+        input_layers = self.clean_source_shps(source_list)
 
         logging.info('merging datasets: {0}'.format(', '.join(input_layers)))
-
         output_dataset = os.path.join(self.download_workspace, 'imazon_sad.shp')
         logging.debug('output dataset: {0}\n'.format(output_dataset))
 

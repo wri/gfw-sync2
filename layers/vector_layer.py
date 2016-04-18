@@ -156,7 +156,7 @@ class VectorLayer(Layer):
             if os.path.basename(self.source) == download_basename:
                 local_coords_source = self.source
 
-            # If the name of the .shp is not correct (or it's not even a .shp; create it then zip
+            # If the name of the .shp is not correct (or it's not even a .shp; create it then zip)
             else:
                 local_coords_source = os.path.join(self.scratch_workspace, download_basename)
                 arcpy.CopyFeatures_management(self.source, local_coords_source)
@@ -204,6 +204,10 @@ class VectorLayer(Layer):
         if "gfwid" not in util.list_fields(self.source, self.gfw_env):
             arcpy.AddField_management(self.source, "gfwid", "TEXT", field_length=50, field_alias="GFW ID")
 
+        # Required to prevent calcuate field failures-- will likely fail to hash the !Shape! object if there are
+        # null geometries
+        arcpy.RepairGeometry_management(self.source, "DELETE_NULL")
+
         arcpy.CalculateField_management(in_table=self.source,
                                         field="gfwid",
                                         expression="md5(!Shape!.WKT)",
@@ -237,4 +241,4 @@ class VectorLayer(Layer):
 
         self.create_archive_and_download_zip()
 
-        self.sync_cartodb(self.source, self.cartodb_service_output, self.cartodb_merge_where_field)
+        self.sync_cartodb(self.esri_service_output, self.cartodb_service_output, self.cartodb_merge_where_field)
