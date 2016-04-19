@@ -11,14 +11,13 @@ from utilities import field_map
 
 
 class Layer(object):
-
+    """ A general Layer class. Used to pull information from the google sheet config table and pass it to
+    various layer update function
+    :param layerdef: A Layer definition dictionary
+    :return:
+    """
+    
     def __init__(self, layerdef):
-        """ A general Layer class. Used to pull information from the google sheet config table and pass it to
-        various layer update function
-        :param layerdef: A Layer definition dictionary
-        :return:
-        """
-
         logging.debug('starting layer class')
 
         self._name = None
