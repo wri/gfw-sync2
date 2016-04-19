@@ -13,7 +13,8 @@ from utilities import field_map
 class Layer(object):
 
     def __init__(self, layerdef):
-        """ A general Layer class
+        """ A general Layer class. Used to pull information from the google sheet config table and pass it to
+        various layer update function
         :param layerdef: A Layer definition dictionary
         :return:
         """
@@ -132,6 +133,13 @@ class Layer(object):
 
     @esri_merge_where_field.setter
     def esri_merge_where_field(self, m):
+        """
+        Ultimately used to build a unique where clause from the source data. If specified, any values in this field
+        in the source dataset (i.e. the country field for a MEX layer) will be used to delete from the global output
+        (DELETE FROM gfw_mining WHERE country = 'MEX') and then the source will be appended
+        :param m: the merge feild
+        :return:
+        """
         if m:
             if m not in util.list_fields(self.source, self.gfw_env):
                 logging.debug("Where clause field {0} specified for esri_merge_where_field but "
@@ -154,6 +162,13 @@ class Layer(object):
 
     @cartodb_merge_where_field.setter
     def cartodb_merge_where_field(self, c):
+        """
+        Ultimately used to build a unique where clause from the source data. If specified, any values in this field
+        in the source dataset (i.e. the country field for a MEX layer) will be used to delete from the global output
+        (DELETE FROM gfw_mining WHERE country = 'MEX') and then the source will be appended
+        :param m: the merge feild
+        :return:
+        """
         if c:
             if c not in util.list_fields(self.source, self.gfw_env):
                 logging.debug("Where clause field {0} specified for cartodb_merge_where_field but field not "
@@ -176,6 +191,12 @@ class Layer(object):
 
     @delete_features_input_where_clause.setter
     def delete_features_input_where_clause(self, f):
+        """
+        Used to filter the input dataset. If this exists, the source will be copied locally, then use this where
+        clause to delete records before integrating with the rest of the update process
+        :param f: the where clause
+        :return:
+        """
         if f:
             if "'" not in f and '"' not in f:
                 logging.debug("delete_features_input_where_clause {0} doesn't have quoted strings. "
@@ -213,9 +234,13 @@ class Layer(object):
 
     @field_map.setter
     def field_map(self, m):
+        """
+        Validates a field map if it exists
+        :param m: D:\path\to\fieldmap.ini\{keyname}
+        :return:
+        """
 
         if m:
-
             # Insert this so that global_vector layers can pass validation checks
             # These layers may have fieldmaps associated, but they are really for the
             # input country vector datasets to use in meeting the schema of the global layers
@@ -237,7 +262,11 @@ class Layer(object):
 
     @source.setter
     def source(self, s):
-
+        """
+        Validates source; can apply a fieldmap to an FC, also will copy locally if an external dataset
+        :param s:
+        :return:
+        """
         if not arcpy.Exists(s):
             logging.error("Cannot find source {0!s} Exiting".format(s))
             sys.exit(1)
@@ -366,6 +395,11 @@ class Layer(object):
 
     @add_country_value.setter
     def add_country_value(self, c):
+        """
+        If this is present, will be added to the feature class with the country field
+        :param c: ISO3 country code
+        :return:
+        """
         if not c:
             c = None
 
@@ -379,23 +413,11 @@ class Layer(object):
 
         self._add_country_value = c
 
-    def _archive(self, input_fc, download_output, archive_output, sr_is_local):
+    def _archive(self, input_fc, download_output, archive_output, sr_is_local=False):
         logging.debug('starting layer._archive')
         archive.zip_file(input_fc, self.scratch_workspace, download_output, archive_output, sr_is_local)
 
         return
-
-    @staticmethod
-    def is_wgs_84(input_dataset):
-        logging.debug('starting layer.isWGS84')
-        sr_as_string = arcpy.Describe(input_dataset).spatialReference.exporttostring()
-
-        first_element = sr_as_string.split(',')[0]
-
-        if 'GEOGCS' in first_element and 'GCS_WGS_1984' in first_element:
-            return True
-        else:
-            return False
 
     def cleanup(self):
         shutil.rmtree(self.scratch_workspace)

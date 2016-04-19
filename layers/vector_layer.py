@@ -32,15 +32,98 @@ class VectorLayer(Layer):
     @sde_workspace.setter
     def sde_workspace(self, s):
         logging.debug('SDE workspace: ' + s)
-        if not s:
-            self._sde_workspace = ""
+        if arcpy.Exists(s) and os.path.splitext(s)[1] == '.sde':
+            self._sde_workspace = s
         else:
-            if arcpy.Exists(s) and os.path.splitext(s)[1] == '.sde':
-                self._sde_workspace = s
-            else:
-                logging.debug("sde_workspace path is invalid")
+            logging.debug("sde_workspace path is invalid")
 
-    def append_to_esri_source(self, input_fc, esri_output_fc, input_where_field, fms=None):
+    def archive_source(self):
+        """
+        Creates an archive of the input data (listed in the config table under 'source' before the process begins
+        :return:
+        """
+        logging.info('Starting vector_layer.archive source for {0}'.format(self.name))
+        archive_dir = os.path.dirname(self.archive_output)
+        archive_src_dir = os.path.join(archive_dir, 'src')
+
+        if not os.path.exists(archive_src_dir):
+            os.mkdir(archive_src_dir)
+
+        src_archive_output = os.path.join(archive_src_dir, os.path.basename(self.archive_output))
+        self._archive(self.source, None, src_archive_output)
+
+    def filter_source_dataset(self, input_wc):
+        """
+        If the config table specifies a where_clause to apply as a filter to the source dataset, copy the source
+        locally and then delete these rows. This copied dataset becomes the new source
+        :param input_wc:
+        :return:
+        """
+        if input_wc:
+            logging.info('Starting vector_layer.filter_source_dataset for {0} with wc {1}'.format(self.name, input_wc))
+
+            # If we are going to filter the source feature class, copy to a new location before deleting records
+            # from it
+            out_filename = os.path.splitext(os.path.basename(self.source))[0] + '.shp'
+            output_fc = os.path.join(self.scratch_workspace, out_filename)
+            arcpy.CopyFeatures_management(self.source, output_fc)
+
+            # Delete records from this copied FC based on the input where clause
+            arcpy.MakeFeatureLayer_management(output_fc, "input_fl", input_wc)
+            arcpy.DeleteRows_management("input_fl")
+            arcpy.Delete_management("input_fl")
+
+            # Set the source to this new fc
+            self.source = output_fc
+
+        else:
+            pass
+
+    def update_gfwid(self):
+        """
+        For each row, take the hash of the well known text representation of the geometry
+         This will be used in the API to cache analysis results for geometries previously analyzed
+        :return:
+        """
+        logging.debug('starting vector_layer.update_gfwid for {0}'.format(self.name))
+
+        if "gfwid" not in util.list_fields(self.source, self.gfw_env):
+            arcpy.AddField_management(self.source, "gfwid", "TEXT", field_length=50, field_alias="GFW ID")
+
+        # Required to prevent calcuate field failures-- will likely fail to hash the !Shape! object if there are
+        # null geometries
+        logging.debug('starting repair geometry')
+        arcpy.RepairGeometry_management(self.source, "DELETE_NULL")
+
+        logging.debug('starting to calculate gfwid')
+        arcpy.CalculateField_management(self.source, "gfwid", "md5(!Shape!.WKT)", "PYTHON_9.3",
+                                        code_block="import hashlib\n"
+                                                   "def md5(shape):\n"
+                                                   "   hash = hashlib.md5()\n"
+                                                   "   hash.update(shape)\n"
+                                                   "   return hash.hexdigest()"
+                                        )
+
+    def add_country_code(self):
+        """
+        If there's a value for sell.add_country_value, add a country field and populate it
+        :return:
+        """
+        if self.add_country_value:
+            logging.info('Starting vector_layer.add_country_value for {0}, '
+                         'country val {1}'.format(self.name, self.add_country_value))
+            util.add_field_and_calculate(self.source, "country", 'TEXT', 3, self.add_country_value, self.gfw_env)
+
+    def append_to_esri_source(self, input_fc, esri_output_fc, input_where_field):
+        """
+        Append to the esri source FC, including projecting to output coord system, creating a versioned FC of the
+        output in SDE, deleting from that versioned FC based on a where_clause, appending the new data, and then
+        posting that version
+        :param input_fc: the input source data
+        :param esri_output_fc: the output in SDE
+        :param input_where_field: a field to build the where_clause
+        :return:
+        """
 
         logging.info('Starting vector_layer.append_to_esri_source for {0}'.format(self.name))
 
@@ -71,14 +154,13 @@ class VectorLayer(Layer):
 
         version_name = self.name + "_" + str(int(time.time()))
         arcpy.CreateVersion_management(self.sde_workspace, "sde.DEFAULT", version_name, "PRIVATE")
-
         arcpy.ChangeVersion_management("esri_service_output_fl", 'TRANSACTIONAL', 'gfw.' + version_name, '')
 
         # Build where clause
-        esri_where_clause = self.build_update_where_clause(input_fc, input_where_field)
+        esri_where_clause = util.build_update_where_clause(input_fc, input_where_field)
 
         if esri_where_clause:
-            logging.debug('Deleting features from esri_service_output based on input_where_field. '
+            logging.debug('Deleting features from esri_service_output feature layer based on input_where_field. '
                           'SQL statement: {0}'.format(esri_where_clause))
 
             arcpy.SelectLayerByAttribute_management("esri_service_output_fl", "NEW_SELECTION", esri_where_clause)
@@ -87,13 +169,15 @@ class VectorLayer(Layer):
             logging.debug('No where clause for esri_service_output found; deleting all features before '
                           'appending from source')
 
+        # If there's a where_clause, this will deleted selected rows
+        # Otherwise, will truncate the table
         arcpy.DeleteRows_management("esri_service_output_fl")
 
         esri_output_pre_append_count = int(arcpy.GetCount_management("esri_service_output_fl").getOutput(0))
         input_feature_count = int(arcpy.GetCount_management(fc_to_append).getOutput(0))
 
         logging.debug('Starting to append to esri_service_output')
-        arcpy.Append_management(fc_to_append, "esri_service_output_fl", "NO_TEST", fms, "")
+        arcpy.Append_management(fc_to_append, "esri_service_output_fl", "NO_TEST")
 
         arcpy.ReconcileVersions_management(input_database=self.sde_workspace, reconcile_mode="ALL_VERSIONS",
                                            target_version="sde.DEFAULT", edit_versions='gfw.' + version_name,
@@ -101,6 +185,7 @@ class VectorLayer(Layer):
                                            conflict_definition="BY_OBJECT", conflict_resolution="FAVOR_TARGET_VERSION",
                                            with_post="POST", with_delete="KEEP_VERSION", out_log="")
 
+        # For some reason need to run DeleteVersion_management here, will have errors if with_delete is used above
         arcpy.Delete_management("esri_service_output_fl")
         arcpy.DeleteVersion_management(self.sde_workspace, 'gfw.' + version_name)
 
@@ -109,48 +194,23 @@ class VectorLayer(Layer):
         if esri_output_pre_append_count + input_feature_count == post_append_count:
             logging.debug('Append successful based on sum of input features')
         else:
-            logging.debug('esri_output_pre_append_count: {0}'.format(esri_output_pre_append_count))
-            logging.debug('input_feature_count: {0}'.format(input_feature_count))
-            logging.debug('post_append_count: {0}'.format(post_append_count))
-            logging.error('Append failed, sum of input features does not match. Exiting')
+            logging.debug('esri_output_pre_append_count: {0}\input_feature_count: {1}\npost_append_count{2}\n'
+                          'Append failed, sum of input features does not match. '
+                          'Exiting'.format(esri_output_pre_append_count, input_feature_count, post_append_count))
             sys.exit(1)
 
         return
 
-    @staticmethod
-    def build_update_where_clause(in_fc, input_field):
-
-        if input_field:
-            # Get unique values in specified where_clause field
-            unique_values = list(set([x[0] for x in arcpy.da.SearchCursor(in_fc, [input_field])]))
-
-            unique_values_sql = "'" + "', '".join(unique_values) + "'"
-
-            where_clause = """{0} IN ({1})""".format(input_field, unique_values_sql)
-
-        else:
-            where_clause = None
-
-        return where_clause
-
-    def archive_source(self):
-        logging.info('Starting vector_layer.archive source for {0}'.format(self.name))
-        archive_dir = os.path.dirname(self.archive_output)
-        archive_src_dir = os.path.join(archive_dir, 'src')
-
-        if not os.path.exists(archive_src_dir):
-            os.mkdir(archive_src_dir)
-
-        print self.source
-
-        src_archive_output = os.path.join(archive_src_dir, os.path.basename(self.archive_output))
-        self._archive(self.source, None, src_archive_output, False)
-
     def create_archive_and_download_zip(self):
+        """
+        Check if the source is wgs84; if not, create a local projection download zip
+        Project to wgs84, and create a download zip and a timestamped archive zip
+        :return:
+        """
         logging.info('Starting vector_layer.create_archive_and_download_zip for {0}'.format(self.name))
 
         # if source is in local projection, create separate download
-        if not self.is_wgs_84(self.source):
+        if not util.is_wgs_84(self.source):
 
             download_basename = self.name + '.shp'
             if os.path.basename(self.source) == download_basename:
@@ -165,69 +225,38 @@ class VectorLayer(Layer):
             self._archive(local_coords_source, self.download_output, None, True)
 
         # Create an archive and a download file for final dataset (esri_service_output)
-        self._archive(self.esri_service_output, self.download_output, self.archive_output, False)
-
-    def add_country_code(self):
-        if self.add_country_value:
-            logging.info('Starting vector_layer.add_country_value for {0}, '
-                         'country val {1}'.format(self.name, self._add_country_value))
-            util.add_field_and_calculate(self.source, "country", 'TEXT', 3, self.add_country_value, self.gfw_env)
-
-    def filter_source_dataset(self, input_wc):
-
-        if input_wc:
-            logging.info('Starting vector_layer.filter_source_dataset for {0} with wc {1}'.format(self.name, input_wc))
-
-            # If we are going to filter the source feature class, copy to a new location before deleting records
-            # from it
-            out_filename = os.path.splitext(os.path.basename(self.source))[0] + '.shp'
-            output_fc = os.path.join(self.scratch_workspace, out_filename)
-            arcpy.CopyFeatures_management(self.source, output_fc)
-
-            # Delete records from this copied FC based on the input where clause
-            arcpy.MakeFeatureLayer_management(output_fc, "input_fl", input_wc)
-            arcpy.DeleteRows_management("input_fl")
-            arcpy.Delete_management("input_fl")
-
-            # Set the source to this new fc
-            self.source = output_fc
-
-        else:
-            pass
-
-    def update(self):
-        self._update()
-
-    def update_gfwid(self):
-        logging.debug('starting vector_layer.update_gfwid for {0}'.format(self.name))
-
-        if "gfwid" not in util.list_fields(self.source, self.gfw_env):
-            arcpy.AddField_management(self.source, "gfwid", "TEXT", field_length=50, field_alias="GFW ID")
-
-        # Required to prevent calcuate field failures-- will likely fail to hash the !Shape! object if there are
-        # null geometries
-        arcpy.RepairGeometry_management(self.source, "DELETE_NULL")
-
-        arcpy.CalculateField_management(in_table=self.source,
-                                        field="gfwid",
-                                        expression="md5(!Shape!.WKT)",
-                                        expression_type="PYTHON_9.3",
-                                        code_block="import hashlib\n"
-                                                   "def md5(shape):\n"
-                                                   "   hash = hashlib.md5()\n"
-                                                   "   hash.update(shape)\n"
-                                                   "   return hash.hexdigest()")
+        self._archive(self.esri_service_output, self.download_output, self.archive_output)
 
     def sync_cartodb(self, input_fc, cartodb_output_fc, input_where_field):
+        """
+        Take the esri source dataset and append it to cartodb. If an input_where_field specified,
+        use that to build a DELETE where clause to run against the cartoDB table before appending
+        :param input_fc: the source dataset
+        :param cartodb_output_fc: the output table in cartoDB
+        :param input_where_field: a field to build a where clause from
+        :return:
+        """
 
         logging.info('Starting vector_layer.sync_cartodb for {0}. Output {1}, '
                      'wc {2}'.format(os.path.basename(input_fc), cartodb_output_fc, input_where_field))
 
-        cartodb_where_clause = self.build_update_where_clause(input_fc, input_where_field)
+        cartodb_where_clause = util.build_update_where_clause(input_fc, input_where_field)
 
         cartodb.cartodb_sync(input_fc, cartodb_output_fc, cartodb_where_clause, self.gfw_env, self.scratch_workspace)
 
+    def update(self):
+        """
+        If a layer is type VectorLayer, this will be called by gfw-sync.py
+        Otherwise, we'll make the _update() available to all objects that inherit from VectorLayer
+        :return:
+        """
+        self._update()
+
     def _update(self):
+        """
+        Contains all relevant update functions for a vector layer
+        :return:
+        """
 
         self.archive_source()
 

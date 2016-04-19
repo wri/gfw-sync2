@@ -14,23 +14,25 @@ class GoogleSheet(object):
 
     def __init__(self, gfw_env):
 
-        self.spreadsheet_file = r'D:\scripts\gfw-sync2\tokens\spreadsheet.json'
-        self.spreadsheet_key = r'1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI'
         self.sheet_name = gfw_env
+        self.wks = self._open_spreadsheet()
 
     def _open_spreadsheet(self):
         """
-        Used to open the spreadsheet for read/update
+        Open the spreadsheet for read/update
         :return: a gspread wks object that can be used to edit/update a given sheet
         """
 
+        spreadsheet_file = r'D:\scripts\gfw-sync2\tokens\spreadsheet.json'
+        spreadsheet_key = r'1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI'
+
         # Updated for oauth2client
         # http://gspread.readthedocs.org/en/latest/oauth2.html
-        credentials = ServiceAccountCredentials.from_json_keyfile_name(self.spreadsheet_file,
+        credentials = ServiceAccountCredentials.from_json_keyfile_name(spreadsheet_file,
                                                                        ['https://spreadsheets.google.com/feeds'])
 
         gc = gspread.authorize(credentials)
-        wks = gc.open_by_key(self.spreadsheet_key).worksheet(self.sheet_name)
+        wks = gc.open_by_key(spreadsheet_key).worksheet(self.sheet_name)
 
         return wks
 
@@ -41,9 +43,7 @@ class GoogleSheet(object):
         """
 
         sheet_as_dict = {}
-
-        wks = self._open_spreadsheet()
-        gdoc_as_lists = wks.get_all_values()
+        gdoc_as_lists = self.wks.get_all_values()
 
         # Pull the header row from the Google doc
         header_row = gdoc_as_lists[0]
@@ -87,22 +87,25 @@ class GoogleSheet(object):
             sys.exit(1)
 
     def update_value(self, layername, colname, update_value):
-        """ Basic
-        :param layername:
-        :param colname:
-        :param update_value:
-        :return:
+        """
+        Update a value in the spreadsheet given the layername and column name
+        :param layername: the layer name we're updating-- matches tech_title in the first column
+        :param colname: the column name to update
+        :param update_value: the value to set
         """
 
-        wks = self._open_spreadsheet()
-        gdoc_as_lists = wks.get_all_values()
+        gdoc_as_lists = self.wks.get_all_values()
 
         row_id = [x[0] for x in gdoc_as_lists].index(layername) + 1
         col_id = gdoc_as_lists[0].index(colname) + 1
 
-        wks.update_cell(row_id, col_id, update_value)
+        self.wks.update_cell(row_id, col_id, update_value)
 
     def update_gs_timestamp(self, layername):
+        """
+        Update the 'last_updated' column for the layer specified with the current date
+        :param layername: the row to update (based on tech_title column)
+        """
         self.update_value(layername, 'last_updated', time.strftime("%m/%d/%Y"))
 
         # If the layer is part of a global_layer, update its last_updated timestamp as well

@@ -13,11 +13,15 @@ import settings
 
 
 def run_ogr2ogr(cmd):
+    """
+    Function to run ogr2ogr in a subprocess and monitor the STDOUT. If there's an error, log it and exit
+    :param cmd: a list of commands to exeecute
+    :return:
+    """
 
     logging.debug('Running OGR:\n' + ' '.join(cmd))
 
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
     subprocess_list = []
 
     # ogr2ogr doesn't properly fail on an error, just displays error messages
@@ -36,9 +40,20 @@ def run_ogr2ogr(cmd):
 
 
 def generate_where_clause(start_id, end_id, transaction_row_limit, where_field_name):
+    """
+    Build a series of where clauses based on a start_id, end_id, a number of ids per where_clause, and the field_name
+    Also sleeps for a minute every time the current_max_id is divisible by 20,000. Important to give the API a break
+    :param start_id: the first ID to append, usually 0
+    :param end_id: the last ID in the dataset
+    :param transaction_row_limit: number of rows for each where_clause to encompases
+    :param where_field_name: the field name of the where_field
+    :return: where_clauses for all ids from start_id to end_id in the appropriate chunks
+    """
 
+    # Set the max to the start_id
     current_max_id = start_id
 
+    # Iterate until the current max is > the last id of interest
     while current_max_id <= end_id:
         yield '{0} >= {1} and {0} < {2}'.format(where_field_name, current_max_id,
                                                 current_max_id + transaction_row_limit)
@@ -46,93 +61,142 @@ def generate_where_clause(start_id, end_id, transaction_row_limit, where_field_n
         # Sleep for a minute every time we hit an increment of 20,000
         # Important to give the cartodb API time to recover
         if not current_max_id % 20000:
-            print 'Sleepinng for a minute'
+            print 'Sleeping for a minute'
             time.sleep(60)
 
+        # Increment the current_max_id based on the rows we just processed
         current_max_id += transaction_row_limit
 
 
-def cartodb_sql(sql, gfw_env, raise_error=True):
+def cartodb_sql(sql, gfw_env):
+    """
+    Execute a SQL statement using the API
+    :param sql: a SQL statment
+    :param gfw_env: the gfw_env-- used to grab the correct API token
+    :return:
+    """
 
     logging.debug(sql)
     key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
+    api_url = settings.get_settings(gfw_env)["cartodb"]["sql_api"]
 
-    result = urllib.urlopen("{0!s}?api_key={1!s}&q={2!s}".format(settings.get_settings(gfw_env)["cartodb"]["sql_api"],
-                                                                 key, sql))
+    result = urllib.urlopen("{0!s}?api_key={1!s}&q={2!s}".format(api_url, key, sql))
     json_result = json.loads(result.readlines()[0], object_pairs_hook=OrderedDict)
 
-    if raise_error and "error" in json_result.keys():
+    if "error" in json_result.keys():
         raise SyntaxError(json_result['error'])
 
     return json_result
 
 
-def is_shp(file_name):
-    if os.path.splitext(file_name)[1] == '.shp':
-        return True
-    else:
-        return False
-
-
 def cartodb_create(file_name, out_cartodb_name, gfw_env):
+    """
+    Create a new dataset/table on cartodb
+    :param file_name: source esri FC
+    :param out_cartodb_name: name of output table
+    :param gfw_env: the gfw-env-- required to pick the API key
+    :return:
+    """
     logging.debug("upload data from {0} to staging table {1}".format(file_name, out_cartodb_name))
 
     key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
     account_name = settings.get_settings(gfw_env)['cartodb']['token'].split('@')[0]
 
+    # Help: http://www.gdal.org/ogr2ogr.html
+    # The -dim 2 option ensures that only two dimensional data is created; no Z or M values
     cmd = ['ogr2ogr', '--config', 'CARTODB_API_KEY', key, '-skipfailures', '-t_srs', 'EPSG:4326',
-           '-f', 'CartoDB', '-nln', out_cartodb_name, 'CartoDB:{0}'.format(account_name)]
+           '-f', 'CartoDB', '-nln', out_cartodb_name, '-dim', '2', 'CartoDB:{0}'.format(account_name)]
 
-    if is_shp(file_name):
-        cmd += [file_name]
-    else:
-        cmd += [os.path.dirname(file_name), os.path.basename(file_name)]
+    cmd = add_fc_to_ogr2ogr_cmd(file_name, cmd)
 
+    # Count dataset rows and compare them to the append limit we're using for each API transaction
     row_count = int(arcpy.GetCount_management(file_name).getOutput(0))
     row_append_limit = 500
-    temp_id_field = util.create_temp_id_field(file_name, gfw_env)
 
-    # Had issues with cartoDB server timing out
+    # If the row count is > row_append limit, we'll need to split up the process of moving the esri FC to cartoDB
     if row_count > row_append_limit:
 
-        cmd.insert(1, '-where')
-        cmd.insert(2, '{1} >= 0 and {1} < {0}'.format(row_append_limit, temp_id_field))
+        # Create a temp ID field (set equal to OBJECTID) that we'll use to manage the process of incrementally
+        # uploading data to the cartoDB server
+        temp_id_field = util.create_temp_id_field(file_name, gfw_env)
+
+        where_clause = '{1} >= 0 and {1} < {0}'.format(row_append_limit, temp_id_field)
+        cmd = add_where_clause_to_ogr2ogr_cmd(where_clause, cmd)
 
         # Run the initial command to create the fc, using FIDs 0 - rowAppendLimit
         run_ogr2ogr(cmd)
 
+        # Build all where_clauses and pass them to cartodb_append
         for wc in generate_where_clause(row_append_limit, row_count, row_append_limit, temp_id_field):
-
-            # Build all where_clauses and pass them to cartodb_append
             cartodb_append(file_name, out_cartodb_name, gfw_env, wc)
 
+    # If there are few enough rows and we don't need a set of where_clauses, upload the entire dataset at once
     else:
         run_ogr2ogr(cmd)
 
 
+def add_fc_to_ogr2ogr_cmd(in_fc, cmd):
+    """
+    Add FC to ogr2ogr, handling issue of different format for .shp vs GDB FC
+    :param in_fc: path to esri FC (shape or GDB)
+    :param cmd: current list of CMD parameters
+    :return: updated cmd list of parameters
+    """
+    if os.path.splitext(in_fc)[1] == '.shp':
+        cmd += [in_fc]
+    else:
+        cmd += [os.path.dirname(in_fc), os.path.basename(in_fc)]
+
+    return cmd
+
+
+def add_where_clause_to_ogr2ogr_cmd(in_where_clause, cmd):
+    """
+    Add where clause to cmd list of parameters if it exists
+    :param in_where_clause: where clause
+    :param cmd: current list of CMD parameters
+    :return: updated cmd list of parameters
+    """
+    if in_where_clause:
+        cmd.insert(1, '-where')
+        cmd.insert(2, in_where_clause)
+
+    return cmd
+
+
 def cartodb_append(file_name, out_cartodb_name, gfw_env, where_clause=None):
+    """
+    Append a local FC to a cartoDB dataset
+    :param file_name: path to local esri FC
+    :param out_cartodb_name: cartoDB table
+    :param gfw_env: gfw_env
+    :param where_clause: where_clause to apply to the dataset
+    :return:
+    """
     key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
     account_name = settings.get_settings(gfw_env)['cartodb']['token'].split('@')[0]
 
-    cmd = ['ogr2ogr', '--config', 'CARTODB_API_KEY', key, '-append', '-skipfailures', '-t_srs',
-           'EPSG:4326', '-f', 'CartoDB', '-nln', out_cartodb_name, 'CartoDB:{0}'.format(account_name)]
+    # Help: http://www.gdal.org/ogr2ogr.html
+    # The -dim 2 option ensures that only two dimensional data is created; no Z or M values
+    cmd = ['ogr2ogr', '--config', 'CARTODB_API_KEY', key, '-append', '-skipfailures', '-t_srs', 'EPSG:4326',
+           '-f', 'CartoDB',  '-nln', out_cartodb_name, '-dim', '2', 'CartoDB:{0}'.format(account_name)]
 
-    if is_shp(file_name):
-        cmd += [file_name]
-    else:
-        cmd += [os.path.dirname(file_name), os.path.basename(file_name)]
-
-    if where_clause:
-        cmd.insert(1, '-where')
-        cmd.insert(2, where_clause)
+    cmd = add_fc_to_ogr2ogr_cmd(file_name, cmd)
+    cmd = add_where_clause_to_ogr2ogr_cmd(where_clause, cmd)
 
     run_ogr2ogr(cmd)
 
 
 def cartodb_make_valid_geom(table_name, gfw_env):
+    """
+    Iterate over all features of table_name using the where_clause and run the SQL statement below
+    :param table_name:
+    :param gfw_env:
+    :return:
+    """
     logging.debug("repair geometry")
 
-    row_count = cartodb_row_count(table_name)
+    row_count = cartodb_row_count(table_name, gfw_env)
     row_wc_limit = 1000
 
     for wc in generate_where_clause(0, row_count, row_wc_limit, 'cartodb_id'):
@@ -143,6 +207,12 @@ def cartodb_make_valid_geom(table_name, gfw_env):
 
 
 def cartodb_check_exists(table_name, gfw_env):
+    """
+    Check if the table exists by executing a LIMIT 1 query against it
+    :param table_name: cartoDB table name
+    :param gfw_env: gfw env
+    :return: True | False
+    """
     sql = "SELECT * FROM {0} LIMIT 1".format(table_name)
 
     try:
@@ -155,21 +225,40 @@ def cartodb_check_exists(table_name, gfw_env):
 
 
 def get_column_order(table_name, gfw_env):
+    """
+    Get column order-- used to list fields for cartoDB datasets
+    :param table_name: cartoDB table
+    :param gfw_env: gfw env
+    :return: field list
+    """
     sql = 'SELECT * FROM {0} LIMIT 1'.format(table_name)
 
     return cartodb_sql(sql, gfw_env)['fields'].keys()
 
 
 def cartodb_row_count(table_name, gfw_env):
+    """
+    Get row count
+    :param table_name: cartoDB table
+    :param gfw_env: gfw env
+    :return: int value of row count
+    """
     sql = "SELECT COUNT(*) FROM {0}".format(table_name)
     row_count = int(cartodb_sql(sql, gfw_env)['rows'][0]['count'])
 
-    print 'THIS IS THE ROW COUNT in CARTODB --------------- {0}'.format(row_count)
+    print 'CartoDB row count: {0}'.format(row_count)
 
     return row_count
 
 
 def cartodb_push_to_production(staging_table, production_table, gfw_env):
+    """
+    Push temporary cartoDB staging table to production by selecting rows from it and inserting into production table
+    :param staging_table: staging table
+    :param production_table: prod table
+    :param gfw_env: gfw env
+    :return:
+    """
     logging.debug("push staging to production table: {0}".format(production_table))
 
     row_count = cartodb_row_count(staging_table, gfw_env)
@@ -190,6 +279,13 @@ def cartodb_push_to_production(staging_table, production_table, gfw_env):
 
 
 def cartodb_delete_where_clause_or_truncate_prod_table(in_prod_table, in_wc, in_gfw_env):
+    """
+    Delete features from cartoDB prod table, using a where clause if it exists
+    :param in_prod_table: prod_table
+    :param in_wc: where clause
+    :param in_gfw_env: gfw env
+    :return:
+    """
     logging.debug("delete or truncate rows from production table")
 
     if in_wc:
@@ -201,13 +297,30 @@ def cartodb_delete_where_clause_or_truncate_prod_table(in_prod_table, in_wc, in_
 
 
 def delete_staging_table_if_exists(staging_table_name, in_gfw_env):
+    """
+    Delete staging table if it exists
+    :param staging_table_name: table name
+    :param in_gfw_env: gfw env
+    :return:
+    """
     logging.debug("delete staging if it exists")
 
-    sql = 'DROP TABLE IF EXISTS {0!s} CASCADE'.format(staging_table_name)
+    sql = 'DROP TABLE IF EXISTS {0} CASCADE'.format(staging_table_name)
     cartodb_sql(sql, in_gfw_env)
 
 
 def cartodb_sync(shp, production_table, where_clause, gfw_env, scratch_workspace):
+    """
+    Function called by VectorLayer and other Layer objects as part of layer.update()
+    Will carry out the sync process from start to finish-- pushing the shp to a staging table on cartodb, then
+    to production on cartodb, using a where_clause if included
+    :param shp: input feature class (can be GDB FC or SDE too)
+    :param production_table: final output table in cartoDB
+    :param where_clause: where_clause to use when adding/deleting from final prod table
+    :param gfw_env: gfw env
+    :param scratch_workspace: scratch workspace
+    :return:
+    """
 
     # ogr2ogr can't use an SDE fc as an input; must export to GDB
     if '@localhost).sde' in shp:

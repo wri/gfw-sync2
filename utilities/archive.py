@@ -13,12 +13,23 @@ import logging
 
 
 def unzip(source_filename, dest_dir):
+    """
+    Extract a zip file to the target dir
+    :param source_filename: .zip file
+    :param dest_dir: dir to extract output
+    :return:
+    """
     with zipfile.ZipFile(source_filename) as zf:
         zf.extractall(dest_dir)
 
 
 def add_to_zip(fname, zf):
-
+    """
+    Will grab all files matching fname except those with .lock and .zip in a dir
+    :param fname: fname to match
+    :param zf: zipfile object we've alrady created
+    :return:
+    """
     bname = os.path.basename(fname)
     ending = os.path.splitext(bname)[1]
     if not ending == ".lock" and not ending == ".zip":
@@ -28,6 +39,10 @@ def add_to_zip(fname, zf):
 
 
 def zip_shp(input_shp):
+    """
+    :param input_shp: path to a shapefile
+    :return: zipped shapefile
+    """
     basepath, fname, base_fname = util.gen_paths_shp(input_shp)
     zip_path = os.path.join(basepath, base_fname + '.zip')
 
@@ -49,6 +64,10 @@ def zip_shp(input_shp):
 
 
 def zip_dir(input_folder):
+    """
+    :param input_folder: path to a dir
+    :return: zipped dir
+    """
     output_dir = os.path.dirname(input_folder)
     output_name = os.path.basename(input_folder)
 
@@ -61,6 +80,10 @@ def zip_dir(input_folder):
 
 
 def zip_tif(input_tif):
+    """
+    :param input_tif: path to a tif
+    :return: zipped tif
+    """
     basepath, fname, base_fname = util.gen_paths_shp(input_tif)
     zip_path = os.path.join(basepath, base_fname + '.zip')
 
@@ -72,6 +95,11 @@ def zip_tif(input_tif):
 
 
 def all_files_less_than_2gb(input_dir):
+    """
+    Checks a dir to see if all files are < 2.0 GB
+    :param input_dir: dir to check
+    :return: Boolean if all files in dir < 2.0 GB
+    """
     all_less_than_2gb = True
 
     for list_file in os.listdir(input_dir):
@@ -87,6 +115,14 @@ def all_files_less_than_2gb(input_dir):
 
 
 def zip_file(input_fc, temp_zip_dir, download_output=None, archive_output=None, sr_is_local=False):
+    """
+    :param input_fc: feature class/raster to zip
+    :param temp_zip_dir: output zip dir
+    :param download_output: path to the download output, if required
+    :param archive_output: path to the archive output, if requried
+    :param sr_is_local: if the spatial reference is local, will create a _local.zip in download_output
+    :return: None
+    """
     logging.debug('Starting archive.zip_file')
 
     basepath, fname, base_fname = util.gen_paths_shp(input_fc)
@@ -96,21 +132,19 @@ def zip_file(input_fc, temp_zip_dir, download_output=None, archive_output=None, 
 
     if data_type in ['FeatureClass', 'ShapeFile']:
 
+        # Try to create a shapefile first, knowing that the data may be too large and may have to use an FGDB instead
         logging.debug('trying to zip SHP-----------------')
         arcpy.FeatureClassToShapefile_conversion(input_fc, temp_dir)
-
         out_shp = os.path.join(temp_dir, fname)
 
         # If the dir with the shapefile is < 2GB, zip the shapefile
         if all_files_less_than_2gb(temp_dir):
             temp_zip = zip_shp(out_shp)
 
-        # In case this process fails-- zip file is too large etc
-        # Try it with GDB and allow > 2GB zip files
         else:
             logging.debug('Some components of SHP > 2 GB; now exporting to GDB instead')
 
-            # Delete failed shapefile conversion dir and start fresh
+            # Delete shapefile conversion dir and start fresh
             temp_dir = util.create_temp_dir(temp_zip_dir)
 
             gdb_fc = util.fc_to_temp_gdb(input_fc, temp_dir)
@@ -125,6 +159,7 @@ def zip_file(input_fc, temp_zip_dir, download_output=None, archive_output=None, 
         logging.error('Unknown data_type: {0}. Exiting the program'.format(data_type))
         sys.exit(1)
 
+    # Define output path for archive zip file and copy temp zip there
     if archive_output:
         logging.debug('Archiving {0} in {1}'.format(base_fname, archive_output))
 
@@ -134,6 +169,7 @@ def zip_file(input_fc, temp_zip_dir, download_output=None, archive_output=None, 
 
         shutil.copy(temp_zip, dst)
 
+    # Define output path for download zip file and copy temp zip there
     if download_output:
         logging.debug("Copying {0} to download folder {1}".format(base_fname, download_output))
 

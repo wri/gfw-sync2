@@ -6,6 +6,7 @@ import logging
 # arcpy.CheckOutExtension("Spatial")
 
 from layer import Layer
+from utilities import util
 
 arcpy.env.overwriteOutput = True
 
@@ -24,7 +25,7 @@ class RasterLayer(Layer):
 
     def archive(self):
         logging.info('Starting raster_layer.archive')
-        self._archive(self.source, self.download_output, self.archive_output, False)
+        self._archive(self.source, self.download_output, self.archive_output)
 
     #
     # def project_to_wgs84(self):
@@ -50,7 +51,7 @@ class RasterLayer(Layer):
 #
 #         arcpy.RasterToPoint_conversion(self.source, self.export_file, "VALUE")
 #
-#         if self.is_wgs_84(self.export_file):
+#         if util.is_wgs_84(self.export_file):
 #             self.wgs84_file = self.export_file
 #
 #         else:

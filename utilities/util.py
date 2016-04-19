@@ -26,7 +26,6 @@ def byteify(unicode_string):
 
 
 def gen_paths_shp(src):
-
     if '@localhost).sde' in src:
         basepath = os.path.split(src)[0]
         base_fname = os.path.basename(src).split('.')[-1]
@@ -40,6 +39,10 @@ def gen_paths_shp(src):
 
 
 def list_network_drives():
+    """
+    Grab all the drives on the current PC, returning those that are mapped through the network
+    :return: list of network drives
+    """
     drive_bitmask = ctypes.cdll.kernel32.GetLogicalDrives()
     all_drives = list(itertools.compress(string.ascii_uppercase, map(lambda x: ord(x) - ord('0'),
                                                                      bin(drive_bitmask)[:1:-1])))
@@ -67,6 +70,12 @@ def create_temp_dir(output_dir):
 
 
 def fc_to_temp_gdb(input_fc, rootdir):
+    """
+    Current a tempdir in the root, create a gdb in the temp dir, and copy the input_fc there
+    :param input_fc: the fc of interest
+    :param rootdir: the dir where we'll create the temp dir
+    :return: path to the input_fc as it exists in the new GDB
+    """
     temp_dir = create_temp_dir(rootdir)
 
     basepath, fname, base_fname = gen_paths_shp(input_fc)
@@ -93,7 +102,51 @@ def csl_to_list(csl):
     return result
 
 
+def is_wgs_84(input_dataset):
+    """
+    Test if input dataset has SR WGS 84
+    :param input_dataset: input dataset
+    :return: True/False if SRS is WGS84
+    """
+    logging.debug('starting layer.isWGS84')
+    sr_as_string = arcpy.Describe(input_dataset).spatialReference.exporttostring()
+
+    first_element = sr_as_string.split(',')[0]
+
+    if 'GEOGCS' in first_element and 'GCS_WGS_1984' in first_element:
+        return True
+    else:
+        return False
+
+
+def build_update_where_clause(in_fc, input_field):
+    """
+    Generate a where_clause based on the unique values in a particular input field
+    :param in_fc: the source feature class
+    :param input_field: the field to look at
+    :return: where clause in form '''field_name in ('fielval1', 'fieldval2', 'fieldval3')'''
+    """
+    if input_field:
+        # Get unique values in specified where_clause field
+        # Uses a set comprehension. Fun!
+        # http://love-python.blogspot.com/2012/12/set-comprehensions-in-python.html
+        unique_values = list({x[0] for x in arcpy.da.SearchCursor(in_fc, [input_field])})
+        unique_values_sql = "'" + "', '".join(unique_values) + "'"
+
+        where_clause = """{0} IN ({1})""".format(input_field, unique_values_sql)
+
+    else:
+        where_clause = None
+
+    return where_clause
+
+
 def get_token(token_file):
+    """
+    Grab token from the tokens\ folder in the root directory
+    :param token_file: name of the file
+    :return: the token value
+    """
     abspath = os.path.abspath(__file__)
     dir_name = os.path.dirname(os.path.dirname(abspath))
     token_path = os.path.join(dir_name, r"tokens\{0!s}".format(token_file))
@@ -111,6 +164,11 @@ def get_token(token_file):
 
 
 def mkdir_p(path):
+    """
+    mkdirs that don't exist for all dirs in the path
+    :param path: path we'd like to create
+    :return:
+    """
     try:
         os.makedirs(path)
     except OSError as exc:  # Python >2.5
@@ -121,6 +179,16 @@ def mkdir_p(path):
 
 
 def add_field_and_calculate(fc, field_name, field_type, field_length, field_val, gfw_env):
+    """
+    Add a field and calculate
+    :param fc: input fc
+    :param field_name: field_name
+    :param field_type: field_type
+    :param field_length: field_length
+    :param field_val: value to calculate
+    :param gfw_env: required because we're using the util.list_fields, which also lists for cartoDB
+    :return:
+    """
     logging.debug("add_field_and_calculate: Adding field {0} and calculating to {1}".format(field_name, field_val))
 
     if field_name not in list_fields(fc, gfw_env):
@@ -136,6 +204,12 @@ def add_field_and_calculate(fc, field_name, field_type, field_length, field_val,
 
 
 def list_fields(input_dataset, gfw_env):
+    """
+    List fields for an esri or cartoDB dataset
+    :param input_dataset: either path to local esri FC or a cartoDB table name
+    :param gfw_env: used to determine which cartoDB account to use
+    :return: list of fields
+    """
 
     if arcpy.Exists(input_dataset):
         field_list = [x.name for x in arcpy.ListFields(input_dataset)]
@@ -152,6 +226,13 @@ def list_fields(input_dataset, gfw_env):
 
 
 def create_temp_id_field(input_dataset, in_gfw_env):
+    """
+    Used when we need a temp_id field when appending to cartoDB tables. We use this temp_id field to set
+    where clauses on the data to group it into manageable chunks for upload to the API
+    :param input_dataset: in dataset
+    :param in_gfw_env: in gfw_env
+    :return: the name of the temp_id field
+    """
 
     temp_id_fieldname = 'c_temp_id'
     oid_field = [f.name for f in arcpy.ListFields(input_dataset) if f.type == 'OID'][0]
@@ -161,19 +242,15 @@ def create_temp_id_field(input_dataset, in_gfw_env):
     return temp_id_fieldname
 
 
-def replace_dict_value(in_dict, in_val, new_val):
-
-    for key, value in in_dict.iteritems():
-        if value == in_val:
-            in_dict[key] = new_val
-            break
-        else:
-            pass
-
-    return in_dict
-
-
 def copy_to_scratch_workspace(input_fc, output_workspace, field_mappings=None):
+    """
+    Used when we get source data that is not local or has field mappings. This data will be copied locally and then
+    the local FC will be the new source
+    :param input_fc: inptu source fc
+    :param output_workspace: output location
+    :param field_mappings: if field mappings are included, use these to set the output fields for the local FC
+    :return: path to local fc
+    """
 
     fc_name = os.path.basename(input_fc)
 
@@ -187,8 +264,6 @@ def copy_to_scratch_workspace(input_fc, output_workspace, field_mappings=None):
         arcpy.CreateFileGDB_management(output_workspace, gdb_name)
         out_copied_fc = os.path.join(output_workspace, gdb_name + '.gdb', fc_name)
 
-    logging.info('Input data is not local or has a fieldmap-- copying here: {0}'.format(out_copied_fc))
-
     if field_mappings:
         out_workspace = os.path.dirname(out_copied_fc)
         arcpy.FeatureClassToFeatureClass_conversion(input_fc, out_workspace, fc_name, "", field_mappings)
@@ -196,10 +271,18 @@ def copy_to_scratch_workspace(input_fc, output_workspace, field_mappings=None):
     else:
         arcpy.Copy_management(input_fc, out_copied_fc)
 
+    logging.info('Input data is not local or has a fieldmap-- copied here: {0}'.format(out_copied_fc))
+
     return out_copied_fc
 
 
 def validate_osm_source(osm_source):
+    """
+    Used to check that all the job uids for an osm datasource exists for our osm HOT export account
+    :param osm_source: list of job uids. Example: 2c5d8ae4-940a-445b-b34a-0e922a40598c,
+                                                  3b88a831-e2a0-4c80-8b25-cd3bc64ffd2f
+    :return: true/false based on if all job uids are valid
+    """
 
     osm_id_list = osm_source.split(',')
 
@@ -217,9 +300,9 @@ def validate_osm_source(osm_source):
             request.add_header(key, value)
 
         try:
-
             # If the input uid is in the correct format, but doesn't exist, will return an empty list
             if json.load(urllib2.urlopen(request)):
+                # Success! We have a response, and can assume that the job uid exists
                 pass
             else:
                 is_valid = False

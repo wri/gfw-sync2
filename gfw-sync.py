@@ -24,17 +24,17 @@ def main():
                                                  settings.get_settings(args.environment)['tool_info']['version']))
     logging.critical('Starting | {0}'.format(args.layer))
 
-    # Get the layerdef from the Google Doc config based on the args supplied
-    # Google Doc: https://docs.google.com/spreadsheets/d/1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI/edit#gid=0
+    # Open the correct sheet of the config table (PROD | DEV)
+    # Config table: https://docs.google.com/spreadsheets/d/1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI/edit#gid=0
     gs = google_sheet.GoogleSheet(args.environment)
 
-    # Pass the layerdef and the google sheet object to the build_layer function
+    # Pass the layername and the config table object to the build_layer function
     layer = layer_decision_tree.build_layer(gs, args.layer)
 
     # Update the layer in the output data sources
     layer.update()
 
-    # Update the last-updated timestamp in the Google Sheet
+    # Update the last-updated timestamp in the config table
     gs.update_gs_timestamp(args.layer)
 
     logging.critical('Finished | {0}'.format(args.layer))
