@@ -525,15 +525,17 @@ def _process_row(in_row, field_obj):
         # with a domain only)
         first_value = field_obj.subtype_dict.values()[0]
 
-        if isinstance(first_value, dict):
+        if isinstance(first_value, dict) and in_row[0]:
 
-            if in_row[0]:
+            # Grab the value for the field we're trying to update as row[0] if it's not null
+            # The value for the subtype field is row[1]
+            # Using the value for the subtype field as a key to the subtype dict,
+            # pass in the actual value in row[0] to get the translated val
+            in_row[2] = field_obj.subtype_dict[in_row[1]][in_row[0]]
 
-                # Grab the value for the field we're trying to update as row[0]
-                # The value for the subtype field is row[1]
-                # Using the value for the subtype field as a key to the subtype dict,
-                # pass in the actual value in row[0] to get the translated val
-                in_row[2] = field_obj.subtype_dict[in_row[1]][in_row[0]]
+        elif isinstance(first_value, dict) and not in_row[0]:
+            # NULL value for in_row[0]-- nothing we can use to input into our domain
+            pass
 
         # If the dictionary isn't nested, we're working with just key/pair values either an actual subtype
         # field or a domain
