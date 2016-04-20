@@ -17,7 +17,7 @@ class VectorLayer(Layer):
     """
 
     def __init__(self, layerdef):
-        logging.debug('starting vectorlayer')
+        logging.debug('Starting vectorlayer')
 
         super(VectorLayer, self).__init__(layerdef)
 
@@ -85,17 +85,17 @@ class VectorLayer(Layer):
          This will be used in the API to cache analysis results for geometries previously analyzed
         :return:
         """
-        logging.debug('starting vector_layer.update_gfwid for {0}'.format(self.name))
+        logging.debug('Starting vector_layer.update_gfwid for {0}'.format(self.name))
 
         if "gfwid" not in util.list_fields(self.source, self.gfw_env):
             arcpy.AddField_management(self.source, "gfwid", "TEXT", field_length=50, field_alias="GFW ID")
 
         # Required to prevent calcuate field failures-- will likely fail to hash the !Shape! object if there are
         # null geometries
-        logging.debug('starting repair geometry')
+        logging.debug('Starting repair geometry')
         arcpy.RepairGeometry_management(self.source, "DELETE_NULL")
 
-        logging.debug('starting to calculate gfwid')
+        logging.debug('Starting to calculate gfwid')
         arcpy.CalculateField_management(self.source, "gfwid", "md5(!Shape!.WKT)", "PYTHON_9.3",
                                         code_block="import hashlib\n"
                                                    "def md5(shape):\n"

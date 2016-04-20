@@ -8,26 +8,30 @@ import util
 
 
 def send_summary():
+    """
+    Read log file and send the result email
+    :return:
+    """
     root_dir = os.getcwd()
     log_file = os.path.join(root_dir, 'logs', time.strftime("%Y%m%d") + '.log')
 
-    try:
-        result_text = read_log_to_result_text(log_file)
-
-    except:
-        result_text = "Attempted to run script, but it failed. Log file may not be written-- " \
-                      "maybe no layers were scheduled? Check if today's log file exists."
-
+    result_text = read_log_to_result_text(log_file)
     send_email(result_text)
 
 
 def parse_line_add_result(input_line, input_dict):
+    """
+    Parse the log file for lines of interest and store their results
+    :param input_line: a line from the log file
+    :param input_dict: a dictionary to store layer-specific results
+    :return: input_dict, now including additional results
+    """
 
     # Pull only lines with the critical flag
     if input_line[0:8] == 'CRITICAL':
         split_line = input_line.split('|')
 
-        # Format CRITICAL:logname:status:layername
+        # Format CRITICAL|logname|status|layername
         if len(split_line) == 4:
 
             layername = split_line[3].strip()
@@ -44,13 +48,18 @@ def parse_line_add_result(input_line, input_dict):
 
 
 def read_log_to_result_text(log):
+    """
+    Open the log file, parse it, and then inspect the return dict to understand if layers succeeded/failed
+    :param log: path to log file
+    :return: text output for an email
+    """
     layer_log_dict = {}
 
     with open(log, 'rb') as theFile:
         for line in theFile:
             parse_line_add_result(line, layer_log_dict)
 
-    final_dict = {'success':[], 'checked':[], 'failure':[]}
+    final_dict = {'success': [], 'checked': [], 'failure': []}
 
     for layername, result_list in layer_log_dict.iteritems():
         if result_list == ['Starting', 'Finished']:
@@ -70,6 +79,11 @@ def read_log_to_result_text(log):
 
 
 def send_email(body_text):
+    """
+    Send an email given a body text
+    :param body_text: text to include in the email
+    :return:
+    """
     username = 'wriforests'
 
     fromaddr = "{0}@gmail.com".format(username)

@@ -54,7 +54,7 @@ class ImazonDataSource(DataSource):
             else:
                 return False
 
-        except:
+        except IndexError:
             return False
 
     def list_sad_urls(self):

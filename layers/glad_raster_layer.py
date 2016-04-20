@@ -11,7 +11,7 @@ class GLADRasterLayer(RasterLayer):
     """
 
     def __init__(self, layerdef):
-        logging.debug('starting glad_raster_layer')
+        logging.debug('Starting glad_raster_layer')
         super(GLADRasterLayer, self).__init__(layerdef)
 
         # self._year_aoi = None

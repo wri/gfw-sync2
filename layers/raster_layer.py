@@ -17,7 +17,7 @@ class RasterLayer(Layer):
     """
 
     def __init__(self, layerdef):
-        logging.debug('starting raster_layer')
+        logging.debug('Starting raster_layer')
         super(RasterLayer, self).__init__(layerdef)
 
         # self.wgs84_file = None

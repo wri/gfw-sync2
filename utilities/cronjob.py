@@ -2,7 +2,7 @@ import subprocess
 import datetime
 import argparse
 
-import google_sheet
+import google_sheet as gs
 import email_stats
 
 parser = argparse.ArgumentParser(description='Pass environment to kick off gfw-sync cron job.')
@@ -12,6 +12,11 @@ args = parser.parse_args()
 
 
 def parse_update_freq(field_text):
+    """
+    Read the update_freq field from the config table and determine if the layer in question needs to be updated today
+    :param field_text: the value in the update_freq column
+    :return:
+    """
     update_layer = False
 
     # Check that the layer has an update frequency first
@@ -41,8 +46,7 @@ def parse_update_freq(field_text):
 
     return update_layer
 
-gs = google_sheet.GoogleSheet(args.environment)
-all_layer_dict = gs.sheet_to_dict()
+all_layer_dict = gs.sheet_to_dict(args.environment)
 
 for layername, layerdef in all_layer_dict.iteritems():
 

@@ -16,9 +16,9 @@ class Layer(object):
     :param layerdef: A Layer definition dictionary
     :return:
     """
-    
+
     def __init__(self, layerdef):
-        logging.debug('starting layer class')
+        logging.debug('Starting layer class')
 
         self._name = None
         self.name = layerdef['tech_title']
@@ -413,7 +413,7 @@ class Layer(object):
         self._add_country_value = c
 
     def _archive(self, input_fc, download_output, archive_output, sr_is_local=False):
-        logging.debug('starting layer._archive')
+        logging.debug('Starting layer._archive')
         archive.zip_file(input_fc, self.scratch_workspace, download_output, archive_output, sr_is_local)
 
         return

@@ -12,15 +12,16 @@ from datasources.wdpa_datasource import WDPADatasource
 from datasources.hot_osm_export_datasource import HotOsmExportDataSource
 from datasources.forest_atlas_datasource import ForestAtlasDataSource
 
+from utilities import google_sheet as gs
 
-def build_layer(google_sheet, layername):
+
+def build_layer(layerdef, gfw_env):
     """
     Used to get a layerdef for our layer of interest, then build a layer object based on the type of layer input
-    :param google_sheet: a google sheet object used to layerdef
-    :param layername: the name of the layer to update
+    :param layerdef: a layerdef that defines a layers inputs/outputs from the Google Sheet
+    :param gfw_env: the environment in which we're running the script (PROD | DEV)
     :return: a layer object to gfw-sync so that it can call the update method
     """
-    layerdef = google_sheet.get_layerdef(layername)
 
     if layerdef["type"] == "simple_vector":
         layer = VectorLayer(layerdef)
@@ -56,16 +57,14 @@ def build_layer(google_sheet, layername):
 
             # Get the associated layerdef for the global_layer specified by our original dataset of interest
             # This is important because if we updated gab_logging, we also need to updated gfw_logging
-            global_layerdef = google_sheet.get_layerdef(layerdef['global_layer'])
-
             logging.debug('Found a value for global_layer. Validating this input using the VectorLayer schema')
+            global_layerdef = gs.get_layerdef(layerdef['global_layer'], gfw_env)
 
             # Use the output value as the source so that all the tests (validating that the "source" exists etc pass
             # This allows us to leave the source field in the google spreadsheet blank for this dataset, which makes
             # sense. The source for a global layer is made up of a bunch of smaller country layers
             global_layerdef['source'] = global_layerdef['esri_service_output']
             VectorLayer(global_layerdef)
-
             logging.debug('Global layer validation complete')
 
             layer = CountryVectorLayer(layerdef)

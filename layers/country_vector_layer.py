@@ -6,7 +6,7 @@ import sys
 import arcpy
 
 from vector_layer import VectorLayer
-from utilities import google_sheet
+from utilities import google_sheet as gs
 from utilities import field_map
 from utilities import util
 
@@ -161,8 +161,7 @@ class CountryVectorLayer(VectorLayer):
         self._update()
 
         # Grab the info about the global layer that we need to update
-        gs = google_sheet.GoogleSheet(self.gfw_env)
-        global_layerdef = gs.get_layerdef(self.global_layer)
+        global_layerdef = gs.get_layerdef(self.global_layer, self.gfw_env)
 
         # Update the global layer using it's own layerdef
         self.update_global_layer(global_layerdef)

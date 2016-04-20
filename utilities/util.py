@@ -108,7 +108,7 @@ def is_wgs_84(input_dataset):
     :param input_dataset: input dataset
     :return: True/False if SRS is WGS84
     """
-    logging.debug('starting layer.isWGS84')
+    logging.debug('Starting layer.isWGS84')
     sr_as_string = arcpy.Describe(input_dataset).spatialReference.exporttostring()
 
     first_element = sr_as_string.split(',')[0]

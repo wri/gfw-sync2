@@ -23,5 +23,6 @@ def build_logger(verbosity):
     # these libraries log automatically; set to only show critical messages
     logging.getLogger('oauth2client').setLevel(logging.CRITICAL)
     logging.getLogger("requests").setLevel(logging.CRITICAL)
+    logging.getLogger("cryptography").setLevel(logging.CRITICAL)
 
     return logging.getLogger()

@@ -17,7 +17,7 @@ class ForestAtlasDataSource(DataSource):
     """
 
     def __init__(self, layerdef):
-        logging.debug('starting forest_atlas_datasource')
+        logging.debug('Starting forest_atlas_datasource')
 
         super(ForestAtlasDataSource, self).__init__(layerdef)
 

@@ -1,7 +1,7 @@
 import argparse
 
 import layer_decision_tree
-from utilities import google_sheet
+from utilities import google_sheet as gs
 from utilities import logger
 from utilities import settings
 
@@ -24,23 +24,23 @@ def main():
                                                  settings.get_settings(args.environment)['tool_info']['version']))
     logging.critical('Starting | {0}'.format(args.layer))
 
-    # Open the correct sheet of the config table (PROD | DEV)
+    # Open the correct sheet of the config table (PROD | DEV) and get the layerdef
     # Config table: https://docs.google.com/spreadsheets/d/1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI/edit#gid=0
-    gs = google_sheet.GoogleSheet(args.environment)
+    layerdef = gs.get_layerdef(args.layer, args.environment)
 
-    # Pass the layername and the config table object to the build_layer function
-    layer = layer_decision_tree.build_layer(gs, args.layer)
+    # Pass the layerdef to the build_layer function
+    layer = layer_decision_tree.build_layer(layerdef, args.environment)
 
     # Update the layer in the output data sources
     layer.update()
 
     # Update the last-updated timestamp in the config table
-    gs.update_gs_timestamp(args.layer)
-
-    logging.critical('Finished | {0}'.format(args.layer))
+    gs.update_gs_timestamp(args.layer, args.environment)
 
     # Delete scratch workspace
     layer.cleanup()
+
+    logging.critical('Finished | {0}'.format(args.layer))
 
 if __name__ == "__main__":
     main()
