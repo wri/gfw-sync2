@@ -21,21 +21,7 @@ class VectorLayer(Layer):
 
         super(VectorLayer, self).__init__(layerdef)
 
-        self._sde_workspace = None
-        self.sde_workspace = os.path.dirname(os.path.dirname(self.esri_service_output))
-
-    # Validate sde_workspace
-    @property
-    def sde_workspace(self):
-        return self._sde_workspace
-
-    @sde_workspace.setter
-    def sde_workspace(self, s):
-        logging.debug('SDE workspace: ' + s)
-        if arcpy.Exists(s) and os.path.splitext(s)[1] == '.sde':
-            self._sde_workspace = s
-        else:
-            logging.debug("sde_workspace path is invalid")
+        self.update_where_clause = None
 
     def archive_source(self):
         """
@@ -114,14 +100,24 @@ class VectorLayer(Layer):
                          'country val {1}'.format(self.name, self.add_country_value))
             util.add_field_and_calculate(self.source, "country", 'TEXT', 3, self.add_country_value, self.gfw_env)
 
-    def append_to_esri_source(self, input_fc, esri_output_fc, input_where_field):
+    def build_update_where_clause(self, input_fc, input_where_field):
+        """
+        Build the where clause to use when deleting from/adding to the esri and cartodb output datasets
+        :param input_fc: the input FC
+        :param input_where_field: a field used to build the where_clause-- all values in the field will be selected
+        :return:
+        """
+        # Build where clause
+        self.update_where_clause = util.build_update_where_clause(input_fc, input_where_field)
+
+    def append_to_esri_source(self, input_fc, esri_output_fc, input_where_clause):
         """
         Append to the esri source FC, including projecting to output coord system, creating a versioned FC of the
         output in SDE, deleting from that versioned FC based on a where_clause, appending the new data, and then
         posting that version
         :param input_fc: the input source data
         :param esri_output_fc: the output in SDE
-        :param input_where_field: a field to build the where_clause
+        :param input_where_clause: where clause used to add to/delete from the output esri FC
         :return:
         """
 
@@ -153,17 +149,25 @@ class VectorLayer(Layer):
         arcpy.MakeFeatureLayer_management(esri_output_fc, "esri_service_output_fl")
 
         version_name = self.name + "_" + str(int(time.time()))
-        arcpy.CreateVersion_management(self.sde_workspace, "sde.DEFAULT", version_name, "PRIVATE")
+
+        sde_workspace = os.path.dirname(esri_output_fc)
+
+        desc = arcpy.Describe(sde_workspace)
+        if hasattr(desc, "datasetType") and desc.datasetType == 'FeatureDataset':
+            sde_workspace = os.path.dirname(sde_workspace)
+
+        if os.path.splitext(sde_workspace)[1] != '.sde':
+            logging.error('Could not find proper SDE workspace. Exiting.')
+            sys.exit(1)
+
+        arcpy.CreateVersion_management(sde_workspace, "sde.DEFAULT", version_name, "PRIVATE")
         arcpy.ChangeVersion_management("esri_service_output_fl", 'TRANSACTIONAL', 'gfw.' + version_name, '')
 
-        # Build where clause
-        esri_where_clause = util.build_update_where_clause(input_fc, input_where_field)
+        if input_where_clause:
+            logging.debug('Deleting features from esri_service_output feature layer based on input_where_clause. '
+                          'SQL statement: {0}'.format(input_where_clause))
 
-        if esri_where_clause:
-            logging.debug('Deleting features from esri_service_output feature layer based on input_where_field. '
-                          'SQL statement: {0}'.format(esri_where_clause))
-
-            arcpy.SelectLayerByAttribute_management("esri_service_output_fl", "NEW_SELECTION", esri_where_clause)
+            arcpy.SelectLayerByAttribute_management("esri_service_output_fl", "NEW_SELECTION", input_where_clause)
 
         else:
             logging.debug('No where clause for esri_service_output found; deleting all features before '
@@ -179,7 +183,7 @@ class VectorLayer(Layer):
         logging.debug('Starting to append to esri_service_output')
         arcpy.Append_management(fc_to_append, "esri_service_output_fl", "NO_TEST")
 
-        arcpy.ReconcileVersions_management(input_database=self.sde_workspace, reconcile_mode="ALL_VERSIONS",
+        arcpy.ReconcileVersions_management(input_database=sde_workspace, reconcile_mode="ALL_VERSIONS",
                                            target_version="sde.DEFAULT", edit_versions='gfw.' + version_name,
                                            acquire_locks="LOCK_ACQUIRED", abort_if_conflicts="NO_ABORT",
                                            conflict_definition="BY_OBJECT", conflict_resolution="FAVOR_TARGET_VERSION",
@@ -187,7 +191,7 @@ class VectorLayer(Layer):
 
         # For some reason need to run DeleteVersion_management here, will have errors if with_delete is used above
         arcpy.Delete_management("esri_service_output_fl")
-        arcpy.DeleteVersion_management(self.sde_workspace, 'gfw.' + version_name)
+        arcpy.DeleteVersion_management(sde_workspace, 'gfw.' + version_name)
 
         post_append_count = int(arcpy.GetCount_management(esri_output_fc).getOutput(0))
 
@@ -210,7 +214,11 @@ class VectorLayer(Layer):
         logging.info('Starting vector_layer.create_archive_and_download_zip for {0}'.format(self.name))
 
         # if source is in local projection, create separate download
-        if not util.is_wgs_84(self.source):
+        # if it has a merge where_field specified, don't create a local download
+        # this suggests that our source dataset is only part of the larger whole, which is in wgs84
+        # example: imazon_sad-- we download pieces each month, project to WGS84, then share the output
+        # don't want to pretend that one of those monthly local projection files is actually the entire dataset
+        if not util.is_wgs_84(self.source) and not self.merge_where_field:
 
             download_basename = self.name + '.shp'
             if os.path.basename(self.source) == download_basename:
@@ -227,22 +235,20 @@ class VectorLayer(Layer):
         # Create an archive and a download file for final dataset (esri_service_output)
         self._archive(self.esri_service_output, self.download_output, self.archive_output)
 
-    def sync_cartodb(self, input_fc, cartodb_output_fc, input_where_field):
+    def sync_cartodb(self, input_fc, cartodb_output_fc, where_clause):
         """
-        Take the esri source dataset and append it to cartodb. If an input_where_field specified,
+        Take the esri source dataset and append it to cartodb. If a where_clause specified,
         use that to build a DELETE where clause to run against the cartoDB table before appending
         :param input_fc: the source dataset
         :param cartodb_output_fc: the output table in cartoDB
-        :param input_where_field: a field to build a where clause from
+        :param where_clause: a where clause to apply to select from the input_fc and to delete from the cartodb_output
         :return:
         """
 
         logging.info('Starting vector_layer.sync_cartodb for {0}. Output {1}, '
-                     'wc {2}'.format(os.path.basename(input_fc), cartodb_output_fc, input_where_field))
+                     'wc {2}'.format(os.path.basename(input_fc), cartodb_output_fc, where_clause))
 
-        cartodb_where_clause = util.build_update_where_clause(input_fc, input_where_field)
-
-        cartodb.cartodb_sync(input_fc, cartodb_output_fc, cartodb_where_clause, self.gfw_env, self.scratch_workspace)
+        cartodb.cartodb_sync(input_fc, cartodb_output_fc, where_clause, self.gfw_env, self.scratch_workspace)
 
     def update(self):
         """
@@ -266,8 +272,10 @@ class VectorLayer(Layer):
 
         self.add_country_code()
 
-        self.append_to_esri_source(self.source, self.esri_service_output, self.esri_merge_where_field)
+        self.build_update_where_clause(self.source, self.merge_where_field)
+
+        self.append_to_esri_source(self.source, self.esri_service_output, self.update_where_clause)
 
         self.create_archive_and_download_zip()
 
-        self.sync_cartodb(self.esri_service_output, self.cartodb_service_output, self.cartodb_merge_where_field)
+        self.sync_cartodb(self.esri_service_output, self.cartodb_service_output, self.update_where_clause)

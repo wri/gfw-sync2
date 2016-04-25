@@ -69,11 +69,12 @@ def create_temp_dir(output_dir):
     return temp_dir
 
 
-def fc_to_temp_gdb(input_fc, rootdir):
+def fc_to_temp_gdb(input_fc, rootdir, where_clause=None):
     """
     Current a tempdir in the root, create a gdb in the temp dir, and copy the input_fc there
     :param input_fc: the fc of interest
     :param rootdir: the dir where we'll create the temp dir
+    :param where_clause: an optional where clause to apply when moving this data to GDB
     :return: path to the input_fc as it exists in the new GDB
     """
     temp_dir = create_temp_dir(rootdir)
@@ -87,8 +88,7 @@ def fc_to_temp_gdb(input_fc, rootdir):
     arcpy.CreateFileGDB_management(gdb_dir, 'data.gdb')
     gdb_path = os.path.join(gdb_dir, 'data.gdb')
 
-    arcpy.FeatureClassToGeodatabase_conversion(input_fc, gdb_path)
-
+    arcpy.FeatureClassToFeatureClass_conversion(input_fc, gdb_path, base_fname, where_clause)
     fc_path = os.path.join(gdb_path, base_fname)
 
     return fc_path

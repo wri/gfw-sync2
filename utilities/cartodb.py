@@ -135,10 +135,18 @@ def cartodb_create(in_fc, out_cartodb_name, gfw_env):
 def add_fc_to_ogr2ogr_cmd(in_fc, cmd):
     """
     Add FC to ogr2ogr, handling issue of different format for .shp vs GDB FC
+    Also add conversion from multiline string to singleline string if it's a line FC
     :param in_fc: path to esri FC (shape or GDB)
     :param cmd: current list of CMD parameters
     :return: updated cmd list of parameters
     """
+
+    if arcpy.Describe(in_fc).shapeType == 'Polyline':
+        cmd += ['-nlt', 'LINESTRING']
+    else:
+        # Don't need to change the type if the input FC is a polgyon
+        pass
+
     if os.path.splitext(in_fc)[1] == '.shp':
         cmd += [in_fc]
     else:
@@ -290,10 +298,11 @@ def cartodb_execute_where_clause(start_row, end_row, id_field, src_fc, out_table
         cartodb_retry(src_fc, out_table, gfw_env, sql, format_tuple, wc)
 
 
-@retry(wait_exponential_multiplier=1000, wait_exponential_max=512000)
+@retry(wait_exponential_multiplier=1000, wait_exponential_max=512000, stop_max_delay=18000000)
 def cartodb_retry(src_fc, out_table, gfw_env, sql, format_tuple, wc):
     """
     Used to retry the ogr2ogr append/SQL query defined from by the where clause
+    Wait 2^x seconds between each retry, up to 8.5 minutes, then 8.5 minutes afterwards until we hit 5 hours
     :param src_fc: the source fc, if appending
     :param out_table: the out table, if appending
     :param gfw_env: gfw_env to know which cartodb account
@@ -356,8 +365,8 @@ def cartodb_sync(shp, production_table, where_clause, gfw_env, scratch_workspace
     """
 
     # ogr2ogr can't use an SDE fc as an input; must export to GDB
-    if '@localhost).sde' in shp:
-        shp = util.fc_to_temp_gdb(shp, scratch_workspace)
+    if where_clause or '@localhost).sde' in shp:
+        shp = util.fc_to_temp_gdb(shp, scratch_workspace, where_clause)
 
     basename = os.path.basename(shp)
     staging_table = os.path.splitext(basename)[0] + '_staging'

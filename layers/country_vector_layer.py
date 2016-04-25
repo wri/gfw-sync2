@@ -76,7 +76,7 @@ class CountryVectorLayer(VectorLayer):
                 result_list.append(True)
 
             else:
-                print "No country code found for {0}".format(fc)
+                logging.debug("No country code found for {0}".format(fc))
                 result_list.append(False)
 
         # If all result_list values are True, return True
@@ -130,17 +130,18 @@ class CountryVectorLayer(VectorLayer):
         # If country field exists in input/outputs and is populated in the input, great
         if self.check_country_fields(country_fc_list) and self.check_country_populated(country_src):
 
+            # Build a where clause to add/delete where country = '{ISO}'
+            where_clause = """{0} = '{1}'""".format(global_layerdef['merge_where_field'], self.add_country_value)
+
             # Append our country-specific data to the global output
-            self.append_to_esri_source(country_src, global_layerdef['esri_service_output'],
-                                       global_layerdef['esri_merge_where_field'])
+            self.append_to_esri_source(country_src, global_layerdef['esri_service_output'], where_clause)
 
             # Zip the global output for archive and download
             self._archive(global_layerdef['esri_service_output'], global_layerdef['download_output'],
                           global_layerdef['archive_output'])
 
             # Append our country-specific data to the global output
-            self.sync_cartodb(country_src, global_layerdef['cartodb_service_output'],
-                              global_layerdef['cartodb_merge_where_field'])
+            self.sync_cartodb(country_src, global_layerdef['cartodb_service_output'], where_clause)
 
         else:
             logging.error("Field country not present or not populated in input/output FCs. Exiting.")

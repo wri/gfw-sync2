@@ -42,14 +42,11 @@ class Layer(object):
         self._esri_service_output = None
         self.esri_service_output = layerdef['esri_service_output']
 
-        self._esri_merge_where_field = None
-        self.esri_merge_where_field = layerdef['esri_merge_where_field']
-
         self._cartodb_service_output = None
         self.cartodb_service_output = layerdef['cartodb_service_output']
 
-        self._cartodb_merge_where_field = None
-        self.cartodb_merge_where_field = layerdef['cartodb_merge_where_field']
+        self._merge_where_field = None
+        self.merge_where_field = layerdef['merge_where_field']
 
         self._delete_features_input_where_clause = None
         self.delete_features_input_where_clause = layerdef['delete_features_input_where_clause']
@@ -125,13 +122,13 @@ class Layer(object):
                 sys.exit(1)
         self._cartodb_service_output = c
 
-    # Validate esri_merge_where_field
+    # Validate merge_where_field
     @property
-    def esri_merge_where_field(self):
-        return self._esri_merge_where_field
+    def merge_where_field(self):
+        return self._merge_where_field
 
-    @esri_merge_where_field.setter
-    def esri_merge_where_field(self, m):
+    @merge_where_field.setter
+    def merge_where_field(self, m):
         """
         Ultimately used to build a unique where clause from the source data. If specified, any values in this field
         in the source dataset (i.e. the country field for a MEX layer) will be used to delete from the global output
@@ -141,47 +138,25 @@ class Layer(object):
         """
         if m:
             if m not in util.list_fields(self.source, self.gfw_env):
-                logging.debug("Where clause field {0} specified for esri_merge_where_field but "
+                logging.debug("Where clause field {0} specified for merge_where_field but "
                               "field not in source dataset".format(m))
 
             if m not in util.list_fields(self.esri_service_output, self.gfw_env):
-                logging.error("Where clause field {0} specified for esri_merge_where_field but "
+                logging.error("Where clause field {0} specified for merge_where_field but "
                               "field not in esri_service_output. Data from this field will not be"
+                              "appended due to the NO_TEST approach. Exiting ".format(m))
+                sys.exit(1)
+				
+            if m not in util.list_fields(self.cartodb_service_output, self.gfw_env):
+                logging.error("Where clause field {0} specified for merge_where_field but "
+                              "field not in cartodb_service_output. Data from this field will not be"
                               "appended due to the NO_TEST approach. Exiting ".format(m))
                 sys.exit(1)
 
         else:
             m = None
-        self._esri_merge_where_field = m
+        self._merge_where_field = m
 
-    # Validate cartodb_merge_where_field
-    @property
-    def cartodb_merge_where_field(self):
-        return self._cartodb_merge_where_field
-
-    @cartodb_merge_where_field.setter
-    def cartodb_merge_where_field(self, c):
-        """
-        Ultimately used to build a unique where clause from the source data. If specified, any values in this field
-        in the source dataset (i.e. the country field for a MEX layer) will be used to delete from the global output
-        (DELETE FROM gfw_mining WHERE country = 'MEX') and then the source will be appended
-        :param m: the merge feild
-        :return:
-        """
-        if c:
-            if c not in util.list_fields(self.source, self.gfw_env):
-                logging.debug("Where clause field {0} specified for cartodb_merge_where_field but field not "
-                              "in source dataset".format(c))
-
-            if c not in util.list_fields(self.esri_service_output, self.gfw_env):
-                logging.error("Where clause field {0} specified for cartodb_merge_where_field but "
-                              "field not in cartodb_service_output. Data from this field will not be"
-                              "appended due to the NO_TEST approach. Exiting ".format(c))
-                sys.exit(1)
-
-        else:
-            c = None
-        self._cartodb_merge_where_field = c
 
     # Validate delete_features_input_where_clause
     @property

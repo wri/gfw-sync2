@@ -1,6 +1,6 @@
 import os
-import shutil
 import sys
+import shutil
 import logging
 import zipfile
 import arcpy
@@ -35,7 +35,7 @@ class DataSource(object):
 
         self._download_workspace = None
         self.download_workspace = os.path.join(settings.get_settings(self.gfw_env)['paths']['scratch_workspace'],
-                                               'downloads')
+                                               'downloads', self.name)
 
     # Validate name
     @property
@@ -57,7 +57,7 @@ class DataSource(object):
     def download_workspace(self, d):
         if os.path.exists(d):
             shutil.rmtree(d)
-        os.mkdir(d)
+        util.mkdir_p(d)
         self._download_workspace = d
         
     # Validate data_source

@@ -26,9 +26,8 @@ add_country_value | ISO country code, required for `country_vector` layers
 source | Path to the source dataset
 transformation | Any transformations that need to be applied to the source
 delete_features_input_where_clause | A where clause filter features from the source
-esri_merge_where_field | Will generate a list of values for a field (i.e. field: country, value: PER) in the source table and delete all records in `esri_service_output` with that value, then append the source. If nothing specified, will truncate `esri_service_output` and then append
+merge_where_field | Will generate a list of values for a field (i.e. field: country, value: PER) in the source table and delete all records in `esri_service_output` and `cartodb_service_output` datasets with that value, then append the source. If nothing specified, will truncate the output data and then append
 esri_service_output | esri output to append the source to
-cartodb_merge_where_field | same as `esri_merge_where_field` above, but for cartoDB
 cartodb_service_output | cartoDB output to append to
 archive_output | path to the output archive ZIP created
 download_output | path to the download ZIP created
