@@ -12,31 +12,38 @@ import util
 import settings
 
 
-def run_ogr2ogr(cmd):
+def run_subprocess(cmd, log=True):
     """
-    Function to run ogr2ogr in a subprocess and monitor the STDOUT. If there's an error, log it and exit
+    Function to run a subprocess and monitor the STDOUT. If there's an error, log it and exit
     :param cmd: a list of commands to exeecute
+    :param log: boolean to log output to file and command line
     :return:
     """
 
-    logging.debug('Running OGR:\n' + ' '.join(cmd))
+    if log:
+        logging.debug('Running subprocess:\n' + ' '.join(cmd))
 
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    subprocess_list = []
 
     # ogr2ogr doesn't properly fail on an error, just displays error messages
     # as a result, we need to read this output as it happens
     # http://stackoverflow.com/questions/1606795/catching-stdout-in-realtime-from-subprocess
+    subprocess_list = []
+
+    # Read from STDOUT and raise an error if we parse one from the output
     for line in iter(p.stdout.readline, b''):
         subprocess_list.append(line.strip())
 
     # If ogr2ogr has complained, and ERROR in one of the messages, exit
-    if subprocess_list and 'error' in str(subprocess_list).lower():
-        logging.error("OGR2OGR threw an error: " + '\n'.join(subprocess_list))
+    result = str(subprocess_list).lower()
+    if subprocess_list and ('error' in result or 'usage: ogr2ogr' in result):
+        logging.error("Error in subprocess: " + '\n'.join(subprocess_list))
         sys.exit(1)
 
     elif subprocess_list:
         logging.debug('\n'.join(subprocess_list))
+
+    return subprocess_list
 
 
 def generate_where_clause(start_row, end_row, where_field_name):
@@ -84,73 +91,111 @@ def cartodb_sql(sql, gfw_env):
     return json_result
 
 
-def cartodb_create(in_fc, out_cartodb_name, gfw_env):
+def sqlite_row_count(sqlite_db):
+
+    ogrinfo = run_subprocess(['ogrinfo', '-q', sqlite_db])
+
+    # Grab the first line from the ogrinfo command, split it, and take the second value
+    # Example ogrinfo output: "1: tiger_conservation_landscapes (Multi Polygon)"
+    table_name = ogrinfo[0].split()[1]
+
+    ogr_row_count_text = run_subprocess(['ogrinfo', sqlite_db, '-q',
+                                         '-sql', 'SELECT count(*) FROM {0}'.format(table_name)])
+
+    # Response looks like this ['', 'Layer  name: SELECT', 'OGRFeature(SELECT):0', 'count(*) (Integer) = 76', '']
+    row_count = int(ogr_row_count_text[-2].split(' = ')[1])
+
+    return row_count
+
+
+def get_layer_type(in_fc):
+    """
+    Get the layer type-- important for ogr2ogr; if we're working with a line string need to explicitly set the otuput
+    to line string, not polyline/whatever it is natively in Arc
+    :param in_fc:
+    :return:
+    """
+
+    if os.path.splitext(in_fc)[1] == '.sqlite':
+        ogrinfo = run_subprocess(['ogrinfo', '-q', in_fc], log=False)
+        shapetype = ogrinfo[0].split('(')[1].lower()
+
+    else:
+        shapetype = arcpy.Describe(in_fc).shapeType.lower()
+
+    if 'string' in shapetype or 'line' in shapetype:
+        layer_type = 'LINE'
+    elif 'polygon' in shapetype:
+        layer_type = 'POLYGON'
+    else:
+        logging.error("Unknown layer type: {0}".format(shapetype))
+        sys.exit(1)
+
+    return layer_type
+
+
+def cartodb_create(sqlite_path, out_cartodb_name, temp_id_field, gfw_env):
     """
     Create a new dataset/table on cartodb
-    :param in_fc: source esri FC
+    :param sqlite_path: path to sqlite database with geometry-cleaned FC
     :param out_cartodb_name: name of output table
+    :param temp_id_field: temp id field that will be used to build where_clauses when uploading to cartodb
     :param gfw_env: the gfw-env-- required to pick the API key
     :return:
     """
-    logging.debug("upload data from {0} to staging table {1}".format(in_fc, out_cartodb_name))
+    logging.debug("upload data from {0} to staging table {1}".format(sqlite_path, out_cartodb_name))
 
     key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
     account_name = settings.get_settings(gfw_env)['cartodb']['token'].split('@')[0]
 
     # Help: http://www.gdal.org/ogr2ogr.html
     # The -dim 2 option ensures that only two dimensional data is created; no Z or M values
-    cmd = ['ogr2ogr', '--config', 'CARTODB_API_KEY', key, '-skipfailures', '-t_srs', 'EPSG:4326',
-           '-f', 'CartoDB', '-nln', out_cartodb_name, '-dim', '2', 'CartoDB:{0}'.format(account_name)]
+    cmd = ['ogr2ogr', '--config', 'CARTODB_API_KEY', key, '-skipfailures', '-t_srs', 'EPSG:4326', '-f',
+           'CartoDB', '-nln', out_cartodb_name, '-dim', '2', 'CartoDB:{0}'.format(account_name)]
 
-    cmd = add_fc_to_ogr2ogr_cmd(in_fc, cmd)
+    # Add the spatialite DB to the path and any additional fc-specific stuff as well
+    cmd = add_fc_to_ogr2ogr_cmd(sqlite_path, cmd)
 
     # Count dataset rows and compare them to the append limit we're using for each API transaction
-    row_count = int(arcpy.GetCount_management(in_fc).getOutput(0))
+    row_count = sqlite_row_count(sqlite_path)
 
     # If the row count is > the row append limit (500), need to split up the process of moving the esri FC to cartoDB
     if row_count > 500:
-
-        # Create a temp ID field (set equal to OBJECTID) that we'll use to manage the process of incrementally
-        # uploading data to the cartoDB server
-        temp_id_field = util.create_temp_id_field(in_fc, gfw_env)
 
         where_clause = '{0} >= 0 and {0} < 500'.format(temp_id_field)
         cmd = add_where_clause_to_ogr2ogr_cmd(where_clause, cmd)
 
         # Run the initial command to create the fc, using FIDs 0 - rowAppendLimit
-        run_ogr2ogr(cmd)
+        run_subprocess(cmd)
 
         # Use cartodb_execute_where_clause to generate where_clauses and append them with exponential backoff
-        cartodb_execute_where_clause(500, row_count, temp_id_field, in_fc, out_cartodb_name, gfw_env)
-
-        # # Build all where_clauses and pass them to cartodb_append
-        # for wc in generate_where_clause(row_append_limit, row_count, row_append_limit, temp_id_field):
-        #     cartodb_append(file_name, out_cartodb_name, gfw_env, wc)
+        cartodb_execute_where_clause(500, row_count, temp_id_field, sqlite_path, out_cartodb_name, gfw_env)
 
     # If there are few enough rows and we don't need a set of where_clauses, upload the entire dataset at once
     else:
-        run_ogr2ogr(cmd)
+        run_subprocess(cmd)
 
 
-def add_fc_to_ogr2ogr_cmd(in_fc, cmd):
+def add_fc_to_ogr2ogr_cmd(in_path, cmd):
     """
-    Add FC to ogr2ogr, handling issue of different format for .shp vs GDB FC
+    Add FC or spatialite DB to ogr2ogr, handling issue of different format for .shp vs GDB FC vs spatialite
     Also add conversion from multiline string to singleline string if it's a line FC
-    :param in_fc: path to esri FC (shape or GDB)
+    :param in_path: path to shape/GDB/spatialite DB
     :param cmd: current list of CMD parameters
     :return: updated cmd list of parameters
     """
 
-    if arcpy.Describe(in_fc).shapeType == 'Polyline':
-        cmd += ['-nlt', 'LINESTRING']
-    else:
-        # Don't need to change the type if the input FC is a polgyon
-        pass
+    layer_type = get_layer_type(in_path)
 
-    if os.path.splitext(in_fc)[1] == '.shp':
-        cmd += [in_fc]
+    if layer_type == 'LINE':
+        cmd += ['-nlt', 'LINESTRING']
+
+    # Check if the input FC is a GDB
+    if os.path.splitext(in_path)[1] == '':
+        cmd += [os.path.dirname(in_path), os.path.basename(in_path)]
+
     else:
-        cmd += [os.path.dirname(in_fc), os.path.basename(in_fc)]
+        cmd += [in_path]
 
     return cmd
 
@@ -169,10 +214,10 @@ def add_where_clause_to_ogr2ogr_cmd(in_where_clause, cmd):
     return cmd
 
 
-def cartodb_append(file_name, out_cartodb_name, gfw_env, where_clause=None):
+def cartodb_append(sqlite_db_path, out_cartodb_name, gfw_env, where_clause=None):
     """
     Append a local FC to a cartoDB dataset
-    :param file_name: path to local esri FC
+    :param sqlite_db_path: path to local sqlite db
     :param out_cartodb_name: cartoDB table
     :param gfw_env: gfw_env
     :param where_clause: where_clause to apply to the dataset
@@ -186,28 +231,10 @@ def cartodb_append(file_name, out_cartodb_name, gfw_env, where_clause=None):
     cmd = ['ogr2ogr', '--config', 'CARTODB_API_KEY', key, '-append', '-skipfailures', '-t_srs', 'EPSG:4326',
            '-f', 'CartoDB',  '-nln', out_cartodb_name, '-dim', '2', 'CartoDB:{0}'.format(account_name)]
 
-    cmd = add_fc_to_ogr2ogr_cmd(file_name, cmd)
+    cmd = add_fc_to_ogr2ogr_cmd(sqlite_db_path, cmd)
     cmd = add_where_clause_to_ogr2ogr_cmd(where_clause, cmd)
 
-    run_ogr2ogr(cmd)
-
-
-def cartodb_make_valid_geom(table_name, gfw_env):
-    """
-    Iterate over all features of table_name using the where_clause and run the SQL statement below
-    :param table_name:
-    :param gfw_env:
-    :return:
-    """
-    logging.debug("repair geometry")
-
-    row_count = cartodb_row_count(table_name, gfw_env)
-
-    sql = 'UPDATE {0} SET the_geom = ST_MakeValid(the_geom), the_geom_webmercator = ST_MakeValid(the_geom_webmercator)'\
-          ' WHERE (ST_IsValid(the_geom) = false AND {1})'
-    format_tuple = (table_name,)
-
-    cartodb_execute_where_clause(0, row_count, 'cartodb_id', None, None, gfw_env, sql, format_tuple)
+    run_subprocess(cmd)
 
 
 def cartodb_check_exists(table_name, gfw_env):
@@ -250,7 +277,7 @@ def cartodb_row_count(table_name, gfw_env):
     sql = "SELECT COUNT(*) FROM {0}".format(table_name)
     row_count = int(cartodb_sql(sql, gfw_env)['rows'][0]['count'])
 
-    print 'CartoDB row count: {0}'.format(row_count)
+    logging.debug('CartoDB row count: {0}'.format(row_count))
 
     return row_count
 
@@ -270,8 +297,7 @@ def cartodb_push_to_production(staging_table, production_table, gfw_env):
     prod_columns = get_column_order(production_table, gfw_env)
     staging_columns = get_column_order(staging_table, gfw_env)
 
-    # Find the columns they have in common
-    # Exclude cartodb_id; cartodb will auto number
+    # Find the columns they have in common, excluding cartodb_id
     final_columns = [x for x in prod_columns if x in staging_columns if x != 'cartodb_id']
     final_columns_sql = ', '.join(final_columns)
 
@@ -296,6 +322,34 @@ def cartodb_execute_where_clause(start_row, end_row, id_field, src_fc, out_table
     """
     for wc in generate_where_clause(start_row, end_row, id_field):
         cartodb_retry(src_fc, out_table, gfw_env, sql, format_tuple, wc)
+
+
+def cartodb_make_valid_geom_local(src_fc):
+
+    if os.path.splitext(src_fc)[1] == '.shp':
+        source_dir = os.path.dirname(src_fc)
+    else:
+        source_dir = os.path.dirname(os.path.dirname(src_fc))
+
+    sqlite_dir = os.path.join(source_dir, 'sqlite')
+    os.mkdir(sqlite_dir)
+
+    out_sqlite_path = os.path.join(sqlite_dir, 'out.sqlite')
+
+    cmd = ['ogr2ogr', '-f', 'SQLite', out_sqlite_path]
+    cmd = add_fc_to_ogr2ogr_cmd(src_fc, cmd)
+    cmd += ["-dsco", "SPATIALITE=yes"]
+
+    logging.debug('Creating sqlite database')
+    run_subprocess(cmd)
+
+    table_name = util.gen_paths_shp(src_fc)[2]
+    sql = 'UPDATE {0} SET GEOMETRY = ST_MakeValid(GEOMETRY) WHERE ST_IsValid(GEOMETRY) <> 1;'.format(table_name)
+    cmd = ['spatialite', out_sqlite_path, sql]
+
+    run_subprocess(cmd)
+
+    return out_sqlite_path
 
 
 @retry(wait_exponential_multiplier=1000, wait_exponential_max=512000, stop_max_delay=18000000)
@@ -373,9 +427,12 @@ def cartodb_sync(shp, production_table, where_clause, gfw_env, scratch_workspace
 
     delete_staging_table_if_exists(staging_table, gfw_env)
 
-    cartodb_create(shp, staging_table, gfw_env)
+    # Create a temp ID field (set equal to OBJECTID) that we'll use to manage pushing to cartodb incrementally
+    temp_id_field = util.create_temp_id_field(shp, gfw_env)
 
-    cartodb_make_valid_geom(staging_table, gfw_env)
+    validated_fc_in_sqlite = cartodb_make_valid_geom_local(shp)
+
+    cartodb_create(validated_fc_in_sqlite, staging_table, temp_id_field, gfw_env)
 
     cartodb_delete_where_clause_or_truncate_prod_table(production_table, where_clause, gfw_env)
 

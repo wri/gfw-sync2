@@ -58,8 +58,8 @@ def list_network_drives():
     return network_drive_list
 
 
-def create_temp_dir(output_dir):
-    temp_dir = os.path.join(output_dir, str(uuid.uuid4()))
+def create_temp_dir(root_dir):
+    temp_dir = os.path.join(root_dir, str(uuid.uuid4()))
 
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)

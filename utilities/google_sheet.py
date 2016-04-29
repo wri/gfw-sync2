@@ -5,14 +5,18 @@ import logging
 from oauth2client.service_account import ServiceAccountCredentials
 
 
-def _open_spreadsheet(gfw_env):
+def _open_spreadsheet(sheet_name, custom_key=False):
     """
     Open the spreadsheet for read/update
     :return: a gspread wks object that can be used to edit/update a given sheet
     """
 
     spreadsheet_file = r'D:\scripts\gfw-sync2\tokens\spreadsheet.json'
-    spreadsheet_key = r'1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI'
+
+    if custom_key:
+        spreadsheet_key = custom_key
+    else:
+        spreadsheet_key = r'1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI'
 
     # Updated for oauth2client
     # http://gspread.readthedocs.org/en/latest/oauth2.html
@@ -20,7 +24,7 @@ def _open_spreadsheet(gfw_env):
                                                                    ['https://spreadsheets.google.com/feeds'])
 
     gc = gspread.authorize(credentials)
-    wks = gc.open_by_key(spreadsheet_key).worksheet(gfw_env)
+    wks = gc.open_by_key(spreadsheet_key).worksheet(sheet_name)
 
     return wks
 
@@ -28,6 +32,7 @@ def _open_spreadsheet(gfw_env):
 def sheet_to_dict(gfw_env):
     """
     Convert the spreadsheet to a dict with {layername: {colName: colVal, colName2: colVal}
+    :param gfw_env: the name of the sheet to call (PROD | DEV)
     :return: a dictionary representing the sheet
     """
 
@@ -62,6 +67,7 @@ def get_layerdef(layer_name, gfw_env):
     """
     Build a layerdef dictionary by specifying the layer of interest
     :param layer_name: the layer name of interest
+    :param gfw_env: the name of the sheet to call
     :return: a dictionary of values that define a layer (layerdef) specified in the config table
     """
 
@@ -78,23 +84,57 @@ def get_layerdef(layer_name, gfw_env):
         sys.exit(1)
 
 
-def update_value(layername, colname, in_update_value, gfw_env):
+def set_value(unique_id_col, unique_id_value, colname, sheet_name, in_update_value, spreadsheet_key=None):
     """
     Update a value in the spreadsheet given the layername and column name
-    :param layername: the layer name we're updating-- matches tech_title in the first column
+    :param unique_id_col: the column that has unique ids (tech_title in the config table)
+    :param unique_id_value: the particular value we're looking for in the unique id col
     :param colname: the column name to update
+    :param sheet_name: the name of the sheet to update
     :param in_update_value: the value to set
-    :param gfw_env: gfw env
+    :param spreadsheet_key: key for the spreadsheet if not the default config table
     """
 
-    wks = _open_spreadsheet(gfw_env)
+    wks, row_id, col_id = get_cell_location(unique_id_col, unique_id_value, colname, sheet_name, spreadsheet_key)
+
+    wks.update_cell(row_id, col_id, in_update_value)
+
+
+def get_value(unique_id_col, unique_id_value, colname, sheet_name, spreadsheet_key=None):
+    """
+    Update a value in the spreadsheet given the layername and column name
+    :param unique_id_col: the column that has unique ids (tech_title in the config table)
+    :param unique_id_value: the particular value we're looking for in the unique id col
+    :param colname: the column name to get the value of
+    :param sheet_name: the name of the sheet in the google doc
+    :param spreadsheet_key: key for the spreadsheet if not the default config table
+    """
+
+    wks, row_id, col_id = get_cell_location(unique_id_col, unique_id_value, colname, sheet_name, spreadsheet_key)
+
+    return wks.cell(row_id, col_id).value
+
+
+def get_cell_location(unique_id_col, unique_id_value, colname, sheet_name, spreadsheet_key=None):
+    """
+    Get the row and col of a particular cell so later we can report the value or update it
+    :param unique_id_col: the column that has unique ids (tech_title in the config table)
+    :param unique_id_value: the particular value we're looking for in the unique id col
+    :param colname: the column name to get the value of
+    :param sheet_name: the name of the sheet in the google doc
+    :param spreadsheet_key: json key if not the default config table
+    """
+
+    wks = _open_spreadsheet(sheet_name, spreadsheet_key)
 
     gdoc_as_lists = wks.get_all_values()
 
-    row_id = [x[0] for x in gdoc_as_lists].index(layername) + 1
+    unique_id_index = gdoc_as_lists[0].index(unique_id_col)
+
+    row_id = [x[unique_id_index] for x in gdoc_as_lists].index(unique_id_value) + 1
     col_id = gdoc_as_lists[0].index(colname) + 1
 
-    wks.update_cell(row_id, col_id, in_update_value)
+    return wks, row_id, col_id
 
 
 def update_gs_timestamp(layername, gfw_env):
@@ -103,10 +143,10 @@ def update_gs_timestamp(layername, gfw_env):
     :param layername: the row to update (based on tech_title column)
     :param gfw_env: gfw env
     """
-    update_value(layername, 'last_updated', time.strftime("%m/%d/%Y"), gfw_env)
+    set_value('tech_title', layername, 'last_updated', time.strftime("%m/%d/%Y"), gfw_env)
 
     # If the layer is part of a global_layer, update its last_updated timestamp as well
     associated_global_layer = get_layerdef(layername, gfw_env)['global_layer']
 
     if associated_global_layer:
-        update_value(associated_global_layer, 'last_updated', time.strftime("%m/%d/%Y"), gfw_env)
+        set_value('tech_title', associated_global_layer, 'last_updated', time.strftime("%m/%d/%Y"), gfw_env)

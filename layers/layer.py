@@ -8,6 +8,8 @@ from utilities import archive
 from utilities import cartodb, settings
 from utilities import util
 from utilities import field_map
+from utilities import metadata
+from utilities import tile_cache_service
 
 
 class Layer(object):
@@ -65,6 +67,12 @@ class Layer(object):
 
         self._add_country_value = None
         self.add_country_value = layerdef['add_country_value']
+
+        self._vector_to_raster_output = None
+        self.vector_to_raster_output = layerdef['vector_to_raster_output']
+
+        self._tile_cache_service = None
+        self.tile_cache_service = layerdef['tile_cache_service']
 
     # Validate name
     @property
@@ -146,7 +154,7 @@ class Layer(object):
                               "field not in esri_service_output. Data from this field will not be"
                               "appended due to the NO_TEST approach. Exiting ".format(m))
                 sys.exit(1)
-				
+
             if m not in util.list_fields(self.cartodb_service_output, self.gfw_env):
                 logging.error("Where clause field {0} specified for merge_where_field but "
                               "field not in cartodb_service_output. Data from this field will not be"
@@ -156,7 +164,6 @@ class Layer(object):
         else:
             m = None
         self._merge_where_field = m
-
 
     # Validate delete_features_input_where_clause
     @property
@@ -362,6 +369,38 @@ class Layer(object):
 
         self._global_layer = g
 
+    # Validate vector_to_raster_output
+    @property
+    def vector_to_raster_output(self):
+        return self._vector_to_raster_output
+
+    @vector_to_raster_output.setter
+    def vector_to_raster_output(self, r):
+        if not r:
+            r = None
+
+        elif not arcpy.Exists(r):
+            logging.error("Could not find raster_output {0}. Exiting.".format(r))
+            sys.exit(1)
+
+        self._vector_to_raster_output = r
+
+    # Validate tile_cache_service
+    @property
+    def tile_cache_service(self):
+        return self._tile_cache_service
+
+    @tile_cache_service.setter
+    def tile_cache_service(self, t):
+        if not t:
+            t = None
+
+        elif arcpy.Describe(t).dataType != 'MapServer':
+            logging.error("Tile cache service path {0} does not appear to be a map service. Exiting.".format(t))
+            sys.exit(1)
+
+        self._tile_cache_service = t
+
     # Validate add_country_value
     @property
     def add_country_value(self):
@@ -395,3 +434,9 @@ class Layer(object):
 
     def cleanup(self):
         shutil.rmtree(self.scratch_workspace)
+
+    def update_esri_metadata(self):
+        metadata.update_metadata(self.esri_service_output, self.name, self.gfw_env)
+
+    def update_tile_cache(self):
+        tile_cache_service.update_cache(self.tile_cache_service, self.scratch_workspace)

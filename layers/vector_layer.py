@@ -205,6 +205,37 @@ class VectorLayer(Layer):
 
         return
 
+    def vector_to_raster(self, input_fc):
+
+        if self.vector_to_raster_output:
+
+            temp_dir = util.create_temp_dir(self.scratch_workspace)
+            arcpy.CreateFileGDB_management(temp_dir, 'temp.gdb')
+
+            # Get spatial reference of output
+            sr = arcpy.Describe(self.vector_to_raster_output).spatialReference
+
+            logging.debug('Starting to project input vector FC to the spatial reference of the output raster')
+            out_projected_fc = os.path.join(temp_dir, 'temp.gdb', 'src_prj_to_ras_sr')
+            arcpy.Project_management(input_fc, out_projected_fc, sr)
+
+            util.add_field_and_calculate(out_projected_fc, 'ras_val', 'SHORT', '', 1, self.gfw_env)
+
+            # Get cell size of output
+            cell_size = int(arcpy.GetRasterProperties_management(self.vector_to_raster_output,
+                                                                 'CELLSIZEX').getOutput(0))
+
+            logging.debug('Rasterizing and outputting as tif')
+            out_raster = os.path.join(temp_dir, 'out.tif')
+            arcpy.PolygonToRaster_conversion(out_projected_fc, 'ras_val', out_raster, "CELL_CENTER", "", cell_size)
+
+            logging.debug('Copying raster {0} to output {1}'.format(out_raster, self.vector_to_raster_output))
+            arcpy.Delete_management(self.vector_to_raster_output)
+            arcpy.CopyRaster_management(out_raster, self.vector_to_raster_output)
+
+        else:
+            pass
+
     def create_archive_and_download_zip(self):
         """
         Check if the source is wgs84; if not, create a local projection download zip
@@ -244,7 +275,6 @@ class VectorLayer(Layer):
         :param where_clause: a where clause to apply to select from the input_fc and to delete from the cartodb_output
         :return:
         """
-
         logging.info('Starting vector_layer.sync_cartodb for {0}. Output {1}, '
                      'wc {2}'.format(os.path.basename(input_fc), cartodb_output_fc, where_clause))
 
@@ -264,18 +294,24 @@ class VectorLayer(Layer):
         :return:
         """
 
-        self.archive_source()
+        # self.archive_source()
+        #
+        # self.filter_source_dataset(self.delete_features_input_where_clause)
+        #
+        # self.update_gfwid()
+        #
+        # self.add_country_code()
+        #
+        # self.build_update_where_clause(self.source, self.merge_where_field)
+        #
+        # self.append_to_esri_source(self.source, self.esri_service_output, self.update_where_clause)
+        #
+        # self.vector_to_raster(self.esri_service_output)
 
-        self.filter_source_dataset(self.delete_features_input_where_clause)
+        # self.update_esri_metadata()
 
-        self.update_gfwid()
+        self.update_tile_cache()
 
-        self.add_country_code()
-
-        self.build_update_where_clause(self.source, self.merge_where_field)
-
-        self.append_to_esri_source(self.source, self.esri_service_output, self.update_where_clause)
-
-        self.create_archive_and_download_zip()
-
-        self.sync_cartodb(self.esri_service_output, self.cartodb_service_output, self.update_where_clause)
+        # self.create_archive_and_download_zip()
+        #
+        # self.sync_cartodb(self.esri_service_output, self.cartodb_service_output, self.update_where_clause)
