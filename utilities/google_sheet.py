@@ -143,7 +143,7 @@ def update_gs_timestamp(layername, gfw_env):
     :param layername: the row to update (based on tech_title column)
     :param gfw_env: gfw env
     """
-    set_value('tech_title', layername, 'last_updated', time.strftime("%m/%d/%Y"), gfw_env)
+    set_value('tech_title', layername, 'last_updated', gfw_env, time.strftime("%m/%d/%Y"))
 
     # If the layer is part of a global_layer, update its last_updated timestamp as well
     associated_global_layer = get_layerdef(layername, gfw_env)['global_layer']

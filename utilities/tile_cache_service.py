@@ -4,6 +4,7 @@ import json
 import requests
 import logging
 import sys
+import shutil
 import urlparse
 
 from utilities import settings
@@ -11,6 +12,11 @@ from utilities import util
 
 
 def find_src_mxd_and_cache_dir(map_service_path):
+    """
+    Use the admin REST endpoint to get info about the source MXD location and the cache directory
+    :param map_service_path:
+    :return:
+    """
 
     # http://server.arcgis.com/en/server/latest/administer/linux/example-edit-service-properties.htm
     token = request_token()
@@ -54,10 +60,9 @@ def find_src_mxd(json_response):
 
     # This config_json file is on the D:\ of the prod server, but that's actually the P:\ drive of the DM server
     # Use this to change the path
-    file_path = os.path.splitdrive(config_json)[1]
-    file_path_rdrive = os.path.join(r'P:', file_path)
+    file_path = map_prod_server_path(config_json)
 
-    with open(file_path_rdrive) as data_file:
+    with open(file_path) as data_file:
         data = json.load(data_file)
 
     resources = data['resources'][0]
@@ -78,8 +83,28 @@ def find_src_mxd(json_response):
 
 def find_cache_dir(json_response):
 
-    # TODO BUILD OUT
-    return json_response
+    service_name = json_response['serviceName']
+    basedir = json_response['properties']['cacheDir']
+
+    cache_dir = os.path.join(basedir, service_name, 'Layers')
+    mapped_cached_dir = map_prod_server_path(cache_dir)
+
+    return mapped_cached_dir
+
+
+def map_prod_server_path(input_path):
+
+    driveletter, file_path = os.path.splitdrive(input_path)
+
+    if driveletter == r'D:':
+        mapped_drive = r'P:'
+
+    else:
+        logging.error("Cached map service is in unknown drive {0} on the server. Exiting".format(driveletter))
+
+    mapped_file_path = os.path.join(mapped_drive, file_path)
+
+    return mapped_file_path
 
 
 def request_token():
@@ -108,6 +133,8 @@ def update_cache(map_service_path, scratch_workspace):
     logging.debug("Found source MXD: {0}".format(source_mxd))
 
     output_dir = util.create_temp_dir(scratch_workspace)
+
+    # Zoom levels 0 - 6
     scale_aoi = "591657527.591555;295828763.795777;147914381.897889;73957190.948944;" \
                 "36978595.474472;18489297.737236;9244648.868618"
 
@@ -115,15 +142,18 @@ def update_cache(map_service_path, scratch_workspace):
     max_scale = scale_aoi.split(';')[-1]
 
     cache_dir_name = 'cache'
-
     arcpy.ManageTileCache_management(output_dir, "RECREATE_ALL_TILES", cache_dir_name, source_mxd, None, None,
                                      scale_aoi, None, None, min_scale, max_scale)
 
+    print output_dir
+    print cache_dir_name
+    print source_mxd
+
     src_layer_dir = os.path.join(output_dir, cache_dir_name, 'Layers')
 
-    # TODO copy to cache dir
+    shutil.rmtree(cache_dir)
+    shutil.copytree(src_layer_dir, cache_dir)
 
     sys.exit(0)
-    #
-    # arcpy.ManageTileCache_management(output_dir, "RECREATE_ALL_TILES", "cache", source_mxd)
+
 

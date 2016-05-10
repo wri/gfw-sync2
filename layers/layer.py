@@ -439,4 +439,5 @@ class Layer(object):
         metadata.update_metadata(self.esri_service_output, self.name, self.gfw_env)
 
     def update_tile_cache(self):
-        tile_cache_service.update_cache(self.tile_cache_service, self.scratch_workspace)
+        if self.tile_cache_service:
+            tile_cache_service.update_cache(self.tile_cache_service, self.scratch_workspace)
