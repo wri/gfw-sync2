@@ -74,6 +74,9 @@ class Layer(object):
         self._tile_cache_service = None
         self.tile_cache_service = layerdef['tile_cache_service']
 
+        self._post_process_script = None
+        self.post_process_script = layerdef['post_process_script']
+
     # Validate name
     @property
     def name(self):
@@ -413,6 +416,26 @@ class Layer(object):
                               "{0}".format(local_server_path))
 
         self._tile_cache_service = t
+
+    # Validate post_process_script
+    @property
+    def post_process_script(self):
+        return self._post_process_script
+
+    @post_process_script.setter
+    def post_process_script(self, p):
+        if not p:
+            p = None
+
+        else:
+            root_dir = settings.get_settings(self.gfw_env)['paths']['root_dir']
+            script_path = os.path.join(root_dir, 'postprocess', p)
+            if not os.path.exists(script_path):
+                logging.error('Post processing script {0} specified, but not '
+                              'in expected location {1}. Exiting'.format(p, script_path))
+                sys.exit(1)
+
+        self._post_process_script = p
 
     # Validate add_country_value
     @property

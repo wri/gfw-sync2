@@ -197,5 +197,4 @@ def update_cache(map_service_path, scratch_workspace):
     # Stop the map service-- no need for it to be serving on the DM machine
     manage_service('dev', map_service_path, 'stop')
 
-    sys.exit(0)
 
