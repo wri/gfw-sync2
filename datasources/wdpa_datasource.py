@@ -162,7 +162,7 @@ class WDPADatasource(DataSource):
         :param input_str: string to remove duplicates from. if we find a duplicate, remove it and return non-dupe str
         :return:
         """
-        return ''.join([j for i,j in enumerate(input_str) if j not in input_str[:i]])
+        return ''.join([j for i, j in enumerate(input_str) if j not in input_str[:i]])
 
     def get_layer(self):
         """

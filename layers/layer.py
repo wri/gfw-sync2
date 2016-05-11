@@ -395,9 +395,22 @@ class Layer(object):
         if not t:
             t = None
 
-        elif arcpy.Describe(t).dataType != 'MapServer':
-            logging.error("Tile cache service path {0} does not appear to be a map service. Exiting.".format(t))
-            sys.exit(1)
+        else:
+
+            arcgis_index = t.index('arcgis on')
+            admin_index = t.index('(admin)')
+
+            local_server_path = t[0:arcgis_index] + 'arcgis on localhost ' + t[admin_index:]
+
+            # Validate path on PROD server
+            if arcpy.Describe(t).dataType != 'MapServer':
+                logging.error("Tile cache service path {0} does not appear to be a map service. Exiting.".format(t))
+                sys.exit(1)
+
+            elif arcpy.Describe(local_server_path).dataType != 'MapServer':
+                logging.error("Does not appear to be a corresponding map service on localhost. This is required"
+                              "to prevent the PROD server from being overworked. Local server path checked: "
+                              "{0}".format(local_server_path))
 
         self._tile_cache_service = t
 
