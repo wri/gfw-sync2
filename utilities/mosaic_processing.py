@@ -4,6 +4,8 @@ import subprocess
 import sys
 import argparse
 
+arcpy.CheckOutExtension("Spatial")
+
 #  Used to pass *kwargs to the functions below at the command line
 # http://stackoverflow.com/questions/14522539/python-passing-parameters-in-a-command-line-app
 parser = argparse.ArgumentParser()

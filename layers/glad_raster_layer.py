@@ -12,8 +12,6 @@ from threading import Thread
 from collections import OrderedDict
 from layers.raster_layer import RasterLayer
 
-arcpy.CheckOutExtension("Spatial")
-
 
 class GladRasterLayer(RasterLayer):
     """
@@ -202,33 +200,45 @@ class GladRasterLayer(RasterLayer):
             logging.debug('{0}: Looking for the next job'.format(i))
             config = self.q.get()
 
-            logging.debug(config)
+            # If the input is a tif, and it doesn't exist yet, move on to the next item in the queue
+            if os.path.splitext(config['input'])[1] == '.tif' and not os.path.exists(config['input']):
 
-            # Each worker needs to use subprocess (apparently) due to ArcGIS issues with locking GDBs
-            if config['type'] == 'export':
+                logging.debug("Putting this task back in the queue; input doesn't exist yet.")
+                self.q.task_done()
+                self.q.put(config)
 
-                cmd = ['python', 'utilities\mosaic_processing.py', 'export_mosaic_to_tif',
-                       config['input'], config['output'], config['ras']]
-
-            elif config['type'] == 'resample':
-
-                cmd = ['python', 'utilities\mosaic_processing.py', 'resample_single_tif',
-                       config['input'], config['output'], config['ras'], config['cell_size']]
+                logging.debug("Sleeping for a minute in case it's the only task left")
+                time.sleep(60)
 
             else:
-                cmd = ['python', 'utilities\mosaic_processing.py', 'run_gdal_translate',
-                       config['input'], config['output'], config['source_mosaic']]
 
-                extent_args = [config['extent']['ulx'], config['extent']['uly'],
-                               config['extent']['lrx'], config['extent']['lry']]
+                logging.debug(config)
 
-                # Add extent info for projwin to extract bounding boxes for overviews
-                cmd += extent_args
+                # Each worker needs to use subprocess (apparently) due to ArcGIS issues with locking GDBs
+                if config['type'] == 'export':
 
-            subprocess.check_call(cmd)
+                    cmd = ['python', 'utilities\mosaic_processing.py', 'export_mosaic_to_tif',
+                           config['input'], config['output'], config['ras']]
 
-            # Log that the worker has finished the task
-            self.q.task_done()
+                elif config['type'] == 'resample':
+
+                    cmd = ['python', 'utilities\mosaic_processing.py', 'resample_single_tif',
+                           config['input'], config['output'], config['ras'], config['cell_size']]
+
+                else:
+                    cmd = ['python', 'utilities\mosaic_processing.py', 'run_gdal_translate',
+                           config['input'], config['output'], config['source_mosaic']]
+
+                    extent_args = [config['extent']['ulx'], config['extent']['uly'],
+                                   config['extent']['lrx'], config['extent']['lry']]
+
+                    # Add extent info for projwin to extract bounding boxes for overviews
+                    cmd += extent_args
+
+                subprocess.check_call(cmd)
+
+                # Log that the worker has finished the task
+                self.q.task_done()
 
     def update(self):
 
