@@ -2,13 +2,9 @@ __author__ = 'Thomas.Maschler'
 
 import arcpy
 import logging
-
-# arcpy.CheckOutExtension("Spatial")
+import os
 
 from layer import Layer
-from utilities import util
-
-arcpy.env.overwriteOutput = True
 
 
 class RasterLayer(Layer):
@@ -27,40 +23,29 @@ class RasterLayer(Layer):
         logging.info('Starting raster_layer.archive')
         self._archive(self.source, self.download_output, self.archive_output)
 
-    #
-    # def project_to_wgs84(self):
-    #     self.project_to_wgs84()
+    def archive_source(self, ras_path):
+        """
+        Creates an archive of the input data (listed in the config table under 'source' before the process begins
+        :param ras_path: path to input raster. required given that the self.source for some raster datasets
+        are multiple rasters
+        :return:
+        """
+        logging.info('Starting raster_layer.archive source for {0}'.format(self.name))
+        archive_dir = os.path.dirname(self.archive_output)
+        archive_src_dir = os.path.join(archive_dir, 'src')
 
-    # def sync_cartodb(self, where_clause):
-    #     cartodb.cartodb_sync(self.wgs84_file, self.cartodb_service_output, where_clause)
+        if not os.path.exists(archive_src_dir):
+            os.mkdir(archive_src_dir)
 
-    def copy_to_esri_output(self):
-        logging.info('Starting to copy from {0} to esri_service_output: {1}'.format(self.source,
-                                                                                    self.esri_service_output))
-        arcpy.CopyRaster_management(self.source, self.esri_service_output)
-        
+        output_zip_name = os.path.basename(ras_path).replace('.tif', '.zip')
 
-#     def export_2_shp(self):
-#
-#         arcpy.CreateFileGDB_management(self.export_folder, 'Export.gdb')
-#
-#         self.export_file = os.path.join(self.export_folder, 'Export.gdb', self.name)
-#
-#         print "Starting to convert the input raster to point"
-#         print "Output: {0}".format(self.export_file)
-#
-#         arcpy.RasterToPoint_conversion(self.source, self.export_file, "VALUE")
-#
-#         if util.is_wgs_84(self.export_file):
-#             self.wgs84_file = self.export_file
-#
-#         else:
-#             self.project_to_wgs84(shape=False)
-#
-# ##        #hardcoded - need to remove this
-# ##        self.wgs84_file = r'D:\GIS Data\GFW\temp\gfw-sync2_test\umd_landsat_alerts__borneo.shp'
-#
-#         return
+        src_archive_output = os.path.join(archive_src_dir, output_zip_name)
+        self._archive(ras_path, None, src_archive_output)
+
+    @staticmethod
+    def copy_to_esri_output(input_ras, output_ras):
+        logging.info('Starting to copy from {0} to esri_service_output: {1}'.format(input_ras, output_ras))
+        arcpy.CopyRaster_management(input_ras, output_ras)
 
     def update(self):
         logging.info('Starting raster_layer.update for {0}'.format(self.name))

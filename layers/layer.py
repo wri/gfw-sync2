@@ -107,9 +107,13 @@ class Layer(object):
 
     @esri_service_output.setter
     def esri_service_output(self, e):
-        if not arcpy.Exists(e):
-            logging.error("esri_service_output {0} does not exist".format(e))
-            sys.exit(1)
+
+        l = e.split(',')
+
+        for output_path in l:
+            if not arcpy.Exists(output_path):
+                logging.error("esri_service_output {0} does not exist".format(e))
+                sys.exit(1)
 
         self._esri_service_output = e
 
@@ -251,13 +255,29 @@ class Layer(object):
         :param s:
         :return:
         """
-        if not arcpy.Exists(s):
+        valid = True
+
+        if type(s) is list:
+            for path in s:
+                if not arcpy.Exists(path):
+                    valid = False
+                    break
+
+        else:
+            if not arcpy.Exists(s):
+                valid = False
+
+        if not valid:
             logging.error("Cannot find source {0!s} Exiting".format(s))
             sys.exit(1)
 
         # If there's a field map, use it as an input to the FeatureClassToFeatureClass tool and copy the data locally
         if self.field_map:
             s = field_map.ini_fieldmap_to_fc(s, self.name, self.field_map, self.scratch_workspace)
+
+        elif type(s) is list:
+            # If we're dealing with a list (currently only GLAD and Terra-I, we can skip this validation)
+            pass
 
         # If there's not a field map, need to figure out what type of data source it is, and if it's local or not
         else:
@@ -303,25 +323,35 @@ class Layer(object):
 
     @transformation.setter
     def transformation(self, t):
-        from_desc = arcpy.Describe(self.source)
-        from_srs = from_desc.spatialReference
 
-        to_srs = arcpy.Describe(self.esri_service_output).spatialReference
+        if type(self.source) is list:
+            s = self.source
+            esri_output = self.esri_service_output.split(',')
 
-        if from_srs.GCS != to_srs.GCS:
-            if not t:
-                logging.debug("No transformation defined")
-            else:
-                extent = from_desc.extent
-                transformations = arcpy.ListTransformations(from_srs, to_srs, extent)
-                if self.transformation not in transformations:
-                    logging.info("Transformation {0!s}: not compatible with in- and output "
-                                 "spatial reference or extent".format(self.transformation))
+        else:
+            s = list(self.source)
+            esri_output = list(self.esri_service_output)
 
-                    t = None
+        for dataset in s:
+            from_desc = arcpy.Describe(dataset)
+            from_srs = from_desc.spatialReference
 
-        del from_desc
-        del to_srs
+            to_srs = arcpy.Describe(esri_output[0]).spatialReference
+
+            if from_srs.GCS != to_srs.GCS:
+                if not t:
+                    logging.debug("No transformation defined")
+                else:
+                    extent = from_desc.extent
+                    transformations = arcpy.ListTransformations(from_srs, to_srs, extent)
+                    if self.transformation not in transformations:
+                        logging.info("Transformation {0!s}: not compatible with in- and output "
+                                     "spatial reference or extent".format(self.transformation))
+
+                        t = None
+
+            del from_desc
+            del to_srs
         self._transformation = t
 
     # Validate archive folder
@@ -350,13 +380,14 @@ class Layer(object):
     @download_output.setter
     def download_output(self, d):
         if not d:
-            logging.error("download_output cannot be empty. Exiting now")
-            sys.exit(1)
+            logging.warning("No download_output specified")
+            d = None
 
-        download_dir = os.path.dirname(d)
+        else:
+            download_dir = os.path.dirname(d)
 
-        if not os.path.exists(download_dir):
-            util.mkdir_p(download_dir)
+            if not os.path.exists(download_dir):
+                util.mkdir_p(download_dir)
 
         self._download_output = d
 

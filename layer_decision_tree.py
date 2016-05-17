@@ -4,10 +4,11 @@ import logging
 from layers.raster_layer import RasterLayer
 from layers.vector_layer import VectorLayer
 from layers.country_vector_layer import CountryVectorLayer
-from layers.glad_raster_layer import GLADRasterLayer
+from layers.glad_raster_layer import GladRasterLayer
 
 from datasources.imazon_datasource import ImazonDataSource
 from datasources.terrai_datasource import TerraiDataSource
+from datasources.glad_datasource import GladDataSource
 from datasources.wdpa_datasource import WDPADatasource
 from datasources.hot_osm_export_datasource import HotOsmExportDataSource
 from datasources.forest_atlas_datasource import ForestAtlasDataSource
@@ -38,7 +39,8 @@ def build_layer(layerdef, gfw_env):
         layer = VectorLayer(datasource.get_layer())
 
     elif layerdef["type"] == "glad_raster":
-        layer = GLADRasterLayer(layerdef)
+        datasource = GladDataSource(layerdef)
+        layer = GladRasterLayer(datasource.get_layer())
 
     elif layerdef["type"] == "hot_osm_export":
         datasource = HotOsmExportDataSource(layerdef)
