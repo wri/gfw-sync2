@@ -134,46 +134,34 @@ def get_layer_type(in_fc):
     return layer_type
 
 
-def cartodb_create(sqlite_path, out_cartodb_name, temp_id_field, gfw_env):
+def cartodb_create(sqlite_path, template_table, output_table, temp_id_field, gfw_env):
     """
     Create a new dataset/table on cartodb
     :param sqlite_path: path to sqlite database with geometry-cleaned FC
-    :param out_cartodb_name: name of output table
+    :param template_table: existing cartodb table used as a template
+    :param output_table: name of the new table to create and push data to
     :param temp_id_field: temp id field that will be used to build where_clauses when uploading to cartodb
     :param gfw_env: the gfw-env-- required to pick the API key
     :return:
     """
-    logging.debug("upload data from {0} to staging table {1}".format(sqlite_path, out_cartodb_name))
+    logging.debug("upload data from {0} to staging table {1}".format(sqlite_path, output_table))
 
-    key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
-    account_name = settings.get_settings(gfw_env)['cartodb']['token'].split('@')[0]
+    # Create a copy of the output table for staging
+    create_staging_table_sql = "CREATE TABLE {0} AS SELECT * FROM {1} WHERE cartodb_id = -9999".format(output_table,
+                                                                                                       template_table)
+    cartodb_sql(create_staging_table_sql, gfw_env)
 
-    # Help: http://www.gdal.org/ogr2ogr.html
-    # The -dim 2 option ensures that only two dimensional data is created; no Z or M values
-    cmd = ['ogr2ogr', '--config', 'CARTODB_API_KEY', key, '-skipfailures', '-t_srs', 'EPSG:4326', '-f',
-           'CartoDB', '-nln', out_cartodb_name, '-dim', '2', 'CartoDB:{0}'.format(account_name)]
-
-    # Add the spatialite DB to the path and any additional fc-specific stuff as well
-    cmd = add_fc_to_ogr2ogr_cmd(sqlite_path, cmd)
+    # https://github.com/CartoDB/cartodb/wiki/creating-tables-though-the-SQL-API
+    # Make the table we created 'discoverable' in the cartoDB UI
+    # Need to use the account name because we're a multi-user account (per cartoDB support)
+    account_name = get_account_name(gfw_env)
+    cartodb_sql("select cdb_cartodbfytable('{0}', '{1}');".format(account_name, output_table), gfw_env)
 
     # Count dataset rows and compare them to the append limit we're using for each API transaction
     row_count = sqlite_row_count(sqlite_path)
 
-    # If the row count is > the row append limit (500), need to split up the process of moving the esri FC to cartoDB
-    if row_count > 500:
-
-        where_clause = '{0} >= 0 and {0} < 500'.format(temp_id_field)
-        cmd = add_where_clause_to_ogr2ogr_cmd(where_clause, cmd)
-
-        # Run the initial command to create the fc, using FIDs 0 - rowAppendLimit
-        run_subprocess(cmd)
-
-        # Use cartodb_execute_where_clause to generate where_clauses and append them with exponential backoff
-        cartodb_execute_where_clause(500, row_count, temp_id_field, sqlite_path, out_cartodb_name, gfw_env)
-
-    # If there are few enough rows and we don't need a set of where_clauses, upload the entire dataset at once
-    else:
-        run_subprocess(cmd)
+    # Use cartodb_execute_where_clause to generate where_clauses and append them with exponential backoff
+    cartodb_execute_where_clause(0, row_count, temp_id_field, sqlite_path, output_table, gfw_env)
 
 
 def add_fc_to_ogr2ogr_cmd(in_path, cmd):
@@ -224,7 +212,7 @@ def cartodb_append(sqlite_db_path, out_cartodb_name, gfw_env, where_clause=None)
     :return:
     """
     key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
-    account_name = settings.get_settings(gfw_env)['cartodb']['token'].split('@')[0]
+    account_name = get_account_name(gfw_env)
 
     # Help: http://www.gdal.org/ogr2ogr.html
     # The -dim 2 option ensures that only two dimensional data is created; no Z or M values
@@ -235,6 +223,12 @@ def cartodb_append(sqlite_db_path, out_cartodb_name, gfw_env, where_clause=None)
     cmd = add_where_clause_to_ogr2ogr_cmd(where_clause, cmd)
 
     run_subprocess(cmd)
+
+
+def get_account_name(gfw_env):
+    account_name = settings.get_settings(gfw_env)['cartodb']['token'].split('@')[0]
+
+    return account_name
 
 
 def cartodb_check_exists(table_name, gfw_env):
@@ -432,10 +426,12 @@ def cartodb_sync(shp, production_table, where_clause, gfw_env, scratch_workspace
 
     validated_fc_in_sqlite = cartodb_make_valid_geom_local(shp)
 
-    cartodb_create(validated_fc_in_sqlite, staging_table, temp_id_field, gfw_env)
+    cartodb_create(validated_fc_in_sqlite, production_table, staging_table, temp_id_field, gfw_env)
 
     cartodb_delete_where_clause_or_truncate_prod_table(production_table, where_clause, gfw_env)
 
     cartodb_push_to_production(staging_table, production_table, gfw_env)
 
-    delete_staging_table_if_exists(staging_table, gfw_env)
+    sys.exit(1)
+
+    # delete_staging_table_if_exists(staging_table, gfw_env)

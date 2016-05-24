@@ -1,7 +1,6 @@
 import arcpy
 import os
 import subprocess
-import sys
 import argparse
 
 arcpy.CheckOutExtension("Spatial")
@@ -16,40 +15,33 @@ args = parser.parse_args()
 
 def export_mosaic_to_tif(input_ras, output_ras, ras_type):
 
-    # Can't log to STDOUT for some reason, likely to due with calling this from subprocess
+    # Can't log to STDOUT for some reason, likely to do with calling this from subprocess
     print 'Exporting {0} to {1}'.format(input_ras, output_ras)
 
-    # Export confidence to 8 bit
-    if ras_type == 'confidence':
+    output_dir = os.path.dirname(output_ras)
+    temp_ras = ras_type + '_with_zeros.tif'
+    raster_with_zeros = os.path.join(output_dir, temp_ras)
 
-        arcpy.CopyRaster_management(input_ras, output_ras, "", "", "8", "NONE", "NONE",
-                                    "8_BIT_UNSIGNED", "NONE", "NONE")
+    # Export the raster to tif
+    arcpy.CopyRaster_management(input_ras, raster_with_zeros, "", "", "256", "NONE", "NONE", "8_BIT_UNSIGNED", "NONE", "NONE")
 
-    # Export date to 16 bit, then set null to remove 0 values
-    elif ras_type == 'filter_glad_alerts':
+    # Set the zero values to null if it's in bands 1 -3
+    if ras_type in ['band1_day', 'band2_day', 'band3_conf_and_year']:
 
-        date_16_bit = os.path.join(os.path.dirname(output_ras), 'filter_glad_alerts_16bit.tif')
-        arcpy.CopyRaster_management(input_ras, date_16_bit, "", "", "16", "NONE", "NONE",
-                                    "16_BIT_UNSIGNED", "NONE", "NONE")
+        arcpy.gp.SetNull_sa(raster_with_zeros, raster_with_zeros, output_ras, """"Value" = 0""")
 
-        arcpy.gp.SetNull_sa(date_16_bit, date_16_bit, output_ras, """"Value" = 0""")
+    # Change pixel type to float. Keep the 0 pixels as 0-- we want to include them in our resampling
+    elif ras_type == 'band4_intensity':
 
-    # Reclass confidence to 1/0, then change pixel type to float
-    elif ras_type == 'intensity':
-
-        out_reclass = os.path.join(os.path.dirname(output_ras), 'intensity_4bit.tif')
-        arcpy.gp.Reclassify_sa(input_ras, "Value", "2 1;3 1;NODATA 0", out_reclass)
-
-        arcpy.CopyRaster_management(out_reclass, output_ras, "", "", "15", "NONE", "NONE",
+        arcpy.CopyRaster_management(raster_with_zeros, output_ras, "", "", "256", "NONE", "NONE",
                                     "32_BIT_FLOAT", "NONE", "NONE")
     else:
-        print 'Unknown raster {0}. Exiting'.format(ras_type)
-        sys.exit(1)
+        raise ValueError('Unknown raster {0}.'.format(ras_type))
 
 
 def resample_single_tif(input_ras, output_ras, ras_type, cell_size):
 
-    if ras_type in ['date', 'confidence']:
+    if ras_type in ['band1_day', 'band2_day', 'band3_conf_and_year']:
         resample_method = 'MAJORITY'
     else:
         resample_method = 'BILINEAR'
@@ -74,8 +66,7 @@ def run_gdal_translate(input_ras, output_ras, source_mosaic, ulx, uly, lrx, lry)
     try:
         subprocess.check_call(cmd, cwd=overview_dir)
     except subprocess.CalledProcessError:
-        print 'Error in gdal_translate subprocess. Exiting.'
-        sys.exit(1)
+        raise SyntaxError('Error in gdal_translate subprocess.')
 
     arcpy.AddRastersToMosaicDataset_management(source_mosaic, "Raster Dataset", output_ras,
                                                "UPDATE_CELL_SIZES", "UPDATE_BOUNDARY", "NO_OVERVIEWS", 0)

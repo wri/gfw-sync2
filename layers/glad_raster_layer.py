@@ -23,8 +23,10 @@ class GladRasterLayer(RasterLayer):
         super(GladRasterLayer, self).__init__(layerdef)
 
         self.processing_dir = r'R:\glad_alerts\processing'
-        self.mosaic_gdb = r'R:\glad_alerts\filter_glad_alerts.gdb'
-        self.region_list = ['africa', 'asia', 'south_america']
+        self.mosaic_gdb = r'R:\glad_alerts\filter_glad_png.gdb'
+       # self.region_list = ['africa', 'asia', 'south_america']
+        self.region_list = ['africa']
+        self.raster_list = ['band1_day', 'band2_day', 'band3_conf_and_year', 'band4_intensity']
 
         self.footprint_dict = {}
         self.num_threads = 3
@@ -105,19 +107,12 @@ class GladRasterLayer(RasterLayer):
         # Process all confidence and filter_glad_alerts rasters first; intensity raster needs
         # the output from confidence as an input
         # We'll ensure this happens by adding confidence rasters to the queue first
-        for ras_type in ['confidence', 'filter_glad_alerts', 'intensity']:
+        for ras_type in self.raster_list:
 
             for region in self.region_list:
 
                 region_dir = os.path.join(self.processing_dir, region)
-                export_gdb = os.path.join(region_dir, 'export_mosaic', 'export.gdb')
-
-                # Intensity rasters just use the confidence rasters as input, not the intensity mosaic
-                if ras_type == 'intensity':
-                    mosaic_path = os.path.join(region_dir, 'resampled', 'confidence' + '_27m.tif')
-
-                else:
-                    mosaic_path = os.path.join(export_gdb, ras_type)
+                mosaic_path = os.path.join(region_dir, 'export_mosaic', 'export.gdb', ras_type)
 
                 tif_output = os.path.join(self.processing_dir, region, 'resampled', ras_type + '_27m.tif')
 
@@ -137,7 +132,7 @@ class GladRasterLayer(RasterLayer):
         # this will remove all the duplicate cell sizes that seem to profilerate (55.659745, 55.659746, etc)
         cell_size_dict = OrderedDict((int(x), x) for x in cell_size_list)
 
-        for ras_type in ['confidence', 'filter_glad_alerts', 'intensity']:
+        for ras_type in self.raster_list:
             for region in self.region_list:
 
                 # Grab the 'raw' (i.e. not resampled) input tiff for this combination of ras_type and region
@@ -168,7 +163,7 @@ class GladRasterLayer(RasterLayer):
 
         for output_name, output_dict in self.footprint_dict.iteritems():
 
-            for ras_type in ['confidence', 'filter_glad_alerts', 'intensity']:
+            for ras_type in self.raster_list:
 
                 region_dir = os.path.join(self.processing_dir, output_dict['region'])
 

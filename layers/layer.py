@@ -329,8 +329,10 @@ class Layer(object):
             esri_output = self.esri_service_output.split(',')
 
         else:
-            s = list(self.source)
-            esri_output = list(self.esri_service_output)
+            s = [self.source]
+            esri_output = [self.esri_service_output]
+
+            print self.source
 
         for dataset in s:
             from_desc = arcpy.Describe(dataset)
