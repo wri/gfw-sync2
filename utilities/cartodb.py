@@ -155,7 +155,13 @@ def cartodb_create(sqlite_path, template_table, output_table, temp_id_field, gfw
     # Make the table we created 'discoverable' in the cartoDB UI
     # Need to use the account name because we're a multi-user account (per cartoDB support)
     account_name = get_account_name(gfw_env)
-    cartodb_sql("select cdb_cartodbfytable('{0}', '{1}');".format(account_name, output_table), gfw_env)
+
+    # Unclear what the deal is with this; apparently if we're using the default account (wri-01) it
+    # will fail if we include that in the select statement. annoying.
+    if account_name == 'wri-01':
+        cartodb_sql("select cdb_cartodbfytable('{0}');".format(output_table), gfw_env)
+    else:
+        cartodb_sql("select cdb_cartodbfytable('{0}', '{1}');".format(account_name, output_table), gfw_env)
 
     # Count dataset rows and compare them to the append limit we're using for each API transaction
     row_count = sqlite_row_count(sqlite_path)

@@ -5,10 +5,11 @@ from layers.raster_layer import RasterLayer
 from layers.vector_layer import VectorLayer
 from layers.country_vector_layer import CountryVectorLayer
 from layers.glad_raster_layer import GladRasterLayer
+from layers.terrai_raster_layer import TerraiRasterLayer
 
 from datasources.imazon_datasource import ImazonDataSource
-from datasources.terrai_datasource import TerraiDataSource
 from datasources.glad_datasource import GladDataSource
+from datasources.terrai_datasource import TerraiDataSource
 from datasources.wdpa_datasource import WDPADatasource
 from datasources.hot_osm_export_datasource import HotOsmExportDataSource
 from datasources.forest_atlas_datasource import ForestAtlasDataSource
@@ -32,7 +33,7 @@ def build_layer(layerdef, gfw_env):
 
     elif layerdef["type"] == "terrai_raster":
         datasource = TerraiDataSource(layerdef)
-        layer = RasterLayer(datasource.get_layer())
+        layer = TerraiRasterLayer(datasource.get_layer())
 
     elif layerdef["type"] == "imazon_vector":
         datasource = ImazonDataSource(layerdef)
