@@ -267,19 +267,24 @@ def get_column_order(table_name, gfw_env):
     return cartodb_sql(sql, gfw_env)['fields'].keys()
 
 
-def cartodb_row_count(table_name, gfw_env):
+def cartodb_min_max(table_name, gfw_env):
     """
-    Get row count
+    Get min/max id for cartodb_id in table
     :param table_name: cartoDB table
     :param gfw_env: gfw env
     :return: int value of row count
     """
-    sql = "SELECT COUNT(*) FROM {0}".format(table_name)
-    row_count = int(cartodb_sql(sql, gfw_env)['rows'][0]['count'])
+    sql = "SELECT min(cartodb_id) as a, max(cartodb_id) as b FROM {0}".format(table_name)
+    result = cartodb_sql(sql, gfw_env)['rows'][0]
 
-    logging.debug('CartoDB row count: {0}'.format(row_count))
+    min_cartodb_id = result['a']
 
-    return row_count
+    # Add 1 to this value so that it's included in any >= and < statements
+    max_cartodb_id = result['b'] + 1
+
+    logging.debug('CartoDB ID min: {0}, max: {1}'.format(min_cartodb_id, max_cartodb_id))
+
+    return min_cartodb_id, max_cartodb_id
 
 
 def cartodb_push_to_production(staging_table, production_table, gfw_env):
@@ -292,7 +297,7 @@ def cartodb_push_to_production(staging_table, production_table, gfw_env):
     """
     logging.debug("push staging to production table: {0}".format(production_table))
 
-    row_count = cartodb_row_count(staging_table, gfw_env)
+    min_cartodb_id, max_cartodb_id = cartodb_min_max(staging_table, gfw_env)
 
     prod_columns = get_column_order(production_table, gfw_env)
     staging_columns = get_column_order(staging_table, gfw_env)
@@ -304,7 +309,7 @@ def cartodb_push_to_production(staging_table, production_table, gfw_env):
     sql = 'INSERT INTO {0} ({1}) SELECT {1} FROM {2} WHERE {3}'
     format_tuple = (production_table, final_columns_sql, staging_table)
 
-    cartodb_execute_where_clause(0, row_count, 'cartodb_id', None, None, gfw_env, sql, format_tuple)
+    cartodb_execute_where_clause(min_cartodb_id, max_cartodb_id, 'cartodb_id', None, None, gfw_env, sql, format_tuple)
 
 
 def cartodb_execute_where_clause(start_row, end_row, id_field, src_fc, out_table, gfw_env, sql=None, format_tuple=None):
