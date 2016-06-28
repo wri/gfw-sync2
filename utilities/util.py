@@ -12,6 +12,7 @@ import cartodb
 import logging
 import uuid
 import urllib2
+from ConfigParser import ConfigParser
 
 
 def byteify(unicode_string):
@@ -157,6 +158,10 @@ def get_token(token_file):
     else:
         if os.path.splitext(token_path)[1] == '.json':
             return json.load(open(token_path))
+        elif os.path.splitext(token_path)[1] == '.config':
+            parser = ConfigParser()
+            parser.read(token_path)
+            return parser.items('Credentials')
         else:
             with open(token_path, "r") as f:
                 for row in f:
