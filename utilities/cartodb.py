@@ -443,6 +443,4 @@ def cartodb_sync(shp, production_table, where_clause, gfw_env, scratch_workspace
 
     cartodb_push_to_production(staging_table, production_table, gfw_env)
 
-    sys.exit(1)
-
-    # delete_staging_table_if_exists(staging_table, gfw_env)
+    delete_staging_table_if_exists(staging_table, gfw_env)
