@@ -23,10 +23,13 @@ class GladRasterLayer(GlobalForestChangeLayer):
 
         print "Asa's stuff goes here"
         print 'Source rasters are here: ' + ', '.join(self.source)
+        print 'Output rasters should be copied here:' + ', '.join(self.esri_service_output.split(','))
+
+        # All of the above is set in the Google Doc - feel free to change if necessary
+        # https://docs.google.com/spreadsheets/d/1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI/edit#gid=0
 
     def start_visualization_process(self):
 
-        print 'Starting subprocess to update viz'
         self.set_processing_server_state('running')
 
         abspath = os.path.abspath(__file__)
@@ -39,8 +42,6 @@ class GladRasterLayer(GlobalForestChangeLayer):
         host_name = 'ubuntu@{0}'.format(self.server_ip)
 
         cmd = ['fab', 'kickoff:GLAD', '-i', pem_file, '-H', host_name]
-        print cmd
-
         self.proc = subprocess.Popen(cmd, cwd=utilities_dir, stdout=subprocess.PIPE)
 
     def finish_visualization_process(self):
@@ -53,7 +54,7 @@ class GladRasterLayer(GlobalForestChangeLayer):
             else:
                 break
 
-        # self.set_processing_server_state('stopped')
+        self.set_processing_server_state('stopped')
 
     def update(self):
 
