@@ -8,7 +8,6 @@ def kickoff(proc_name):
     aws_access_key = token_info[0][1]
     aws_secret_key = token_info[1][1]
 
-
     # Required, even though these are set for ubuntu in .bashrc
     with fabric.api.shell_env(AWS_ACCESS_KEY_ID=aws_access_key, AWS_SECRET_ACCESS_KEY=aws_secret_key):
         if proc_name == 'GLAD':
