@@ -245,7 +245,7 @@ class VectorLayer(Layer):
             out_dir = os.path.dirname(self.vector_to_raster_output)
             out_file_name = os.path.splitext(os.path.basename(self.vector_to_raster_output))[0]
 
-            for extension in ['.tif', '.tfw', '.tif.aux.xml', '.tif.ovr', '.tif.vat.cpg', '.tif.vat.dbf', '.tif.xml']:
+            for extension in ['.tif', '.tfw', '.tif.aux.xml', '.tif.vat.cpg', '.tif.vat.dbf', '.tif.xml']:
                 src_file = os.path.join(src_dir, src_file_name + extension)
                 out_file = os.path.join(out_dir, out_file_name + extension)
 
