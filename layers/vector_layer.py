@@ -5,6 +5,7 @@ import sys
 import time
 import logging
 import arcpy
+import shutil
 
 from layer import Layer
 from utilities import cartodb
@@ -225,13 +226,30 @@ class VectorLayer(Layer):
             cell_size = int(arcpy.GetRasterProperties_management(self.vector_to_raster_output,
                                                                  'CELLSIZEX').getOutput(0))
 
+            arcpy.env.pyramid = "NONE"
+            arcpy.env.snapRaster = self.vector_to_raster_output
+
             logging.debug('Rasterizing and outputting as tif')
             out_raster = os.path.join(temp_dir, 'out.tif')
+
             arcpy.PolygonToRaster_conversion(out_projected_fc, 'ras_val', out_raster, "CELL_CENTER", "", cell_size)
 
             logging.debug('Copying raster {0} to output {1}'.format(out_raster, self.vector_to_raster_output))
             arcpy.Delete_management(self.vector_to_raster_output)
-            arcpy.CopyRaster_management(out_raster, self.vector_to_raster_output)
+
+            # Move all related tif files to final destination
+            # Much faster than using CopyRaster_management-- just need to physically move the files
+            src_dir = os.path.dirname(out_raster)
+            src_file_name = os.path.splitext(os.path.basename(out_raster))[0]
+
+            out_dir = os.path.dirname(self.vector_to_raster_output)
+            out_file_name = os.path.splitext(os.path.basename(self.vector_to_raster_output))[0]
+
+            for extension in ['.tif', '.tfw', '.tif.aux.xml', '.tif.vat.cpg', '.tif.vat.dbf', '.tif.xml']:
+                src_file = os.path.join(src_dir, src_file_name + extension)
+                out_file = os.path.join(out_dir, out_file_name + extension)
+
+                shutil.move(src_file, out_file)
 
         else:
             pass

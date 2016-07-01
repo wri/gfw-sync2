@@ -25,7 +25,12 @@ def find_src_mxd_and_cache_dir(map_service_path):
 
     # Need to convert the path from our gis server (map_service_path) to its URL
     # map_service_path example: GIS Servers\arcgis on gis-gfw.wri.org (admin)\cached\temp_cached_mapservice.MapServer
-    partial_path = map_service_path.split('gis-gfw.wri.org')[1]
+    try:
+        partial_path = map_service_path.split('gis-gfw.wri.org')[1]
+
+    except IndexError:
+        partial_path = map_service_path.split('localhost')[1]
+
     paren_index = partial_path.index(')')
 
     # Start at the paren index and grab the rest of the path
