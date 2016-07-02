@@ -9,10 +9,13 @@ def kickoff(proc_name):
     aws_secret_key = token_info[1][1]
 
     # Required, even though these are set for ubuntu in .bashrc
-    with fabric.api.shell_env(AWS_ACCESS_KEY_ID=aws_access_key, AWS_SECRET_ACCESS_KEY=aws_secret_key):
+    # Set for both tilestache and s4cmd . . . annoyingly different
+    with fabric.api.shell_env(AWS_ACCESS_KEY_ID=aws_access_key, AWS_SECRET_ACCESS_KEY=aws_secret_key,
+                              S3_ACCESS_KEY=aws_access_key, S3_SECRET_KEY=aws_secret_key):
+
         if proc_name == 'GLAD':
 
-            cmd = 'python /home/ubuntu/glad/glad-processing-gdal/process_glad.py -r sa_test'
+            cmd = 'python /home/ubuntu/glad/glad-processing-gdal/process_glad.py -r all'
             fabric.api.run(cmd)
 
         else:

@@ -26,19 +26,23 @@ class GladRasterLayer(GlobalForestChangeLayer):
         # http://gis-gfw.wri.org/arcgis/rest/services/image_services/glad_alerts_con_analysis/ImageServer
 
         #step 1- copy to R drive .source to .esri_service_output
+
+        # this fails-- should be self.copy_to_esri_output_multiple()
         copy_to_esri_output_multiple()
+        download_output = self.esri_service_output
+
 
         #step 2 calculate stats on rasters
-        for file in self.esri_service_output:
-            arcpy.CalculateStatistics_management(file, "1", "1", "", "OVERWRITE", "")
-            print "stats calculated on raster"
+        # for file in self.esri_service_output:
+        #     arcpy.CalculateStatistics_management(file, "1", "1", "", "OVERWRITE", "")
+        #     print "stats calculated on raster"
 
         #step 3 calculate stats on mosaics, possibly add to the spreadsheet?
-        # self.mosaic_gdb = [r'R:\glad_alerts\glad_alerts_analysis.gdb', 
+        # self.mosaic_gdb = [r'R:\glad_alerts\glad_alerts_analysis.gdb',
 
-        print "Asa's stuff goes here"
-        print 'Source rasters are here: ' + ', '.join(self.source)
-        print 'Output rasters should be copied here:' + ', '.join(self.esri_service_output.split(','))
+        # print "Asa's stuff goes here"
+        # print 'Source rasters are here: ' + ', '.join(self.source)
+        # print 'Output rasters should be copied here:' + ', '.join(self.esri_service_output.split(','))
 
         # All of the above is set in the Google Doc - feel free to change if necessary
         # https://docs.google.com/spreadsheets/d/1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI/edit#gid=0
@@ -76,7 +80,7 @@ class GladRasterLayer(GlobalForestChangeLayer):
 
         self.start_visualization_process()
 
-        self.update_image_service() #will update the analysis
+        #self.update_image_service() #will update the analysis
 
         self.finish_visualization_process()
 

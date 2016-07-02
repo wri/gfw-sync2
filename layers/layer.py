@@ -112,7 +112,7 @@ class Layer(object):
 
         for output_path in l:
             if not arcpy.Exists(output_path):
-                logging.error("esri_service_output {0} does not exist".format(e))
+                logging.error("esri_service_output {0} does not exist".format(output_path))
                 sys.exit(1)
 
         self._esri_service_output = e

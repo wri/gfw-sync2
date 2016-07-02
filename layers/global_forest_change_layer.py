@@ -7,6 +7,7 @@ import boto.ec2
 from layers.raster_layer import RasterLayer
 from utilities import util
 
+
 class GlobalForestChangeLayer(RasterLayer):
     """
     GlobalForestChange layer class. Inherits from RasterLayer
