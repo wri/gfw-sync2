@@ -15,7 +15,7 @@ def kickoff(proc_name):
 
         if proc_name == 'GLAD':
 
-            cmd = 'python /home/ubuntu/glad/glad-processing-gdal/process_glad.py -r all'
+            cmd = 'python /home/ubuntu/glad/glad-processing-gdal/process_glad.py -r sa_test'
             fabric.api.run(cmd)
 
         else:

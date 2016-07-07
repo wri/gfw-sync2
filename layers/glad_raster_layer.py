@@ -28,8 +28,8 @@ class GladRasterLayer(GlobalForestChangeLayer):
         #step 1- copy to R drive .source to .esri_service_output
 
         # this fails-- should be self.copy_to_esri_output_multiple()
-        copy_to_esri_output_multiple()
-        download_output = self.esri_service_output
+        download = GlobalForestChangeLayer()
+        download.copy_to_esri_output_multiple()
 
 
         #step 2 calculate stats on rasters
@@ -80,8 +80,8 @@ class GladRasterLayer(GlobalForestChangeLayer):
 
         self.start_visualization_process()
 
-        #self.update_image_service() #will update the analysis
+        # self.update_image_service() #will update the analysis
 
         self.finish_visualization_process()
-
-        self._update()
+        #
+        # self._update()
