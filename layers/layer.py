@@ -59,6 +59,9 @@ class Layer(object):
         self._download_output = None
         self.download_output = layerdef['download_output']
 
+        self._esri_mosaics = None
+        self.esri_mosaics = layerdef['esri_mosaics']
+
         self._transformation = None
         self.transformation = layerdef['transformation']
 

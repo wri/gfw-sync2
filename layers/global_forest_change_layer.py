@@ -39,6 +39,16 @@ class GlobalForestChangeLayer(RasterLayer):
         for input_ras, output_ras in input_output_tuples:
             self.copy_to_esri_output(input_ras, output_ras)
 
+    def calculate_stats(self):
+        '''
+        calculate stats on rasters and mosaics
+        '''
+        for raster in esri_service_output:
+            arcpy.CalculateStatistics_management(raster, "1", "1", "", "OVERWRITE", "")
+
+        for mosaic in esri_mosaics:
+            arcpy.CalculateStatistics_management(mosaic, "1", "1", "", "OVERWRITE", "")
+
     def set_processing_server_state(self, desired_state):
 
         token_info = util.get_token('boto.config')
@@ -83,5 +93,3 @@ class GlobalForestChangeLayer(RasterLayer):
         # self.copy_to_esri_output_multiple()
 
         pass
-
-
