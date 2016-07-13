@@ -3,6 +3,7 @@ __author__ = 'Charlie.Hofmann'
 import time
 import logging
 import boto.ec2
+import arcpy
 
 from layers.raster_layer import RasterLayer
 from utilities import util
@@ -32,6 +33,7 @@ class GlobalForestChangeLayer(RasterLayer):
         """
         Copy inputs downloaded from the source to the proper output location
 copy_to_esri_output_multiple        """
+        arcpy.env.overwriteOutput = True
         esri_output_list = self.esri_service_output.split(',')
         input_output_tuples = zip(self.source, esri_output_list)
 
@@ -43,10 +45,10 @@ copy_to_esri_output_multiple        """
         '''
         calculate stats on rasters and mosaics
         '''
-        for raster in esri_service_output:
+        for raster in self.esri_service_output:
             arcpy.CalculateStatistics_management(raster, "1", "1", "", "OVERWRITE", "")
 
-        for mosaic in esri_mosaics:
+        for mosaic in self.esri_mosaics:
             arcpy.CalculateStatistics_management(mosaic, "1", "1", "", "OVERWRITE", "")
 
     def set_processing_server_state(self, desired_state):
