@@ -9,7 +9,6 @@ import os
 import arcpy
 import datetime
 
-from..utilities import util
 #specify urls to GLAD Alerts in S3
 urls = [
 r"http://umd-landsat-alerts.s3.amazonaws.com/roc_day2016.tif",

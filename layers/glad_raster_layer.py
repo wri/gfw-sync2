@@ -21,13 +21,15 @@ class GladRasterLayer(GlobalForestChangeLayer):
         self.proc = None
 
     def update_image_service(self):
+        arcpy.env.overwriteOutput = True
         # Will update two GFW image services
         # http://gis-gfw.wri.org/arcgis/rest/services/image_services/glad_alerts_analysis/ImageServer
         # http://gis-gfw.wri.org/arcgis/rest/services/image_services/glad_alerts_con_analysis/ImageServer
 
-        update_glad = GlobalForestChangeLayer()
-        update_glad.copy_to_esri_output_multiple()
-        update.glad.calculate_stats()
+        print "running update_image_service"
+        # update_glad = GlobalForestChangeLayer()
+        self.copy_to_esri_output_multiple()
+        self.calculate_stats()
 
     def start_visualization_process(self):
 
@@ -59,10 +61,10 @@ class GladRasterLayer(GlobalForestChangeLayer):
 
     def update(self):
 
-        self.start_visualization_process()
+        # self.start_visualization_process()
 
-        # self.update_image_service() #will update the analysis
+        self.update_image_service() #will update the analysis
 
-        self.finish_visualization_process()
+        # self.finish_visualization_process()
         #
         # self._update()

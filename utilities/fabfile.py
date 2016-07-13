@@ -10,12 +10,12 @@ def kickoff(proc_name):
 
     # Required, even though these are set for ubuntu in .bashrc
     # Set for both tilestache and s4cmd . . . annoyingly different
-    with fabric.api.shell_env(AWS_ACCESS_KEY_ID=aws_access_key, AWS_SECRET_ACCESS_KEY=aws_secret_key,
-                              S3_ACCESS_KEY=aws_access_key, S3_SECRET_KEY=aws_secret_key):
+    # Previouly used AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY as well for tilestache
+    with fabric.api.shell_env(S3_ACCESS_KEY=aws_access_key, S3_SECRET_KEY=aws_secret_key):
 
         if proc_name == 'GLAD':
 
-            cmd = 'python /home/ubuntu/glad/glad-processing-gdal/process_glad.py -r sa_test'
+            cmd = 'python /home/ubuntu/mapnik-forest-change-tiles/generate-tiles.py -t glad -r all'
             fabric.api.run(cmd)
 
         else:

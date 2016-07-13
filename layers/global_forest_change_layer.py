@@ -31,12 +31,12 @@ class GlobalForestChangeLayer(RasterLayer):
     def copy_to_esri_output_multiple(self):
         """
         Copy inputs downloaded from the source to the proper output location
-        :return:
-        """
+copy_to_esri_output_multiple        """
         esri_output_list = self.esri_service_output.split(',')
         input_output_tuples = zip(self.source, esri_output_list)
 
         for input_ras, output_ras in input_output_tuples:
+            print input_ras, output_ras
             self.copy_to_esri_output(input_ras, output_ras)
 
     def calculate_stats(self):
@@ -90,6 +90,6 @@ class GlobalForestChangeLayer(RasterLayer):
 
         # self.archive_source_rasters()
         #
-        # self.copy_to_esri_output_multiple()
+        self.copy_to_esri_output_multiple()
 
         pass
