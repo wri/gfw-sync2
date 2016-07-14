@@ -15,7 +15,7 @@ def kickoff(proc_name):
 
         if proc_name == 'GLAD':
 
-            cmd = 'python /home/ubuntu/mapnik-forest-change-tiles/generate-tiles.py -t glad -r all'
+            cmd = 'python /home/ubuntu/mapnik-forest-change-tiles/generate-tiles.py -l glad -r south_america --test'
             fabric.api.run(cmd)
 
         else:

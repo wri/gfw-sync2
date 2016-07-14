@@ -110,12 +110,17 @@ class Layer(object):
 
     @esri_mosaics.setter
     def esri_mosaics(self, e):
-        l = e.split(',')
 
-        for output_path in l:
-            if not arcpy.Exists(output_path):
-                logging.error("esri_mosaics {0} does not exist".format(output_path))
-                sys.exit(1)
+        if not e:
+            e = None
+
+        else:
+            l = e.split(',')
+
+            for output_path in l:
+                if not arcpy.Exists(output_path):
+                    logging.error("esri_mosaics {0} does not exist".format(output_path))
+                    sys.exit(1)
 
         self._esri_mosaics = e
 
@@ -350,8 +355,6 @@ class Layer(object):
         else:
             s = [self.source]
             esri_output = [self.esri_service_output]
-
-            print self.source
 
         for dataset in s:
             from_desc = arcpy.Describe(dataset)

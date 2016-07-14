@@ -27,9 +27,6 @@ def main():
     # Open the correct sheet of the config table (PROD | DEV) and get the layerdef
     # Config table: https://docs.google.com/spreadsheets/d/1pkJCLNe9HWAHqxQh__s-tYQr9wJzGCb6rmRBPj8yRWI/edit#gid=0
     layerdef = gs.get_layerdef(args.layer, args.environment)
-	
-    print args.environment
-    print layerdef
 
     # Pass the layerdef to the build_layer function
     layer = layer_decision_tree.build_layer(layerdef, args.environment)
