@@ -3,6 +3,7 @@ __author__ = 'Thomas.Maschler'
 import arcpy
 import logging
 import os
+import shutil
 
 from layer import Layer
 
@@ -45,13 +46,14 @@ class RasterLayer(Layer):
     @staticmethod
     def copy_to_esri_output(input_ras, output_ras):
         logging.info('Starting to copy from {0} to esri_service_output: {1}'.format(input_ras, output_ras))
-        arcpy.CopyRaster_management(input_ras, output_ras)
+        shutil.copy(input_ras, output_ras)
+        #arcpy.CopyRaster_management(input_ras, output_ras)
 
     def update(self):
         logging.info('Starting raster_layer.update for {0}'.format(self.name))
 
         # Creates timestamped backup and download from source
-        self.archive() 
+        self.archive()
 
         # Exports to WGS84 if current dataset isn't already
         # self.export_2_shp()

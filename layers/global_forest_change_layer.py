@@ -4,6 +4,7 @@ import time
 import logging
 import boto.ec2
 import arcpy
+import subprocess
 
 from layers.raster_layer import RasterLayer
 from utilities import util
@@ -45,11 +46,42 @@ copy_to_esri_output_multiple        """
         '''
         calculate stats on rasters and mosaics
         '''
-        for raster in self.esri_service_output:
-            arcpy.CalculateStatistics_management(raster, "1", "1", "", "OVERWRITE", "")
+        esri_raster_list = self.esri_service_output.split(',')
+        esri_mosaic_list = self.esri_mosaics.split(',')
 
-        for mosaic in self.esri_mosaics:
+        for raster in esri_raster_list:
+            arcpy.CalculateStatistics_management(raster, "1", "1", "", "OVERWRITE", "")
+            print "stats calculated on raster"
+
+        for mosaic in esri_mosaic_list:
             arcpy.CalculateStatistics_management(mosaic, "1", "1", "", "OVERWRITE", "")
+            print "stats calculated on mosaic"
+
+    def stop_service(self, service):
+        username = 'astrong'
+        auth_key = r'D:\scripts\gfw-sync2\tokens\arcgis_server_pass'
+
+        with open(auth_key, 'r') as myfile:
+            data = myfile.read().replace('\n', '')
+
+        cwd = r"C:\Program Files\ArcGIS\Server\tools\admin"
+        cmd = ['python', "manageservice.py"]
+        cmd += ['-u', username, '-p', data, '-s', 'http://gis-gfw.wri.org/arcgis/admin', '-n', service, '-o', 'stop']
+        subprocess.call(cmd, cwd=cwd)
+        print "service stopped"
+
+    def start_service(self, service):
+        username = 'astrong'
+        auth_key = r'D:\scripts\gfw-sync2\tokens\arcgis_server_pass'
+
+        with open(auth_key, 'r') as myfile:
+            data = myfile.read().replace('\n', '')
+
+        cwd = r"C:\Program Files\ArcGIS\Server\tools\admin"
+        cmd = ['python', "manageservice.py"]
+        cmd += ['-u', username, '-p', data, '-s', 'http://gis-gfw.wri.org/arcgis/admin', '-n', service, '-o', 'start']
+        subprocess.call(cmd, cwd=cwd)
+        print "service started"
 
     def set_processing_server_state(self, desired_state):
 

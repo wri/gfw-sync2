@@ -30,6 +30,10 @@ class GladRasterLayer(GlobalForestChangeLayer):
         # update_glad = GlobalForestChangeLayer()
         self.copy_to_esri_output_multiple()
         self.calculate_stats()
+        self.stop_service('image_services/glad_alerts_analysis')
+        self.start_service('image_services/glad_alerts_analysis')
+        self.stop_service('image_services/glad_alerts_con_analysis')
+        self.start_service('image_services/glad_alerts_con_analysis')
 
     def start_visualization_process(self):
 
@@ -63,7 +67,7 @@ class GladRasterLayer(GlobalForestChangeLayer):
 
         # self.start_visualization_process()
 
-        self.update_image_service() #will update the analysis
+        self.update_image_service()
 
         # self.finish_visualization_process()
         #
