@@ -128,6 +128,6 @@ class TerraiRasterLayer(GlobalForestChangeLayer):
         #
         # self.project_rasters()
 
-        self.update_image_service
+        self.update_image_service()
 
         # self._update()

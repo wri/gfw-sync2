@@ -41,6 +41,7 @@ class GladDataSource(DataSource):
         else:
             # Important for the script that reads the log file and sends an email
             # Including this 'Checked' message will show that we checked the layer but it didn't need updating
+            logging.debug('Checked GLAD S3 bucket, no new data as compared to last timestamp in gfw-sync2 config')
             logging.critical('Checked | {0}'.format(self.name))
             sys.exit(0)
 
@@ -49,7 +50,7 @@ class GladDataSource(DataSource):
     def find_updated_data(self, raster_url_list):
 
         #TODO remove this
-        gs.set_value('tech_title', 'umd_landsat_alerts', 'last_updated', self.gfw_env, '12/8/1987')
+        # gs.set_value('tech_title', 'umd_landsat_alerts', 'last_updated', self.gfw_env, '12/8/1987')
 
         config_sheet_datetime_text = gs.get_value('tech_title', 'umd_landsat_alerts', 'last_updated', self.gfw_env)
         config_sheet_datetime = datetime.datetime.strptime(config_sheet_datetime_text, '%m/%d/%Y')

@@ -3,8 +3,12 @@ __author__ = 'Charlie.Hofmann'
 import arcpy
 import datetime
 import logging
+import sys
+import urlparse
 
 from datasource import DataSource
+from utilities import aws_s3
+from utilities import google_sheet as gs
 
 
 class TerraiDataSource(DataSource):
@@ -26,10 +30,12 @@ class TerraiDataSource(DataSource):
 
         raster_url_list = self.data_source.split(',')
         output_list = []
-        
+
         for ras in raster_url_list:
             out_file = self.download_file(ras, self.download_workspace)
             output_list.append(out_file)
 
         self.layerdef['source'] = output_list
+
+
         return self.layerdef
