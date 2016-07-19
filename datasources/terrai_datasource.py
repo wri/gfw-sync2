@@ -24,18 +24,12 @@ class TerraiDataSource(DataSource):
         :return: an updated layerdef with the local source for the layer.update() process
         """
 
-        # self.data_source = self.download_file(self.data_source, self.download_workspace)
-        #
-        # self.build_table()
-        #
-        # self.calculate_dates()
-        #
-        # self.layerdef['source'] = self.data_source
+        raster_url_list = self.data_source.split(',')
+        output_list = []
+        
+        for ras in raster_url_list:
+            out_file = self.download_file(ras, self.download_workspace)
+            output_list.append(out_file)
 
+        self.layerdef['source'] = output_list
         return self.layerdef
-
-
-    
-
-
-

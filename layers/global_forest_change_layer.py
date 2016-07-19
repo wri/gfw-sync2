@@ -39,7 +39,7 @@ copy_to_esri_output_multiple        """
         input_output_tuples = zip(self.source, esri_output_list)
 
         for input_ras, output_ras in input_output_tuples:
-            print input_ras, output_ras
+            logging.debug(input_ras, output_ras)
             self.copy_to_esri_output(input_ras, output_ras)
 
     def calculate_stats(self):
@@ -51,11 +51,11 @@ copy_to_esri_output_multiple        """
 
         for raster in esri_raster_list:
             arcpy.CalculateStatistics_management(raster, "1", "1", "", "OVERWRITE", "")
-            print "stats calculated on raster"
+            logging.debug("stats calculated on raster")
 
         for mosaic in esri_mosaic_list:
             arcpy.CalculateStatistics_management(mosaic, "1", "1", "", "OVERWRITE", "")
-            print "stats calculated on mosaic"
+            logging.debug("stats calculated on mosaic")
 
     def stop_service(self, service):
         username = 'astrong'
@@ -68,7 +68,7 @@ copy_to_esri_output_multiple        """
         cmd = ['python', "manageservice.py"]
         cmd += ['-u', username, '-p', data, '-s', 'http://gis-gfw.wri.org/arcgis/admin', '-n', service, '-o', 'stop']
         subprocess.call(cmd, cwd=cwd)
-        print "service stopped"
+        logging.debug("service stopped")
 
     def start_service(self, service):
         username = 'astrong'
@@ -81,7 +81,7 @@ copy_to_esri_output_multiple        """
         cmd = ['python', "manageservice.py"]
         cmd += ['-u', username, '-p', data, '-s', 'http://gis-gfw.wri.org/arcgis/admin', '-n', service, '-o', 'start']
         subprocess.call(cmd, cwd=cwd)
-        print "service started"
+        logging.debug("service started")
 
     def set_processing_server_state(self, desired_state):
 
@@ -102,7 +102,8 @@ copy_to_esri_output_multiple        """
                         break
 
         if server_instance.state != desired_state:
-            print 'Current server state is {0}. Setting it to {1} now.'.format(server_instance.state, desired_state)
+            logging.debug('Current server state is {0}. '
+                          'Setting it to {1} now.'.format(server_instance.state, desired_state))
 
             if desired_state == 'running':
                 server_instance.start()
@@ -110,7 +111,7 @@ copy_to_esri_output_multiple        """
                 server_instance.stop()
 
             while server_instance.state != desired_state:
-                print server_instance.state
+                logging.debug(server_instance.state)
                 time.sleep(5)
 
                 # Need to keep checking get updated instance status
@@ -118,12 +119,8 @@ copy_to_esri_output_multiple        """
 
         self.server_ip = server_instance.ip_address
 
-        print 'Server {0} is now {1}, IP: {2}'.format(self.server_name, server_instance.state, self.server_ip)
+        logging.debug('Server {0} is now {1}, IP: {2}'.format(self.server_name, server_instance.state, self.server_ip))
 
     def _update(self):
 
-        # self.archive_source_rasters()
-        #
-        self.copy_to_esri_output_multiple()
-
-        pass
+        self.archive_source_rasters()

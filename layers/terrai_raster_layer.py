@@ -24,6 +24,17 @@ class TerraiRasterLayer(GlobalForestChangeLayer):
 
         self.overview_template_fc = r'R:\glad_alerts\processing\footprint\footprint.gdb\final_footprint'
 
+    def update_image_service(self):
+        #copy data to R drive
+        self.copy_to_esri_output_multiple()
+
+        #calculate stats on files and mosaic
+        self.calculate_stats()
+
+        #Restart image service
+        self.stop_service('image_services/terrai_analysis')
+        self.start_service('image_services/terrai_analysis')
+
     @staticmethod
     def extract_attribute_values(input_ras):
 
@@ -113,15 +124,10 @@ class TerraiRasterLayer(GlobalForestChangeLayer):
 
     def update(self):
 
-        self.reclassify_rasters()
+        # self.reclassify_rasters()
+        #
+        # self.project_rasters()
 
-        self.project_rasters()
+        self.update_image_service
 
-        self._update()
-
-
-
-
-
-
-
+        # self._update()
