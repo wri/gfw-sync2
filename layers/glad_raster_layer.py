@@ -53,7 +53,7 @@ class GladRasterLayer(GlobalForestChangeLayer):
         pem_file = os.path.join(tokens_dir, 'chofmann-wri.pem')
         host_name = 'ubuntu@{0}'.format(self.server_ip)
 
-        cmd = ['fab', 'kickoff:GLAD', '-i', pem_file, '-H', host_name]
+        cmd = ['fab', 'kickoff:glad', '-i', pem_file, '-H', host_name]
         self.proc = subprocess.Popen(cmd, cwd=utilities_dir, stdout=subprocess.PIPE)
 
     def finish_visualization_process(self):

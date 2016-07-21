@@ -13,11 +13,5 @@ def kickoff(proc_name):
     # Previouly used AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY as well for tilestache
     with fabric.api.shell_env(S3_ACCESS_KEY=aws_access_key, S3_SECRET_KEY=aws_secret_key):
 
-        if proc_name == 'GLAD':
-
-            # cmd = 'python /home/ubuntu/mapnik-forest-change-tiles/generate-tiles.py -l glad -r south_america --test'
-            cmd = 'python /home/ubuntu/mapnik-forest-change-tiles/generate-tiles.py -l glad -r all'
-            fabric.api.run(cmd)
-
-        else:
-            raise ValueError("Unknown process name in fabfile.py")
+        cmd = 'python /home/ubuntu/mapnik-forest-change-tiles/generate-tiles.py -l {0} -r all'.format(proc_name)
+        fabric.api.run(cmd)

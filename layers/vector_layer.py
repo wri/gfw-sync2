@@ -152,7 +152,6 @@ class VectorLayer(Layer):
         version_name = self.name + "_" + str(int(time.time()))
 
         sde_workspace = os.path.dirname(esri_output_fc)
-
         desc = arcpy.Describe(sde_workspace)
         if hasattr(desc, "datasetType") and desc.datasetType == 'FeatureDataset':
             sde_workspace = os.path.dirname(sde_workspace)
@@ -183,6 +182,10 @@ class VectorLayer(Layer):
 
         logging.debug('Starting to append to esri_service_output')
         arcpy.Append_management(fc_to_append, "esri_service_output_fl", "NO_TEST")
+
+        print sde_workspace
+        print version_name
+        print '**************************'
 
         arcpy.ReconcileVersions_management(input_database=sde_workspace, reconcile_mode="ALL_VERSIONS",
                                            target_version="sde.DEFAULT", edit_versions='gfw.' + version_name,

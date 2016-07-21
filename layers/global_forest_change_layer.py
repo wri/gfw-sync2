@@ -32,8 +32,8 @@ class GlobalForestChangeLayer(RasterLayer):
 
     def copy_to_esri_output_multiple(self):
         """
-        Copy inputs downloaded from the source to the proper output location
-copy_to_esri_output_multiple        """
+        Copy inputs downloaded from the source to the proper output location copy_to_esri_output_multiple
+        """
         arcpy.env.overwriteOutput = True
         esri_output_list = self.esri_service_output.split(',')
         input_output_tuples = zip(self.source, esri_output_list)
