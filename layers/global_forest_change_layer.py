@@ -1,13 +1,12 @@
 __author__ = 'Charlie.Hofmann'
 
-import time
 import logging
-import boto.ec2
 import arcpy
 import subprocess
+import os
 
 from layers.raster_layer import RasterLayer
-from utilities import util
+from utilities import aws
 
 
 class GlobalForestChangeLayer(RasterLayer):
@@ -21,6 +20,7 @@ class GlobalForestChangeLayer(RasterLayer):
 
         self.server_name = 'TERRANLYSIS-GFW-DEV'
         self.server_ip = None
+        self.proc = None
 
     def archive_source_rasters(self):
         """
@@ -57,70 +57,76 @@ class GlobalForestChangeLayer(RasterLayer):
             arcpy.CalculateStatistics_management(mosaic, "1", "1", "", "OVERWRITE", "")
             logging.debug("stats calculated on mosaic")
 
-    def stop_service(self, service):
-        username = 'astrong'
+    def set_service_status(self, action):
         auth_key = r'D:\scripts\gfw-sync2\tokens\arcgis_server_pass'
 
-        with open(auth_key, 'r') as myfile:
-            data = myfile.read().replace('\n', '')
+        service_dict = {'umd_landsat_alerts': 'glad_alerts_analysis', 'terrai': 'terrai_analysis'}
+        service_name = service_dict[self.name]
 
-        cwd = r"C:\Program Files\ArcGIS\Server\tools\admin"
-        cmd = ['python', "manageservice.py"]
-        cmd += ['-u', username, '-p', data, '-s', 'http://gis-gfw.wri.org/arcgis/admin', '-n', service, '-o', 'stop']
-        subprocess.call(cmd, cwd=cwd)
-        logging.debug("service stopped")
-
-    def start_service(self, service):
-        username = 'astrong'
-        auth_key = r'D:\scripts\gfw-sync2\tokens\arcgis_server_pass'
+        service = r'image_services/{0}'.format(service_name)
 
         with open(auth_key, 'r') as myfile:
-            data = myfile.read().replace('\n', '')
+            password = myfile.read().replace('\n', '')
 
         cwd = r"C:\Program Files\ArcGIS\Server\tools\admin"
-        cmd = ['python', "manageservice.py"]
-        cmd += ['-u', username, '-p', data, '-s', 'http://gis-gfw.wri.org/arcgis/admin', '-n', service, '-o', 'start']
-        subprocess.call(cmd, cwd=cwd)
-        logging.debug("service started")
+        cmd = ['python', "manageservice.py", '-u', 'astrong', '-p', password]
+        cmd += ['-s', 'http://gis-gfw.wri.org/arcgis/admin', '-n', service, '-o', action]
 
-    def set_processing_server_state(self, desired_state):
+        # Added check_call so it will crash if the subprocess fails
+        subprocess.check_call(cmd, cwd=cwd)
+        logging.debug("service {0} complete".format(action))
 
-        token_info = util.get_token('boto.config')
-        aws_access_key = token_info[0][1]
-        aws_secret_key = token_info[1][1]
+    def update_image_service(self):
+        arcpy.env.overwriteOutput = True
 
-        ec2_conn = boto.ec2.connect_to_region('us-east-1', aws_access_key_id=aws_access_key,
-                                              aws_secret_access_key=aws_secret_key)
+        logging.debug("running update_image_service")
+        # Copy downloaded data to R drive
+        self.copy_to_esri_output_multiple()
 
-        reservations = ec2_conn.get_all_reservations()
-        for reservation in reservations:
-            for instance in reservation.instances:
-                if 'Name' in instance.tags:
-                    if instance.tags['Name'] == self.server_name:
+        # Calculate stats on files and mosaics
+        self.calculate_stats()
 
-                        server_instance = instance
-                        break
+        # Will update two GFW image services
+        # http://gis-gfw.wri.org/arcgis/rest/services/image_services/glad_alerts_analysis/ImageServer
+        # http://gis-gfw.wri.org/arcgis/rest/services/image_services/glad_alerts_con_analysis/ImageServer
+        for i in range(0, 2):
+            self.set_service_status('stop')
+            self.set_service_status('start')
 
-        if server_instance.state != desired_state:
-            logging.debug('Current server state is {0}. '
-                          'Setting it to {1} now.'.format(server_instance.state, desired_state))
+    def start_visualization_process(self):
 
-            if desired_state == 'running':
-                server_instance.start()
+        server_ip = aws.set_processing_server_state(self.server_name, 'running')
+
+        abspath = os.path.abspath(__file__)
+        gfw_sync_dir = os.path.dirname(os.path.dirname(abspath))
+
+        utilities_dir = os.path.join(gfw_sync_dir, 'utilities')
+        tokens_dir = os.path.join(gfw_sync_dir, 'tokens')
+
+        pem_file = os.path.join(tokens_dir, 'chofmann-wri.pem')
+        host_name = 'ubuntu@{0}'.format(server_ip)
+
+        cmd = ['fab', 'kickoff:{0}'.format(self.name), '-i', pem_file, '-H', host_name]
+        self.proc = subprocess.Popen(cmd, cwd=utilities_dir, stdout=subprocess.PIPE)
+
+    def finish_visualization_process(self):
+
+        while True:
+            line = self.proc.stdout.readline().rstrip()
+
+            if line != '':
+                logging.debug(line)
             else:
-                server_instance.stop()
+                break
 
-            while server_instance.state != desired_state:
-                logging.debug(server_instance.state)
-                time.sleep(5)
+        self.set_processing_server_state('stopped')
 
-                # Need to keep checking get updated instance status
-                server_instance.update()
+    def update(self):
 
-        self.server_ip = server_instance.ip_address
+        self.start_visualization_process()
 
-        logging.debug('Server {0} is now {1}, IP: {2}'.format(self.server_name, server_instance.state, self.server_ip))
+        self.update_image_service()
 
-    def _update(self):
+        self.finish_visualization_process()
 
         self.archive_source_rasters()

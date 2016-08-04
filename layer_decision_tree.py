@@ -4,8 +4,7 @@ import logging
 from layers.raster_layer import RasterLayer
 from layers.vector_layer import VectorLayer
 from layers.country_vector_layer import CountryVectorLayer
-from layers.glad_raster_layer import GladRasterLayer
-from layers.terrai_raster_layer import TerraiRasterLayer
+from layers.global_forest_change_layer import GlobalForestChangeLayer
 
 from datasources.imazon_datasource import ImazonDataSource
 from datasources.glad_datasource import GladDataSource
@@ -31,17 +30,9 @@ def build_layer(layerdef, gfw_env):
     elif layerdef["type"] == "raster":
         layer = RasterLayer(layerdef)
 
-    elif layerdef["type"] == "terrai_raster":
-        datasource = TerraiDataSource(layerdef)
-        layer = TerraiRasterLayer(datasource.get_layer())
-
     elif layerdef["type"] == "imazon_vector":
         datasource = ImazonDataSource(layerdef)
         layer = VectorLayer(datasource.get_layer())
-
-    elif layerdef["type"] == "glad_raster":
-        datasource = GladDataSource(layerdef)
-        layer = GladRasterLayer(datasource.get_layer())
 
     elif layerdef["type"] == "hot_osm_export":
         datasource = HotOsmExportDataSource(layerdef)
@@ -54,6 +45,16 @@ def build_layer(layerdef, gfw_env):
     elif layerdef["type"] == "forest_atlas_vector":
         datasource = ForestAtlasDataSource(layerdef)
         layer = CountryVectorLayer(datasource.get_layer())
+
+    elif layerdef["type"] == "global_forest_change":
+
+        if layerdef["tech_title"] == 'terrai':
+            datasource = TerraiDataSource(layerdef)
+
+        else:
+            datasource = GladDataSource(layerdef)
+
+        layer = GlobalForestChangeLayer(datasource.get_layer())
 
     elif layerdef["type"] == "country_vector":
         if layerdef['global_layer']:

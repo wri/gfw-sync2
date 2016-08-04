@@ -1,14 +1,8 @@
 __author__ = 'Charlie.Hofmann'
 
-import arcpy
-import datetime
 import logging
-import sys
-import urlparse
 
 from datasource import DataSource
-from utilities import aws_s3
-from utilities import google_sheet as gs
 
 
 class TerraiDataSource(DataSource):
@@ -36,6 +30,5 @@ class TerraiDataSource(DataSource):
             output_list.append(out_file)
 
         self.layerdef['source'] = output_list
-
 
         return self.layerdef
