@@ -124,27 +124,7 @@ class VectorLayer(Layer):
 
         logging.info('Starting vector_layer.append_to_esri_source for {0}'.format(self.name))
 
-        # Check if source SR matches esri_service_output SR
-        from_srs = arcpy.Describe(input_fc).spatialReference
-        to_srs = arcpy.Describe(esri_output_fc).spatialReference
-
-        if to_srs.exportToString() != from_srs.exportToString():
-
-            # Project if not
-            logging.debug('Source SR of {0} does not match esri_service_output of {1}'.format(input_fc, esri_output_fc))
-            logging.debug('Projecting source data to temp FC before appending to esri_service_output')
-
-            temp_proj_dataset = os.path.join(self.scratch_workspace, "src_proj.shp")
-
-            if self.transformation:
-                arcpy.env.geographicTransformations = self.transformation
-
-            arcpy.Project_management(input_fc, temp_proj_dataset, to_srs, self.transformation, from_srs)
-
-            fc_to_append = temp_proj_dataset
-
-        else:
-            fc_to_append = input_fc
+        fc_to_append = self.project_to_output_srs(input_fc, esri_output_fc)
 
         logging.debug('Creating a versioned FL from esri_service_output')
         arcpy.MakeFeatureLayer_management(esri_output_fc, "esri_service_output_fl")
@@ -169,23 +149,35 @@ class VectorLayer(Layer):
 
             arcpy.SelectLayerByAttribute_management("esri_service_output_fl", "NEW_SELECTION", input_where_clause)
 
+            # Delete the features selected by the input where_clause
+            arcpy.DeleteRows_management("esri_service_output_fl")
+
         else:
             logging.debug('No where clause for esri_service_output found; deleting all features before '
                           'appending from source')
 
-        # If there's a where_clause, this will deleted selected rows
-        # Otherwise, will truncate the table
-        arcpy.DeleteRows_management("esri_service_output_fl")
+            sde_sql_conn = arcpy.ArcSDESQLExecute(sde_workspace)
+            esri_fc_name = os.path.basename(esri_output_fc)
+
+            # Find the min and max OID values
+            oid_field = [f.name for f in arcpy.ListFields(esri_output_fc) if f.type == 'OID'][0]
+
+            sql = 'SELECT min({0}), max({0}) from {1}'.format(oid_field, esri_fc_name)
+            min_oid, max_oid = sde_sql_conn.execute(sql)[0]
+
+            for where_clause in util.generate_where_clause(min_oid, max_oid, oid_field, 1000):
+
+                logging.debug('Deleting features with OIDs {0} to {1}'.format(min_oid, max_oid))
+                arcpy.MakeFeatureLayer_management("esri_service_output_fl", "fl_to_delete", where_clause)
+
+                arcpy.DeleteRows_management("fl_to_delete")
+                arcpy.Delete_management("fl_to_delete")
 
         esri_output_pre_append_count = int(arcpy.GetCount_management("esri_service_output_fl").getOutput(0))
         input_feature_count = int(arcpy.GetCount_management(fc_to_append).getOutput(0))
 
         logging.debug('Starting to append to esri_service_output')
         arcpy.Append_management(fc_to_append, "esri_service_output_fl", "NO_TEST")
-
-        print sde_workspace
-        print version_name
-        print '**************************'
 
         arcpy.ReconcileVersions_management(input_database=sde_workspace, reconcile_mode="ALL_VERSIONS",
                                            target_version="sde.DEFAULT", edit_versions='gfw.' + version_name,
@@ -208,6 +200,32 @@ class VectorLayer(Layer):
             sys.exit(1)
 
         return
+
+    def project_to_output_srs(self, input_fc, esri_output_fc):
+
+        # Check if source SR matches esri_service_output SR
+        from_srs = arcpy.Describe(input_fc).spatialReference
+        to_srs = arcpy.Describe(esri_output_fc).spatialReference
+
+        if to_srs.exportToString() != from_srs.exportToString():
+
+            # Project if not
+            logging.debug('Source SR of {0} does not match esri_service_output of {1}'.format(input_fc, esri_output_fc))
+            logging.debug('Projecting source data to temp FC before appending to esri_service_output')
+
+            temp_proj_dataset = os.path.join(self.scratch_workspace, "src_proj.shp")
+
+            if self.transformation:
+                arcpy.env.geographicTransformations = self.transformation
+
+            arcpy.Project_management(input_fc, temp_proj_dataset, to_srs, self.transformation, from_srs)
+
+            fc_to_append = temp_proj_dataset
+
+        else:
+            fc_to_append = input_fc
+
+        return fc_to_append
 
     def vector_to_raster(self, input_fc):
 

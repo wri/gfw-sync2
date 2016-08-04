@@ -321,3 +321,26 @@ def validate_osm_source(osm_source):
             break
 
     return is_valid
+
+
+def generate_where_clause(start_row, end_row, where_field_name, transaction_row_limit):
+    """
+    Build a series of where clauses based on a start_row, end_row, a number of ids per where_clause, and the field_name
+    Also sleeps for a minute every time the current_max_id is divisible by 20,000. Important to give the API a break
+    Per the cartoDB developers, we're hardcoding the transaction row limit to 500
+    :param start_row: the first ID to append, usually 0
+    :param end_row: the last ID in the dataset
+    :param where_field_name: the field name of the where_field
+    :return: where_clauses for all ids from start_id to end_id in the appropriate chunks
+    """
+
+    # Set the max to the start_id
+    current_max_id = start_row
+
+    # Iterate until the current max is > the last id of interest
+    while current_max_id <= end_row:
+        yield '{0} >= {1} and {0} < {2}'.format(where_field_name, current_max_id,
+                                                current_max_id + transaction_row_limit)
+
+        # Increment the current_max_id based on the rows we just processed
+        current_max_id += transaction_row_limit
