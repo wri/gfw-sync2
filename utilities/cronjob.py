@@ -46,18 +46,19 @@ def parse_update_freq(field_text):
 
     return update_layer
 
-	
+
 def main():
-	all_layer_dict = gs.sheet_to_dict(args.environment)
+    all_layer_dict = gs.sheet_to_dict(args.environment)
 
-	for layername, layerdef in all_layer_dict.iteritems():
+    for layername, layerdef in all_layer_dict.iteritems():
 
-		update_layer_today = parse_update_freq(layerdef['update_days'])
+        update_layer_today = parse_update_freq(layerdef['update_days'])
 
-		if update_layer_today:
-			subprocess.call(['python', 'gfw-sync.py', '-l', layername, '-e', args.environment])
+        if update_layer_today:
+            subprocess.call(['python', 'gfw-sync.py', '-l', layername, '-e', args.environment])
 
-	email_stats.send_summary()
+    email_stats.send_summary()
+
 
 if __name__ == '__main__':
     main()

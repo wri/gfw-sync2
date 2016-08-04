@@ -3,6 +3,7 @@ import os
 import shutil
 import sys
 import arcpy
+import subprocess
 
 from utilities import archive
 from utilities import cartodb, settings
@@ -490,6 +491,9 @@ class Layer(object):
                               'in expected location {1}. Exiting'.format(p, script_path))
                 sys.exit(1)
 
+            else:
+                p = script_path
+
         self._post_process_script = p
 
     # Validate add_country_value
@@ -532,3 +536,16 @@ class Layer(object):
     def update_tile_cache(self):
         if self.tile_cache_service:
             tile_cache_service.update_cache(self.tile_cache_service, self.scratch_workspace)
+
+    def post_process(self):
+
+        if self.post_process_script:
+
+            import imp
+            p = imp.load_source('post_process', self.post_process_script)
+
+            p.post_process(self)
+            # subprocess.check_call(['python', self.post_process_script])
+
+        else:
+            pass

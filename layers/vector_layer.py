@@ -167,7 +167,7 @@ class VectorLayer(Layer):
 
             for where_clause in util.generate_where_clause(min_oid, max_oid, oid_field, 1000):
 
-                logging.debug('Deleting features with OIDs {0} to {1}'.format(min_oid, max_oid))
+                logging.debug('Deleting features with {0}'.format(where_clause))
                 arcpy.MakeFeatureLayer_management("esri_service_output_fl", "fl_to_delete", where_clause)
 
                 arcpy.DeleteRows_management("fl_to_delete")
@@ -354,3 +354,5 @@ class VectorLayer(Layer):
         self.create_archive_and_download_zip()
 
         self.sync_cartodb(self.esri_service_output, self.cartodb_service_output, self.update_where_clause)
+
+        self.post_process()

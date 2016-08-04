@@ -13,7 +13,6 @@ from urllib2 import urlopen
 
 from datasource import DataSource
 from utilities import util
-from utilities import cartodb
 
 
 class ImazonDataSource(DataSource):
@@ -177,15 +176,6 @@ class ImazonDataSource(DataSource):
         
         return imazon_date_text
 
-    def update_layerspec_maxdate(self):
-        """
-        Update the date value in the layerspec table-- required for the time slider to work properly
-        :return:
-        """
-        logging.debug("update layer spec max date")
-        sql = "UPDATE layerspec set maxdate = (SELECT max(date) FROM imazon_sad) WHERE table_name='imazon_sad'"
-        cartodb.cartodb_sql(sql, self.gfw_env)
-
     def clean_source_shps(self, shp_list):
         """
         After the data has been unzipped, repair geometry, remove fields, and add date and orig_fname
@@ -236,11 +226,6 @@ class ImazonDataSource(DataSource):
         logging.debug('output dataset: {0}\n'.format(output_dataset))
 
         arcpy.Merge_management(input_layers, output_dataset)
-
-        # Update the layerspec table to reflect that we are about to update the data source
-        # TODO | move this to post-update . . . need to understand what the other layers require in terms of updating
-        # TODO | other tables after they've been processed
-        self.update_layerspec_maxdate()
 
         # overwrite properties from original layerdef read
         # from the gfw-sync2 config Google Doc
