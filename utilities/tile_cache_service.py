@@ -50,8 +50,6 @@ def find_src_mxd_and_cache_dir(map_service_path):
         response = json.loads(r.content)
 
         source_mxd = find_src_mxd(response)
-
-        # TODO BUILD THIS OUT
         cache_dir = find_cache_dir(response)
 
     return source_mxd, cache_dir
@@ -171,7 +169,7 @@ def push_to_production(src_cache_dir, out_local_cache_dir, service_path):
     manage_service('prod', service_path, 'start')
 
 
-def update_cache(map_service_path, scratch_workspace):
+def update_cache(map_service_path, scratch_workspace, gfw_env):
 
     logging.debug('Updating tiles for cached map service {0}'.format(map_service_path))
 
@@ -197,7 +195,12 @@ def update_cache(map_service_path, scratch_workspace):
 
     logging.debug("Copying to local and production cache directories")
     src_cache_dir = os.path.join(output_dir, cache_dir_name, 'Layers')
-    push_to_production(src_cache_dir, local_cache_dir, map_service_path)
+
+    if gfw_env == 'PROD':
+        push_to_production(gfw_env, src_cache_dir, local_cache_dir, map_service_path)
+    else:
+        logging.debug("Nothing pushed to PROD dir; just testing cache generation process")
+        logging.debug('Cached tiles are here: {0}'.format(local_cache_dir))
 
     # Stop the map service-- no need for it to be serving on the DM machine
     manage_service('dev', map_service_path, 'stop')

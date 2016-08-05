@@ -3,7 +3,6 @@ import os
 import shutil
 import sys
 import arcpy
-import subprocess
 
 from utilities import archive
 from utilities import cartodb, settings
@@ -535,7 +534,7 @@ class Layer(object):
 
     def update_tile_cache(self):
         if self.tile_cache_service:
-            tile_cache_service.update_cache(self.tile_cache_service, self.scratch_workspace)
+            tile_cache_service.update_cache(self.tile_cache_service, self.scratch_workspace, self.gfw_env)
 
     def post_process(self):
 
@@ -543,9 +542,8 @@ class Layer(object):
 
             import imp
             p = imp.load_source('post_process', self.post_process_script)
-
+            self.esri_service_output
             p.post_process(self)
-            # subprocess.check_call(['python', self.post_process_script])
 
         else:
             pass

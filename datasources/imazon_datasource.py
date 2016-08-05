@@ -203,6 +203,8 @@ class ImazonDataSource(DataSource):
             imazon_date_str = self.get_date_from_filename(os.path.basename(shp))
 
             util.add_field_and_calculate(single_part_path, 'Date', 'DATE', "", imazon_date_str, self.gfw_env)
+            util.add_field_and_calculate(single_part_path, 'date_alias', 'DATE', "", imazon_date_str,
+                                         self.gfw_env)
             util.add_field_and_calculate(single_part_path, 'data_type', 'TEXT', "255", self.data_type(shp),
                                          self.gfw_env)
             util.add_field_and_calculate(single_part_path, 'orig_fname', 'TEXT', "255", shp_name, self.gfw_env)

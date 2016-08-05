@@ -8,6 +8,9 @@ def post_process(layerdef):
     :return:
     """
 
+    update_layerspec(layerdef)
+
+
+def update_layerspec(layerdef):
     sql = "UPDATE layerspec set maxdate = (SELECT max(date) FROM imazon_sad) WHERE table_name='imazon_sad'"
     cartodb.cartodb_sql(sql, layerdef.gfw_env)
-

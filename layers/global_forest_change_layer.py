@@ -39,7 +39,6 @@ class GlobalForestChangeLayer(RasterLayer):
         input_output_tuples = zip(self.source, esri_output_list)
 
         for input_ras, output_ras in input_output_tuples:
-            logging.debug(input_ras, output_ras)
             self.copy_to_esri_output(input_ras, output_ras)
 
     def calculate_stats(self):
@@ -107,6 +106,8 @@ class GlobalForestChangeLayer(RasterLayer):
         host_name = 'ubuntu@{0}'.format(server_ip)
 
         cmd = ['fab', 'kickoff:{0}'.format(self.name), '-i', pem_file, '-H', host_name]
+        logging.debug('Running fabric: {0}'.format(cmd))
+
         self.proc = subprocess.Popen(cmd, cwd=utilities_dir, stdout=subprocess.PIPE)
 
     def finish_visualization_process(self):
@@ -119,7 +120,7 @@ class GlobalForestChangeLayer(RasterLayer):
             else:
                 break
 
-        self.set_processing_server_state('stopped')
+        aws.set_processing_server_state(self.server_name, 'stopped')
 
     def update(self):
 

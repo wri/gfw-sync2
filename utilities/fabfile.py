@@ -16,6 +16,5 @@ def kickoff(proc_name):
     # Previouly used AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY as well for tilestache
     with fabric.api.shell_env(S3_ACCESS_KEY=aws_access_key, S3_SECRET_KEY=aws_secret_key):
 
-        # cmd = 'python /home/ubuntu/mapnik-forest-change-tiles/generate-tiles.py -l {0} -r all'.format(proc_name)
         cmd = 'python /home/ubuntu/mapnik-forest-change-tiles/generate-tiles.py -l {0} -r all'.format(tile_layer_name)
         fabric.api.run(cmd)
