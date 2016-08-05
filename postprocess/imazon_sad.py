@@ -1,3 +1,5 @@
+import logging
+
 from utilities import cartodb
 
 
@@ -8,7 +10,11 @@ def post_process(layerdef):
     :return:
     """
 
-    update_layerspec(layerdef)
+    if layerdef.gfw_env == 'PROD':
+        update_layerspec(layerdef)
+
+    else:
+        logging.debug('Not updating layerspec table; gfw_env is {0}'.format(layerdef.gfw_env))
 
 
 def update_layerspec(layerdef):

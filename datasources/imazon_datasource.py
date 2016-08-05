@@ -209,9 +209,30 @@ class ImazonDataSource(DataSource):
                                          self.gfw_env)
             util.add_field_and_calculate(single_part_path, 'orig_fname', 'TEXT', "255", shp_name, self.gfw_env)
 
+            self.calculate_area_ha_eckert_iv(single_part_path)
+
             cleaned_shp_list.append(single_part_path)
 
         return cleaned_shp_list
+
+    @staticmethod
+    def calculate_area_ha_eckert_iv(fc):
+
+        arcpy.AddField_management(fc, 'ha_eck_iv', 'DOUBLE')
+
+        # Source: http://gis.stackexchange.com/a/43514/30899
+        eckert_iv_sr = arcpy.SpatialReference(54012)
+
+        with arcpy.da.UpdateCursor(fc, ['ha_eck_iv', 'shape@area'], None, eckert_iv_sr) as cursor:
+            for row in cursor:
+                area_m2 = row[1]
+                area_hectares = area_m2 / 10000.0
+
+                row[0] = area_hectares
+
+                print area_hectares
+
+                cursor.updateRow(row)
 
     def get_layer(self):
         """

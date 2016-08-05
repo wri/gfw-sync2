@@ -204,7 +204,11 @@ def _join_ini_fields(in_fl, join_list):
     :return:
     """
 
+    if isinstance(join_list, basestring):
+        join_list = [join_list]
+
     for join in join_list:
+        print join
         src_info, to_info = join.split(' ON ')
         to_table, to_field = to_info.split('.')
 
