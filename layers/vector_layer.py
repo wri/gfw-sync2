@@ -10,6 +10,7 @@ import shutil
 from layer import Layer
 from utilities import cartodb
 from utilities import util
+from utilities import arcgis_server
 
 
 class VectorLayer(Layer):
@@ -255,6 +256,13 @@ class VectorLayer(Layer):
 
             arcpy.PolygonToRaster_conversion(out_projected_fc, 'ras_val', out_raster, "CELL_CENTER", "", cell_size)
 
+            # Stop service that has a lock on the raster
+            service = r'image_services/analysis'
+            arcgis_server.set_service_status(service, 'stop')
+
+            logging.debug('Sleeping for 10 seconds to let the lock files resolve themselves')
+            time.sleep(10)
+
             logging.debug('Copying raster {0} to output {1}'.format(out_raster, self.vector_to_raster_output))
             arcpy.Delete_management(self.vector_to_raster_output)
 
@@ -271,6 +279,9 @@ class VectorLayer(Layer):
                 out_file = os.path.join(out_dir, out_file_name + extension)
 
                 shutil.move(src_file, out_file)
+
+            # Restart the service after we're finished
+            arcgis_server.set_service_status(service, 'start')
 
         else:
             pass

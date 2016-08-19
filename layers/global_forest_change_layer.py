@@ -7,6 +7,7 @@ import os
 
 from layers.raster_layer import RasterLayer
 from utilities import aws
+from utilities import arcgis_server
 
 
 class GlobalForestChangeLayer(RasterLayer):
@@ -56,25 +57,6 @@ class GlobalForestChangeLayer(RasterLayer):
             arcpy.CalculateStatistics_management(mosaic, "1", "1", "", "OVERWRITE", "")
             logging.debug("stats calculated on mosaic")
 
-    def set_service_status(self, action):
-        auth_key = r'D:\scripts\gfw-sync2\tokens\arcgis_server_pass'
-
-        service_dict = {'umd_landsat_alerts': 'glad_alerts_analysis', 'terrai': 'terrai_analysis'}
-        service_name = service_dict[self.name]
-
-        service = r'image_services/{0}'.format(service_name)
-
-        with open(auth_key, 'r') as myfile:
-            password = myfile.read().replace('\n', '')
-
-        cwd = r"C:\Program Files\ArcGIS\Server\tools\admin"
-        cmd = ['python', "manageservice.py", '-u', 'astrong', '-p', password]
-        cmd += ['-s', 'http://gis-gfw.wri.org/arcgis/admin', '-n', service, '-o', action]
-
-        # Added check_call so it will crash if the subprocess fails
-        subprocess.check_call(cmd, cwd=cwd)
-        logging.debug("service {0} complete".format(action))
-
     def update_image_service(self):
         arcpy.env.overwriteOutput = True
 
@@ -88,9 +70,14 @@ class GlobalForestChangeLayer(RasterLayer):
         # Will update two GFW image services
         # http://gis-gfw.wri.org/arcgis/rest/services/image_services/glad_alerts_analysis/ImageServer
         # http://gis-gfw.wri.org/arcgis/rest/services/image_services/glad_alerts_con_analysis/ImageServer
+        service_dict = {'umd_landsat_alerts': 'glad_alerts_analysis', 'terrai': 'terrai_analysis'}
+        service_name = service_dict[self.name]
+
+        service = r'image_services/{0}'.format(service_name)
+
         for i in range(0, 2):
-            self.set_service_status('stop')
-            self.set_service_status('start')
+            arcgis_server.set_service_status(service, 'stop')
+            arcgis_server.set_service_status(service, 'start')
 
     def start_visualization_process(self):
 

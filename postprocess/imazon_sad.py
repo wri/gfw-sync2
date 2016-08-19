@@ -18,5 +18,6 @@ def post_process(layerdef):
 
 
 def update_layerspec(layerdef):
-    sql = "UPDATE layerspec set maxdate = (SELECT max(date) FROM imazon_sad) WHERE table_name='imazon_sad'"
+    sql = "UPDATE layerspec set maxdate = (SELECT max(date) + INTERVAL '1 day' " \
+          "FROM imazon_sad) WHERE table_name='imazon_sad'"
     cartodb.cartodb_sql(sql, layerdef.gfw_env)

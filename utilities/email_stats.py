@@ -87,18 +87,19 @@ def send_email(body_text):
     username = 'wriforests'
 
     fromaddr = "{0}@gmail.com".format(username)
-    toaddr = "chofmann@wri.org"
     msg = MIMEMultipart()
     msg['From'] = fromaddr
-    msg['To'] = toaddr
     msg['Subject'] = "gfw-sync2 results"
-
     msg.attach(MIMEText(body_text, 'html'))
 
     server = smtplib.SMTP('smtp.gmail.com', 587)
     server.ehlo()
     server.starttls()
     server.login(fromaddr, util.get_token(username))
-    text = msg.as_string()
-    server.sendmail(fromaddr, toaddr, text)
+
+    for toaddr in ["chofmann@wri.org", "mweisse@wri.org"]:
+        msg['To'] = toaddr
+        text = msg.as_string()
+        server.sendmail(fromaddr, toaddr, text)
+
     server.quit()
