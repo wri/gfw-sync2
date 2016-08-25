@@ -161,15 +161,15 @@ class VectorLayer(Layer):
             esri_fc_name = os.path.basename(esri_output_fc)
 
             # Find the min and max OID values
-            oid_field = [f.name for f in arcpy.ListFields(esri_output_fc) if f.type == 'OID'][0]
+            to_delete_oid_field = [f.name for f in arcpy.ListFields(esri_output_fc) if f.type == 'OID'][0]
 
-            sql = 'SELECT min({0}), max({0}) from {1}'.format(oid_field, esri_fc_name)
-            min_oid, max_oid = sde_sql_conn.execute(sql)[0]
+            sql = 'SELECT min({0}), max({0}) from {1}'.format(to_delete_oid_field, esri_fc_name)
+            to_delete_min_oid, to_delete_min_oid = sde_sql_conn.execute(sql)[0]
 
-            for where_clause in util.generate_where_clause(min_oid, max_oid, oid_field, 1000):
+            for wc in util.generate_where_clause(to_delete_min_oid, to_delete_min_oid, to_delete_oid_field, 1000):
 
-                logging.debug('Deleting features with {0}'.format(where_clause))
-                arcpy.MakeFeatureLayer_management("esri_service_output_fl", "fl_to_delete", where_clause)
+                logging.debug('Deleting features with {0}'.format(wc))
+                arcpy.MakeFeatureLayer_management("esri_service_output_fl", "fl_to_delete", wc)
 
                 arcpy.DeleteRows_management("fl_to_delete")
                 arcpy.Delete_management("fl_to_delete")
@@ -178,7 +178,18 @@ class VectorLayer(Layer):
         input_feature_count = int(arcpy.GetCount_management(fc_to_append).getOutput(0))
 
         logging.debug('Starting to append to esri_service_output')
-        arcpy.Append_management(fc_to_append, "esri_service_output_fl", "NO_TEST")
+
+        # Find the min and max OID values
+        to_append_oid_field = [f.name for f in arcpy.ListFields(fc_to_append) if f.type == 'OID'][0]
+        to_append_min_oid, to_append_max_oid = cartodb.ogrinfo_min_max(fc_to_append, to_append_oid_field)
+
+        for wc in util.generate_where_clause(to_append_min_oid, to_append_max_oid, to_append_oid_field, 1000):
+
+                logging.debug('Appending features with {0}'.format(wc))
+                arcpy.MakeFeatureLayer_management(fc_to_append, "fl_to_append", wc)
+
+                arcpy.Append_management("fl_to_append", "esri_service_output_fl", "NO_TEST")
+                arcpy.Delete_management("fl_to_append")
 
         arcpy.ReconcileVersions_management(input_database=sde_workspace, reconcile_mode="ALL_VERSIONS",
                                            target_version="sde.DEFAULT", edit_versions='gfw.' + version_name,

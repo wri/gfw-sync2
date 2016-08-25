@@ -386,6 +386,23 @@ def delete_staging_table_if_exists(staging_table_name, in_gfw_env):
     cartodb_sql(sql, in_gfw_env)
 
 
+def ogrinfo_min_max(input_fc, oid_fieldname):
+
+    input_table_name = os.path.basename(os.path.splitext(input_fc)[0])
+
+    sql_statement = 'SELECT min({0}), max({0}) FROM "{1}"'.format(oid_fieldname, input_table_name)
+    ogrinfo = run_subprocess(['ogrinfo', '-sql', sql_statement, input_fc])
+
+    # Grab the last two lines with data (the final line is blank)
+    result_lines = ogrinfo[-3:-1]
+
+    # Result lines look like `MIN_FID (Integer) = 0`
+    # Split them at the ' = ' and grab the result then convert to int()
+    result_vals = [int(l.split(' = ')[1]) for l in result_lines]
+
+    return result_vals[0], result_vals[1]
+
+
 def cartodb_sync(shp, production_table, where_clause, gfw_env, scratch_workspace):
     """
     Function called by VectorLayer and other Layer objects as part of layer.update()
