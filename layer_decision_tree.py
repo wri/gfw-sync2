@@ -12,6 +12,7 @@ from datasources.terrai_datasource import TerraiDataSource
 from datasources.wdpa_datasource import WDPADatasource
 from datasources.hot_osm_export_datasource import HotOsmExportDataSource
 from datasources.forest_atlas_datasource import ForestAtlasDataSource
+from datasources.gran_chaco_datasource import GranChacoDataSource
 
 from utilities import google_sheet as gs
 
@@ -32,6 +33,10 @@ def build_layer(layerdef, gfw_env):
 
     elif layerdef["type"] == "imazon_vector":
         datasource = ImazonDataSource(layerdef)
+        layer = VectorLayer(datasource.get_layer())
+
+    elif layerdef["type"] == "gran_chaco_vector":
+        datasource = GranChacoDataSource(layerdef)
         layer = VectorLayer(datasource.get_layer())
 
     elif layerdef["type"] == "hot_osm_export":

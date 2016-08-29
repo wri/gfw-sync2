@@ -1,9 +1,19 @@
+__author__ = 'Asa.Strong'
+
 import os
 import subprocess
 import time
 import logging
 import arcpy
 
-from layers.global_forest_change_layer import GlobalForestChangeLayer
+from layers.vector_layer import VectorLayer
 
-class GranChacoDeforestation
+class GranChacoDeforestation(VectorLayer):
+
+    def update_gran_chaco_vector(self):
+
+        self.delete_and_append()
+
+    def update(self):
+
+        self.update_gran_chaco_vector()

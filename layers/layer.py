@@ -542,7 +542,6 @@ class Layer(object):
 
             import imp
             p = imp.load_source('post_process', self.post_process_script)
-            self.esri_service_output
             p.post_process(self)
 
         else:

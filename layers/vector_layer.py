@@ -40,6 +40,23 @@ class VectorLayer(Layer):
         src_archive_output = os.path.join(archive_src_dir, os.path.basename(self.archive_output))
         self._archive(self.source, None, src_archive_output)
 
+    def delete_and_append(self):
+
+        logging.info('Starting delete and append for {0}'.format(self.name))
+        arcpy.DeleteRows_management(self.esri_service_output)
+        arcpy.Append_management(self.source, self.esri_service_output)
+
+        logging.info('restarting service for {0}'.format(self.name))
+        service_dict = {'gran_chaco_deforestation': 'forest_change'}
+        service_name = service_dict[self.name]
+
+        service = service_name
+
+        for i in range(0, 2):
+            arcgis_server.set_service_status(service, 'stop')
+            arcgis_server.set_service_status(service, 'start')
+
+
     def filter_source_dataset(self, input_wc):
         """
         If the config table specifies a where_clause to apply as a filter to the source dataset, copy the source
@@ -164,9 +181,9 @@ class VectorLayer(Layer):
             to_delete_oid_field = [f.name for f in arcpy.ListFields(esri_output_fc) if f.type == 'OID'][0]
 
             sql = 'SELECT min({0}), max({0}) from {1}'.format(to_delete_oid_field, esri_fc_name)
-            to_delete_min_oid, to_delete_min_oid = sde_sql_conn.execute(sql)[0]
+            to_delete_min_oid, to_delete_max_oid = sde_sql_conn.execute(sql)[0]
 
-            for wc in util.generate_where_clause(to_delete_min_oid, to_delete_min_oid, to_delete_oid_field, 1000):
+            for wc in util.generate_where_clause(to_delete_min_oid, to_delete_max_oid, to_delete_oid_field, 1000):
 
                 logging.debug('Deleting features with {0}'.format(wc))
                 arcpy.MakeFeatureLayer_management("esri_service_output_fl", "fl_to_delete", wc)
@@ -191,11 +208,15 @@ class VectorLayer(Layer):
                 arcpy.Append_management("fl_to_append", "esri_service_output_fl", "NO_TEST")
                 arcpy.Delete_management("fl_to_append")
 
+        logging.debug('Append finished, starting to reconcile versions')
+
         arcpy.ReconcileVersions_management(input_database=sde_workspace, reconcile_mode="ALL_VERSIONS",
                                            target_version="sde.DEFAULT", edit_versions='gfw.' + version_name,
                                            acquire_locks="LOCK_ACQUIRED", abort_if_conflicts="NO_ABORT",
                                            conflict_definition="BY_OBJECT", conflict_resolution="FAVOR_TARGET_VERSION",
                                            with_post="POST", with_delete="KEEP_VERSION", out_log="")
+
+        logging.debug('Deleting temporary FL and temporary version')
 
         # For some reason need to run DeleteVersion_management here, will have errors if with_delete is used above
         arcpy.Delete_management("esri_service_output_fl")
