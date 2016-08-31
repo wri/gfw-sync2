@@ -290,7 +290,7 @@ class VectorLayer(Layer):
 
             # Stop service that has a lock on the raster
             service = r'image_services/analysis'
-            arcgis_server.set_service_status(service, 'stop')
+            # arcgis_server.set_service_status(service, 'stop')
 
             logging.debug('Sleeping for 10 seconds to let the lock files resolve themselves')
             time.sleep(10)
@@ -310,10 +310,13 @@ class VectorLayer(Layer):
                 src_file = os.path.join(src_dir, src_file_name + extension)
                 out_file = os.path.join(out_dir, out_file_name + extension)
 
-                shutil.move(src_file, out_file)
+                try:
+                    shutil.move(src_file, out_file)
+                except IOError:
+                    print 'No such file {0}'.format(src_file)
 
             # Restart the service after we're finished
-            arcgis_server.set_service_status(service, 'start')
+            # arcgis_server.set_service_status(service, 'start')
 
         else:
             pass
@@ -378,24 +381,26 @@ class VectorLayer(Layer):
 
         self.archive_source()
 
-        self.filter_source_dataset(self.delete_features_input_where_clause)
+        # self.filter_source_dataset(self.delete_features_input_where_clause)
 
-        self.update_gfwid()
+        # self.update_gfwid()
 
-        self.add_country_code()
+        # self.add_country_code()
+        #
+        # self.build_update_where_clause(self.source, self.merge_where_field)
+        #
+        # self.append_to_esri_source(self.source, self.esri_service_output, self.update_where_clause)
+        #
+        # self.vector_to_raster(self.esri_service_output)
+        #
+        # self.update_esri_metadata()
+        #
+        # self.update_tile_cache()
+        #
+        # self.create_archive_and_download_zip()
 
-        self.build_update_where_clause(self.source, self.merge_where_field)
+        # self.sync_cartodb(self.esri_service_output, self.cartodb_service_output, self.update_where_clause)
+        #
+        # self.post_process()
 
-        self.append_to_esri_source(self.source, self.esri_service_output, self.update_where_clause)
-
-        self.vector_to_raster(self.esri_service_output)
-
-        self.update_esri_metadata()
-
-        self.update_tile_cache()
-
-        self.create_archive_and_download_zip()
-
-        self.sync_cartodb(self.esri_service_output, self.cartodb_service_output, self.update_where_clause)
-
-        self.post_process()
+        self.delete_and_append()

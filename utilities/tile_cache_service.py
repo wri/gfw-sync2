@@ -160,7 +160,8 @@ def push_to_production(src_cache_dir, out_local_cache_dir, service_path):
     out_prod_cache_dir = map_prod_server_path(out_local_cache_dir)
 
     # Not totally necessary to update the cache on the DM server, but helpful for troubleshooting
-    for cache in [out_local_cache_dir, out_prod_cache_dir]:
+    #for cache in [out_local_cache_dir, out_prod_cache_dir]:
+    for cache in [out_prod_cache_dir]:
         shutil.rmtree(cache)
         shutil.copytree(src_cache_dir, cache)
 
@@ -197,7 +198,7 @@ def update_cache(map_service_path, scratch_workspace, gfw_env):
     src_cache_dir = os.path.join(output_dir, cache_dir_name, 'Layers')
 
     if gfw_env == 'PROD':
-        push_to_production(gfw_env, src_cache_dir, local_cache_dir, map_service_path)
+        push_to_production(src_cache_dir, local_cache_dir, map_service_path)
     else:
         logging.debug("Nothing pushed to PROD dir; just testing cache generation process")
         logging.debug('Cached tiles are here: {0}'.format(local_cache_dir))

@@ -62,9 +62,6 @@ class WDPADatasource(DataSource):
                                           tolerance="10 Meters", minimum_area="0 Unknown", error_option="NO_CHECK",
                                           collapsed_point_option="NO_KEEP")
 
-        logging.debug("Starting repair_geometry")
-        arcpy.RepairGeometry_management(simplified_fc, "DELETE_NULL")
-
         self.data_source = simplified_fc
 
     def check_current_version(self, wdpa_gdb):
@@ -107,7 +104,7 @@ class WDPADatasource(DataSource):
         else:
             logging.debug('Current WDPA version text is {0}, downloaded version is {1} Updating '
                           'dataset now.'.format(current_version_text, download_version_text))
-            gs.set_value(unique_col, unique_val, update_col, sheet_name, download_version_text, gs_key)
+            # gs.set_value(unique_col, unique_val, update_col, sheet_name, download_version_text, gs_key)
 
     def parse_month_abbrev(self, download_version):
 
