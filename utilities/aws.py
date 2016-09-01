@@ -5,6 +5,12 @@ import logging
 import time
 import util
 
+token_info = util.get_token('boto.config')
+access_key = token_info[0][1]
+secret_key = token_info[1][1]
+
+ec2_conn = boto.ec2.connect_to_region('us-east-1', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
+
 
 def get_timestamps(bucket, filelist):
 
@@ -20,14 +26,7 @@ def get_timestamps(bucket, filelist):
     return out_dict
 
 
-def set_processing_server_state(server_name, desired_state):
-
-    token_info = util.get_token('boto.config')
-    aws_access_key = token_info[0][1]
-    aws_secret_key = token_info[1][1]
-
-    ec2_conn = boto.ec2.connect_to_region('us-east-1', aws_access_key_id=aws_access_key,
-                                          aws_secret_access_key=aws_secret_key)
+def get_aws_instance(server_name):
 
     reservations = ec2_conn.get_all_reservations()
     for reservation in reservations:
@@ -38,24 +37,50 @@ def set_processing_server_state(server_name, desired_state):
                     server_instance = instance
                     break
 
-    if server_instance.state != desired_state:
+    return server_instance
+
+
+def set_server_instance_type(aws_instance_object, desired_type):
+
+    instance_name = aws_instance_object.tags['Name']
+    current_type = ec2_conn.get_instance_attribute(aws_instance_object.id, 'instanceType')['instanceType']
+
+    if current_type != desired_type:
+        logging.debug('Changing {0} from type {1} to {2}'.format(instance_name, current_type, desired_type))
+
+        # Stop instance if it is running
+        if aws_instance_object.state != 'stopped':
+            set_processing_server_state(aws_instance_object, 'stopped')
+
+        ec2_conn.modify_image_attribute(aws_instance_object.id, 'instanceType', desired_type)
+
+    else:
+        logging.debug('Server {0} is already type {1}'.format(instance_name, desired_type))
+
+
+def set_processing_server_state(aws_instance_object, desired_state):
+
+    if aws_instance_object.state != desired_state:
         logging.debug('Current server state is {0}. '
-                      'Setting it to {1} now.'.format(server_instance.state, desired_state))
+                      'Setting it to {1} now.'.format(aws_instance_object.state, desired_state))
 
         if desired_state == 'running':
-            server_instance.start()
+            aws_instance_object.start()
+        elif desired_state == 'stopped':
+            aws_instance_object.stop()
         else:
-            server_instance.stop()
+            raise ValueError('Unknown server status {0} requested'.format(desired_state))
 
-        while server_instance.state != desired_state:
-            logging.debug(server_instance.state)
+        while aws_instance_object.state != desired_state:
+            logging.debug(aws_instance_object.state)
             time.sleep(5)
 
             # Need to keep checking get updated instance status
-            server_instance.update()
+            aws_instance_object.update()
 
-    logging.debug('Server {0} is now {1} at {2}'.format(server_name, server_instance.state, server_instance.ip_address))
+    logging.debug('Server {0} is now {1} at {2}'.format(aws_instance_object.tags['Name'],
+                                                        aws_instance_object.state, aws_instance_object.ip_address))
     logging.debug('Sleeping for a minute to be sure server is up')
     time.sleep(60)
 
-    return server_instance.ip_address
+    return aws_instance_object.ip_address

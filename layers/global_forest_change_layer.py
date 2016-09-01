@@ -81,7 +81,10 @@ class GlobalForestChangeLayer(RasterLayer):
 
     def start_visualization_process(self):
 
-        server_ip = aws.set_processing_server_state(self.server_name, 'running')
+        server_instance = aws.get_aws_instance(self.server_name)
+
+        aws.set_server_instance_type(server_instance, 'm4.10xlarge')
+        server_ip = aws.set_processing_server_state(server_instance, 'running')
 
         abspath = os.path.abspath(__file__)
         gfw_sync_dir = os.path.dirname(os.path.dirname(abspath))

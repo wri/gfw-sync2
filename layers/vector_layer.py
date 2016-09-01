@@ -381,26 +381,26 @@ class VectorLayer(Layer):
 
         self.archive_source()
 
-        # self.filter_source_dataset(self.delete_features_input_where_clause)
+        self.filter_source_dataset(self.delete_features_input_where_clause)
 
-        # self.update_gfwid()
+        self.update_gfwid()
 
-        # self.add_country_code()
-        #
-        # self.build_update_where_clause(self.source, self.merge_where_field)
-        #
-        # self.append_to_esri_source(self.source, self.esri_service_output, self.update_where_clause)
-        #
-        # self.vector_to_raster(self.esri_service_output)
-        #
-        # self.update_esri_metadata()
-        #
-        # self.update_tile_cache()
-        #
-        # self.create_archive_and_download_zip()
+        self.add_country_code()
 
-        # self.sync_cartodb(self.esri_service_output, self.cartodb_service_output, self.update_where_clause)
-        #
-        # self.post_process()
+        self.build_update_where_clause(self.source, self.merge_where_field)
 
-        self.delete_and_append()
+        self.append_to_esri_source(self.source, self.esri_service_output, self.update_where_clause)
+
+        self.vector_to_raster(self.esri_service_output)
+
+        self.update_esri_metadata()
+
+        self.update_tile_cache()
+
+        self.create_archive_and_download_zip()
+
+        self.sync_cartodb(self.esri_service_output, self.cartodb_service_output, self.update_where_clause)
+
+        self.post_process()
+
+        # self.delete_and_append()
