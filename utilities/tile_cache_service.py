@@ -7,6 +7,7 @@ import subprocess
 import sys
 import shutil
 import urlparse
+import time
 
 from utilities import settings
 from utilities import util
@@ -167,6 +168,9 @@ def push_to_production(src_cache_dir, out_local_cache_dir, service_path):
 
     logging.debug('Restarting production services')
     manage_service('prod', service_path, 'stop')
+
+    logging.debug('Sleeping for 30 seconds')
+    time.sleep(30)
     manage_service('prod', service_path, 'start')
 
 

@@ -1,6 +1,7 @@
 __author__ = 'Thomas.Maschler'
 
 import arcpy
+from arcpy import env
 import logging
 import os
 import shutil
@@ -45,6 +46,7 @@ class RasterLayer(Layer):
 
     @staticmethod
     def copy_to_esri_output(input_ras, output_ras):
+        arcpy.env.overwriteOutput = True
         logging.info('Starting to copy from {0} to esri_service_output: {1}'.format(input_ras, output_ras))
         shutil.copy(input_ras, output_ras)
         print "raster copied"

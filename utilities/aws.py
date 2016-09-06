@@ -52,7 +52,7 @@ def set_server_instance_type(aws_instance_object, desired_type):
         if aws_instance_object.state != 'stopped':
             set_processing_server_state(aws_instance_object, 'stopped')
 
-        ec2_conn.modify_image_attribute(aws_instance_object.id, 'instanceType', desired_type)
+        ec2_conn.modify_instance_attribute(aws_instance_object.id, 'instanceType', desired_type)
 
     else:
         logging.debug('Server {0} is already type {1}'.format(instance_name, desired_type))
@@ -80,7 +80,7 @@ def set_processing_server_state(aws_instance_object, desired_state):
 
     logging.debug('Server {0} is now {1} at {2}'.format(aws_instance_object.tags['Name'],
                                                         aws_instance_object.state, aws_instance_object.ip_address))
-    logging.debug('Sleeping for a minute to be sure server is up')
+    logging.debug('Sleeping for a minute to be sure server is ready')
     time.sleep(60)
 
     return aws_instance_object.ip_address

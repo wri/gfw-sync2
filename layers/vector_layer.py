@@ -360,10 +360,13 @@ class VectorLayer(Layer):
         :param where_clause: a where clause to apply to select from the input_fc and to delete from the cartodb_output
         :return:
         """
-        logging.info('Starting vector_layer.sync_cartodb for {0}. Output {1}, '
-                     'wc {2}'.format(os.path.basename(input_fc), cartodb_output_fc, where_clause))
+        if cartodb_output_fc:
+            logging.info('Starting vector_layer.sync_cartodb for {0}. Output {1}, '
+                         'wc {2}'.format(os.path.basename(input_fc), cartodb_output_fc, where_clause))
 
-        cartodb.cartodb_sync(input_fc, cartodb_output_fc, where_clause, self.gfw_env, self.scratch_workspace)
+            cartodb.cartodb_sync(input_fc, cartodb_output_fc, where_clause, self.gfw_env, self.scratch_workspace)
+        else:
+            logging.debug('No cartodb output fc specified. Moving on.')
 
     def update(self):
         """

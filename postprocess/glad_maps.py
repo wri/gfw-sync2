@@ -16,15 +16,15 @@ arcpy.env.scratchWorkspace = r"D:\temp\environment"
 rasters = [
 r"http://umd-landsat-alerts.s3.amazonaws.com/borneo_day2016.tif",
 r"http://umd-landsat-alerts.s3.amazonaws.com/peru_day2016.tif",
-r"http://umd-landsat-alerts.s3.amazonaws.com/roc_day2016.tif",
-r"http://umd-landsat-alerts.s3.amazonaws.com/brazil_day2016.tif"
+# r"http://umd-landsat-alerts.s3.amazonaws.com/roc_day2016.tif",
+# r"http://umd-landsat-alerts.s3.amazonaws.com/brazil_day2016.tif"
 ]
 
 new_rasters = [
 r"D:\GIS Data\GFW\glad\raster\borneo_day2016.tif",
 r"D:\GIS Data\GFW\glad\raster\peru_day2016.tif",
-r"D:\GIS Data\GFW\glad\raster\roc_day2016.tif",
-r"D:\GIS Data\GFW\glad\raster\brazil_day2016.tif"
+# r"D:\GIS Data\GFW\glad\raster\roc_day2016.tif",
+# r"D:\GIS Data\GFW\glad\raster\brazil_day2016.tif"
 ]
 
 #paths to past points for analysis
@@ -195,24 +195,25 @@ def export():
     Symbology = r"D:\GIS Data\GFW\glad\maps\mxds\color.lyr"
     arcpy.ApplySymbologyFromLayer_management(density_lyr, Symbology)
     arcpy.RefreshActiveView()
-    arcpy.mapping.ExportToPNG(mxd, r"F:\climate\glad_maps" name + "_" + time_year + "_" + time_week + ".png")
+    output = os.path.join(r"F:\climate\glad_maps", name + "_" + time_year + "_" + time_week + ".png")
+    arcpy.mapping.ExportToPNG(mxd, output)
     print "map created"
 
 convert_rasters()
 archive_point(borneo_past)
-archive_point(roc_past)
+# archive_point(roc_past)
 archive_point(peru_past)
-archive_point(brazil_past)
+# archive_point(brazil_past)
 replace(borneo_past, borneo_latest)
-replace(roc_past, roc_latest)
+# replace(roc_past, roc_latest)
 replace(peru_past, peru_latest)
-replace(brazil_past, brazil_latest)
+# replace(brazil_past, brazil_latest)
 kernel(borneo_latest)
-kernel(roc_latest)
+# kernel(roc_latest)
 kernel(peru_latest)
-kernel(brazil_latest)
+# kernel(brazil_latest)
 select(borneo_mxd)
-select(roc_mxd)
+# select(roc_mxd)
 select(peru_mxd)
-select(brazil_mxd)
+# select(brazil_mxd)
 export()

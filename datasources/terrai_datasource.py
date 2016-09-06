@@ -29,6 +29,10 @@ class TerraiDataSource(DataSource):
             out_file = self.download_file(ras, self.download_workspace)
             output_list.append(out_file)
 
+        # Add an additional step where we use copy raster to convert each raster in
+        # the list to U16 or whatever
+        # Then set self.layerdef['source'] = to that new list of correct rasters
+
         self.layerdef['source'] = output_list
 
         return self.layerdef
