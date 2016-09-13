@@ -154,6 +154,8 @@ class VectorLayer(Layer):
         if hasattr(desc, "datasetType") and desc.datasetType == 'FeatureDataset':
             sde_workspace = os.path.dirname(sde_workspace)
 
+        del desc
+
         if os.path.splitext(sde_workspace)[1] != '.sde':
             logging.error('Could not find proper SDE workspace. Exiting.')
             sys.exit(1)
@@ -174,6 +176,10 @@ class VectorLayer(Layer):
             logging.debug('No where clause for esri_service_output found; deleting all features before '
                           'appending from source')
 
+            arcpy.MakeFeatureLayer_management("esri_service_output_fl", "fl_to_delete")
+            arcpy.DeleteRows_management("fl_to_delete")
+            arcpy.Delete_management("fl_to_delete")
+
             sde_sql_conn = arcpy.ArcSDESQLExecute(sde_workspace)
             esri_fc_name = os.path.basename(esri_output_fc)
 
@@ -183,13 +189,19 @@ class VectorLayer(Layer):
             sql = 'SELECT min({0}), max({0}) from {1}'.format(to_delete_oid_field, esri_fc_name)
             to_delete_min_oid, to_delete_max_oid = sde_sql_conn.execute(sql)[0]
 
-            for wc in util.generate_where_clause(to_delete_min_oid, to_delete_max_oid, to_delete_oid_field, 1000):
+            # If there are features to delete, do it
+            if to_delete_min_oid and to_delete_max_oid:
 
-                logging.debug('Deleting features with {0}'.format(wc))
-                arcpy.MakeFeatureLayer_management("esri_service_output_fl", "fl_to_delete", wc)
+                for wc in util.generate_where_clause(to_delete_min_oid, to_delete_max_oid, to_delete_oid_field, 1000):
 
-                arcpy.DeleteRows_management("fl_to_delete")
-                arcpy.Delete_management("fl_to_delete")
+                    logging.debug('Deleting features with {0}'.format(wc))
+                    arcpy.MakeFeatureLayer_management("esri_service_output_fl", "fl_to_delete", wc)
+
+                    arcpy.DeleteRows_management("fl_to_delete")
+                    arcpy.Delete_management("fl_to_delete")
+
+            else:
+                pass
 
         esri_output_pre_append_count = int(arcpy.GetCount_management("esri_service_output_fl").getOutput(0))
         input_feature_count = int(arcpy.GetCount_management(fc_to_append).getOutput(0))
@@ -202,11 +214,11 @@ class VectorLayer(Layer):
 
         for wc in util.generate_where_clause(to_append_min_oid, to_append_max_oid, to_append_oid_field, 1000):
 
-                logging.debug('Appending features with {0}'.format(wc))
-                arcpy.MakeFeatureLayer_management(fc_to_append, "fl_to_append", wc)
+            logging.debug('Appending features with {0}'.format(wc))
+            arcpy.MakeFeatureLayer_management(fc_to_append, "fl_to_append", wc)
 
-                arcpy.Append_management("fl_to_append", "esri_service_output_fl", "NO_TEST")
-                arcpy.Delete_management("fl_to_append")
+            arcpy.Append_management("fl_to_append", "esri_service_output_fl", "NO_TEST")
+            arcpy.Delete_management("fl_to_append")
 
         logging.debug('Append finished, starting to reconcile versions')
 
@@ -396,7 +408,10 @@ class VectorLayer(Layer):
 
         self.vector_to_raster(self.esri_service_output)
 
-        self.update_esri_metadata()
+        # Running into issues with SDE locks
+        # Works fine for one layer, but when that layer is part of a larger country layer, it
+        # doesn't release the lock that it creates
+        # self.update_esri_metadata()
 
         self.update_tile_cache()
 
@@ -405,5 +420,3 @@ class VectorLayer(Layer):
         self.sync_cartodb(self.esri_service_output, self.cartodb_service_output, self.update_where_clause)
 
         self.post_process()
-
-        # self.delete_and_append()

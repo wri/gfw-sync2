@@ -13,7 +13,6 @@ def update_metadata(in_fc, tech_title, gfw_env):
 
     api_url = settings.get_settings(gfw_env)['metadata']['api_url']
     layer_url = api_url + r'/' + tech_title
-    layer_url = api_url + r'/' + 'wdpa_protected_areas'
 
     response = requests.get(layer_url)
     api_data = json.loads(response.text)
@@ -39,7 +38,7 @@ def update_metadata(in_fc, tech_title, gfw_env):
 def escape_html(text_string):
 
     # Replace all the <p> tags-- not needed in XML
-    text_string = text_string.replace('<p>', '').replace('</p', '')
+    text_string = text_string.replace('<p>', '').replace('</p>', '')
     # text_string = text_string.replace('<br>', '')
     # # udata = text_string.decode('utf-8')
 

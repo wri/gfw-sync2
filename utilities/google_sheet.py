@@ -149,4 +149,4 @@ def update_gs_timestamp(layername, gfw_env):
     associated_global_layer = get_layerdef(layername, gfw_env)['global_layer']
 
     if associated_global_layer:
-        set_value('tech_title', associated_global_layer, 'last_updated', time.strftime("%m/%d/%Y"), gfw_env)
+        set_value('tech_title', associated_global_layer, 'last_updated', gfw_env, time.strftime("%m/%d/%Y"))

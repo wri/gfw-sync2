@@ -82,8 +82,10 @@ class GlobalForestChangeLayer(RasterLayer):
     def start_visualization_process(self):
 
         server_instance = aws.get_aws_instance(self.server_name)
-
         aws.set_server_instance_type(server_instance, 'm4.10xlarge')
+
+        # Required so that the machine now knows it's an m4.10xlarge
+        server_instance.update()
         server_ip = aws.set_processing_server_state(server_instance, 'running')
 
         abspath = os.path.abspath(__file__)
@@ -110,15 +112,19 @@ class GlobalForestChangeLayer(RasterLayer):
             else:
                 break
 
-        aws.set_processing_server_state(self.server_name, 'stopped')
+        server_instance = aws.get_aws_instance(self.server_name)
+        aws.set_processing_server_state(server_instance, 'stopped')
 
     def update(self):
 
         if self.gfw_env == 'DEV':
-            self.update_image_service()
+
+            self.start_visualization_process()
+
+            # self.update_image_service()
 
         else:
-            self.start_visualization_process()
+
 
             self.update_image_service()
 

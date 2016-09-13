@@ -160,18 +160,22 @@ def push_to_production(src_cache_dir, out_local_cache_dir, service_path):
 
     out_prod_cache_dir = map_prod_server_path(out_local_cache_dir)
 
-    # Not totally necessary to update the cache on the DM server, but helpful for troubleshooting
-    #for cache in [out_local_cache_dir, out_prod_cache_dir]:
-    for cache in [out_prod_cache_dir]:
-        shutil.rmtree(cache)
-        shutil.copytree(src_cache_dir, cache)
+    print 'NEED TO MOVE CACHE MANUALLY- SERVER IS TOO UNSTABLE TO BE TURNED ON/OFF'
+    print 'Source: {0}'.format(src_cache_dir)
+    print 'Dest: {0}'.format(out_prod_cache_dir)
 
-    logging.debug('Restarting production services')
-    manage_service('prod', service_path, 'stop')
-
-    logging.debug('Sleeping for 30 seconds')
-    time.sleep(30)
-    manage_service('prod', service_path, 'start')
+    # # Not totally necessary to update the cache on the DM server, but helpful for troubleshooting
+    # #for cache in [out_local_cache_dir, out_prod_cache_dir]:
+    # for cache in [out_prod_cache_dir]:
+    #     shutil.rmtree(cache)
+    #     shutil.copytree(src_cache_dir, cache)
+    #
+    # logging.debug('Restarting production services')
+    # manage_service('prod', service_path, 'stop')
+    #
+    # logging.debug('Sleeping for 30 seconds')
+    # time.sleep(30)
+    # manage_service('prod', service_path, 'start')
 
 
 def update_cache(map_service_path, scratch_workspace, gfw_env):

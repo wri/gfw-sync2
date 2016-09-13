@@ -387,8 +387,13 @@ def delete_staging_table_if_exists(staging_table_name, in_gfw_env):
 
 
 def ogrinfo_min_max(input_fc, oid_fieldname):
-
     input_table_name = os.path.basename(os.path.splitext(input_fc)[0])
+
+    # ogrinfo doesn't recognize OBJECTID in these cases, apparently
+    # Also need to only have the GDB as an input, doesn't want entire FC path
+    if '.gdb' in input_fc:
+        oid_fieldname = 'FID'
+        input_fc = os.path.dirname(input_fc)
 
     sql_statement = 'SELECT min({0}), max({0}) FROM "{1}"'.format(oid_fieldname, input_table_name)
     ogrinfo = run_subprocess(['ogrinfo', '-sql', sql_statement, input_fc])
