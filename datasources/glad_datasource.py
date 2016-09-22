@@ -29,10 +29,12 @@ class GladDataSource(DataSource):
 
         raster_url_list = self.data_source.split(',')
 
-        if self.find_updated_data(raster_url_list):
+        updated_raster_url_list = self.find_updated_data(raster_url_list)
+
+        if updated_raster_url_list:
             output_list = []
 
-            for ras in raster_url_list:
+            for ras in updated_raster_url_list:
                 out_file = self.download_file(ras, self.download_workspace)
                 output_list.append(out_file)
 
@@ -49,6 +51,8 @@ class GladDataSource(DataSource):
 
     def find_updated_data(self, raster_url_list):
 
+        updated_raster_url_list = []
+
         config_sheet_datetime_text = gs.get_value('tech_title', 'umd_landsat_alerts', 'last_updated', self.gfw_env)
         config_sheet_datetime = datetime.datetime.strptime(config_sheet_datetime_text, '%m/%d/%Y')
 
@@ -56,18 +60,17 @@ class GladDataSource(DataSource):
         netloc = urlparse.urlparse(first_url).netloc
 
         bucket = netloc.split('.')[0]
-
-        raster_name_list = []
+        bucket_timestamps = aws.get_timestamps(bucket)
 
         for raster_url in raster_url_list:
 
             raster_name = urlparse.urlparse(raster_url).path.replace('/', '')
-            raster_name_list.append(raster_name)
+            raster_timestamp = bucket_timestamps[raster_name]
 
-        time_stamp_dict = aws.get_timestamps(bucket, raster_name_list)
-        min_bucket_datetime = min(time_stamp_dict.values())
+            if raster_timestamp > config_sheet_datetime:
+                updated_raster_url_list.append(raster_url)
 
-        return min_bucket_datetime > config_sheet_datetime
+        return updated_raster_url_list
 
 
 

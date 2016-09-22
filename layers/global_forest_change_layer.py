@@ -97,7 +97,9 @@ class GlobalForestChangeLayer(RasterLayer):
         pem_file = os.path.join(tokens_dir, 'chofmann-wri.pem')
         host_name = 'ubuntu@{0}'.format(server_ip)
 
-        cmd = ['fab', 'kickoff:{0}'.format(self.name), '-i', pem_file, '-H', host_name]
+        regions_to_update = self.lookup_regions_from_source()
+
+        cmd = ['fab', 'kickoff:{0},{1}'.format(self.name, regions_to_update), '-i', pem_file, '-H', host_name]
         logging.debug('Running fabric: {0}'.format(cmd))
 
         self.proc = subprocess.Popen(cmd, cwd=utilities_dir, stdout=subprocess.PIPE)
@@ -115,16 +117,38 @@ class GlobalForestChangeLayer(RasterLayer):
         server_instance = aws.get_aws_instance(self.server_name)
         aws.set_processing_server_state(server_instance, 'stopped')
 
+    def lookup_regions_from_source(self):
+        region_list = []
+
+        if self.name == 'terrai':
+            region_list = ['eastern_hemi', 'latin']
+
+        else:
+            lkp_dict = {'roc': 'roc',
+                        'uganda': 'uganda',
+                        'peru': 'south_america',
+                        'brazil': 'south_america',
+                        'FE': 'russia',
+                        'borneo': 'asia'}
+
+            for output_raster in self.source:
+                country = os.path.basename(output_raster).split('_')[0]
+
+                region = lkp_dict[country]
+                region_list.append(region)
+
+            # Remove duplicates
+            region_list = list(set(region_list))
+
+        return region_list
+
     def update(self):
 
         if self.gfw_env == 'DEV':
-
-            self.start_visualization_process()
-
-            # self.update_image_service()
+            self.update_image_service()
 
         else:
-
+            self.start_visualization_process()
 
             self.update_image_service()
 

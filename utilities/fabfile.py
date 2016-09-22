@@ -2,7 +2,7 @@ import fabric.api
 import util
 
 
-def kickoff(proc_name):
+def kickoff(proc_name, *regions):
 
     token_info = util.get_token('s3_read_write.config')
     aws_access_key = token_info[0][1]
@@ -11,11 +11,13 @@ def kickoff(proc_name):
     lkp_proc_name = {'umd_landsat_alerts': 'glad', 'terrai': 'terrai'}
     tile_layer_name = lkp_proc_name[proc_name]
 
-    cmd = 'python /home/ubuntu/mapnik-forest-change-tiles/generate-tiles.py -l {0} -r all'.format(tile_layer_name)
+    region_str = ' '.join(regions)
 
-    # Required, even though these are set for ubuntu in .bashrc
-    # Set for both tilestache and s4cmd . . . annoyingly different
-    # Previouly used AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY as well for tilestache
+    cmd = 'python /home/ubuntu/mapnik-forest-change-tiles/generate-tiles.py'
+    cmd += '-l {0} -r {1} --world'.format(tile_layer_name, region_str)
+
+    # # Required, even though these are set for ubuntu in .bashrc
+    # # Set for both tilestache and s4cmd . . . annoyingly different
+    # # Previouly used AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY as well for tilestache
     with fabric.api.shell_env(S3_ACCESS_KEY=aws_access_key, S3_SECRET_KEY=aws_secret_key):
-
         fabric.api.run(cmd)

@@ -12,7 +12,7 @@ secret_key = token_info[1][1]
 ec2_conn = boto.ec2.connect_to_region('us-east-1', aws_access_key_id=access_key, aws_secret_access_key=secret_key)
 
 
-def get_timestamps(bucket, filelist):
+def get_timestamps(bucket):
 
     out_dict = {}
 
@@ -20,8 +20,7 @@ def get_timestamps(bucket, filelist):
     bucket = s3.lookup(bucket)
 
     for key in bucket:
-        if key.name in filelist:
-            out_dict[key.name] = datetime.datetime.strptime(key.last_modified, '%Y-%m-%dT%H:%M:%S.000Z')
+        out_dict[key.name] = datetime.datetime.strptime(key.last_modified, '%Y-%m-%dT%H:%M:%S.000Z')
 
     return out_dict
 
