@@ -7,8 +7,7 @@ from layers.country_vector_layer import CountryVectorLayer
 from layers.global_forest_change_layer import GlobalForestChangeLayer
 
 from datasources.imazon_datasource import ImazonDataSource
-from datasources.glad_datasource import GladDataSource
-from datasources.terrai_datasource import TerraiDataSource
+from datasources.global_forest_change_datasource import GlobalForestChange
 from datasources.wdpa_datasource import WDPADatasource
 from datasources.hot_osm_export_datasource import HotOsmExportDataSource
 from datasources.forest_atlas_datasource import ForestAtlasDataSource
@@ -52,13 +51,7 @@ def build_layer(layerdef, gfw_env):
         layer = CountryVectorLayer(datasource.get_layer())
 
     elif layerdef["type"] == "global_forest_change":
-
-        if layerdef["tech_title"] == 'terrai':
-            datasource = TerraiDataSource(layerdef)
-
-        else:
-            datasource = GladDataSource(layerdef)
-
+        datasource = GlobalForestChange(layerdef)
         layer = GlobalForestChangeLayer(datasource.get_layer())
 
     elif layerdef["type"] == "country_vector":

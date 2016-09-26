@@ -10,20 +10,20 @@ from utilities import aws
 from utilities import google_sheet as gs
 
 
-class GladDataSource(DataSource):
+class GlobalForestChange(DataSource):
     """
     GLAD datasource class. Inherits from DataSource
     Used to download the source files
     """
     def __init__(self, layerdef):
-        logging.debug('Starting GLAD datasource')
-        super(GladDataSource, self).__init__(layerdef)
+        logging.debug('Starting GlobalForestChange datasource')
+        super(GlobalForestChange, self).__init__(layerdef)
 
         self.layerdef = layerdef
 
     def get_layer(self):
         """
-        Download the GLAD datasets
+        Download the source rasters from S3
         :return: an updated layerdef with the local source for the layer.update() process
         """
 
@@ -43,7 +43,7 @@ class GladDataSource(DataSource):
         else:
             # Important for the script that reads the log file and sends an email
             # Including this 'Checked' message will show that we checked the layer but it didn't need updating
-            logging.debug('Checked GLAD S3 bucket, no new data as compared to last timestamp in gfw-sync2 config')
+            logging.debug('Checked S3 bucket, no new data as compared to last timestamp in gfw-sync2 config')
             logging.critical('Checked | {0}'.format(self.name))
             sys.exit(0)
 
@@ -53,7 +53,7 @@ class GladDataSource(DataSource):
 
         updated_raster_url_list = []
 
-        config_sheet_datetime_text = gs.get_value('tech_title', 'umd_landsat_alerts', 'last_updated', self.gfw_env)
+        config_sheet_datetime_text = gs.get_value('tech_title', self.name, 'last_updated', self.gfw_env)
         config_sheet_datetime = datetime.datetime.strptime(config_sheet_datetime_text, '%m/%d/%Y')
 
         first_url = raster_url_list[0]
