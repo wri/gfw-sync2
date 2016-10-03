@@ -156,16 +156,16 @@ class GlobalForestChangeLayer(RasterLayer):
 
     def update(self):
 
-        # if self.gfw_env == 'DEV':
-        #     self.update_image_service()
-        #
-        # else:
-        #     self.start_visualization_process()
-        #
-        #     self.update_image_service()
-        #
-        #     self.finish_visualization_process()
-        #
-        #     self.archive_source_rasters()
+        if self.gfw_env == 'DEV':
+            self.update_image_service()
+
+        else:
+            self.start_visualization_process()
+
+            self.update_image_service()
+
+            self.finish_visualization_process()
+
+            self.archive_source_rasters()
 
         self.post_process()
