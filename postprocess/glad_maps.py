@@ -9,6 +9,7 @@ import datetime
 from os import walk
 import sys
 import logging
+import subprocess
 
 #Check out ArcGIS Extensions
 arcpy.CheckOutExtension("Spatial")
@@ -22,9 +23,8 @@ brazil_mxd = arcpy.mapping.MapDocument(r"D:\GIS Data\GFW\glad\maps\mxds\brazil.m
 
 def post_process(layerdef):
     """
-    Update the date value in the layerspec table-- required for the time slider to work properly
+    Create density maps for GFW Climate Visualization
     :param layerdef: the layerdef
-    :return:
     """
     logging.debug('starting postprocess glad maps')
     print layerdef.source
@@ -94,6 +94,15 @@ def post_process(layerdef):
             make_maps(borneo_mxd)
         else:
             pass
+
+    #start country page analysis stuff (not map related)
+    cmd = ['python', 'update_country_stats.py', '-d', 'umd_landsat_alerts', '-a', 'gadm1_boundary', '--emissions']
+    cwd = r'D:\scripts\gfw-country-pages-analysis'
+
+    if layerdef.gfw_env == 'DEV':
+        cmd.append('--test')
+
+    subprocess.check_call(cmd, cwd=cwd)
 
 def make_maps(mxd):
 
