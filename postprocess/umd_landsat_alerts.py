@@ -88,13 +88,13 @@ def post_process(layerdef):
         if "peru" in layer:
             logging.debug("creating map for peru")
             make_maps(peru_mxd)
-        if "roc" in layerdef.source:
+        if "roc" in layer:
             logging.debug("creating map for roc")
             make_maps(roc_mxd)
-        if "brazil" in layerdef.source:
+        if "brazil" in layer:
             logging.debug("creating map for brazil")
             make_maps(brazil_mxd)
-        if "borneo" in layerdef.source:
+        if "borneo" in layer:
             logging.debug("creating map for borneo")
             make_maps(borneo_mxd)
         else:
