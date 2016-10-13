@@ -27,7 +27,7 @@ def post_process(layerdef):
     :param layerdef: the layerdef
     """
     logging.debug('starting postprocess glad maps')
-    print layerdef.source
+    logging.debug(layerdef.source)
 
     olddata_hash = {}
     #replace path with D:\GIS Data\GFW\glad\past_points
@@ -58,7 +58,7 @@ def post_process(layerdef):
             raster_extract = ExtractByAttributes(ras, where_clause)
             latest_raster = raster_extract.save(os.path.join (r"D:\GIS Data\GFW\glad\latest_points", ras_name))
             # latest_rasters.append(latest_raster)
-            print "new values for %s extracted" %(ras_name)
+            logging.debug("new values for %s extracted" %(ras_name))
         else:
             pass
 
@@ -68,13 +68,13 @@ def post_process(layerdef):
         output = os.path.join(os.path.dirname(ras), ras_name)
         new_point = arcpy.RasterToPoint_conversion(ras, output, "Value")
         new_points.append(output)
-        print "converted %s to points" %(ras)
+        logging.debug("converted %s to points" %(ras))
 
     for newp in new_points:
         for pastp in past_points:
             if os.path.basename(newp) == os.path.basename(pastp):
                 arcpy.Copy_management(newp, pastp)
-                print "copied %s to %s" %(newp, pastp)
+                logging.debug("copied %s to %s" %(newp, pastp))
 
     for newp in new_points:
         outKDens = KernelDensity(newp, "NONE", "", "", "HECTARES")
@@ -82,20 +82,26 @@ def post_process(layerdef):
         name = os.path.basename(newp).replace(".shp", "")
         output = os.path.join(path, name + "_density.tif")
         outKDens.save(output)
+        logging.debug("density layer created")
 
     for layer in layerdef.source:
-        if "peru" in layerdef.source:
+        if "peru" in layer:
+            logging.debug("creating map for peru")
             make_maps(peru_mxd)
         if "roc" in layerdef.source:
+            logging.debug("creating map for roc")
             make_maps(roc_mxd)
         if "brazil" in layerdef.source:
+            logging.debug("creating map for brazil")
             make_maps(brazil_mxd)
         if "borneo" in layerdef.source:
+            logging.debug("creating map for borneo")
             make_maps(borneo_mxd)
         else:
             pass
 
     #start country page analysis stuff (not map related)
+    logging.debug("starting country page analytics")
     cmd = ['python', 'update_country_stats.py', '-d', 'umd_landsat_alerts', '-a', 'gadm1_boundary', '--emissions']
     cwd = r'D:\scripts\gfw-country-pages-analysis'
 
@@ -151,7 +157,7 @@ def make_maps(mxd):
     clip_output = os.path.join(clip_path, name + "_clip.tif")
     density_clip = arcpy.Clip_management(density, rectangle, clip_output, selection, "#", "ClippingGeometry")
     # clip_result = density_clip.getOutput(0)
-    print "adding data to mxd file and setting extent"
+    logging.debug("adding data to mxd file and setting extent")
     df = arcpy.mapping.ListDataFrames(mxd, "Layers")[0]
     add_results = arcpy.mapping.Layer(clip_output)
     add_gadm = arcpy.mapping.Layer("lyr")
@@ -164,7 +170,7 @@ def make_maps(mxd):
     arcpy.mapping.RemoveLayer(df,gadm_lyr)
 
     #export
-    print "adding symbology and exporting"
+    logging.debug("adding symbology and exporting")
     ts = time.time()
     time_year = datetime.datetime.fromtimestamp(ts).strftime("%Y")
     time_week = datetime.datetime.fromtimestamp(ts).strftime("%W")
@@ -174,4 +180,4 @@ def make_maps(mxd):
     arcpy.RefreshActiveView()
     output = os.path.join(r"F:\climate\glad_maps", name + "_" + time_year + "_" + time_week + ".png")
     arcpy.mapping.ExportToPNG(mxd, output)
-    print "map created"
+    logging.debug("map created")
