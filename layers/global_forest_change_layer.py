@@ -109,7 +109,7 @@ class GlobalForestChangeLayer(RasterLayer):
         pem_file = os.path.join(tokens_dir, 'chofmann-wri.pem')
         host_name = 'ubuntu@{0}'.format(server_ip)
 
-        regions_to_update = self.lookup_regions_from_source()
+        regions_to_update = ','.join(self.lookup_regions_from_source())
 
         cmd = ['fab', 'kickoff:{0},{1}'.format(self.name, regions_to_update), '-i', pem_file, '-H', host_name]
         logging.debug('Running fabric: {0}'.format(cmd))

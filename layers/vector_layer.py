@@ -56,7 +56,6 @@ class VectorLayer(Layer):
             arcgis_server.set_service_status(service, 'stop')
             arcgis_server.set_service_status(service, 'start')
 
-
     def filter_source_dataset(self, input_wc):
         """
         If the config table specifies a where_clause to apply as a filter to the source dataset, copy the source
@@ -69,8 +68,8 @@ class VectorLayer(Layer):
 
             # If we are going to filter the source feature class, copy to a new location before deleting records
             # from it
-            out_filename = os.path.splitext(os.path.basename(self.source))[0] + '.shp'
-            output_fc = os.path.join(self.scratch_workspace, out_filename)
+            out_filename = os.path.splitext(os.path.basename(self.source))[0]
+            output_fc = os.path.join(self.scratch_workspace, out_filename).replace('.', '_') + '.shp'
             arcpy.CopyFeatures_management(self.source, output_fc)
 
             # Delete records from this copied FC based on the input where clause
@@ -258,7 +257,11 @@ class VectorLayer(Layer):
             logging.debug('Source SR of {0} does not match esri_service_output of {1}'.format(input_fc, esri_output_fc))
             logging.debug('Projecting source data to temp FC before appending to esri_service_output')
 
-            temp_proj_dataset = os.path.join(self.scratch_workspace, "src_proj.shp")
+            temp_gdb = os.path.join(self.scratch_workspace, 'source_data.gdb')
+            if not os.path.exists(temp_gdb):
+                arcpy.CreateFileGDB_management(self.scratch_workspace, os.path.basename(temp_gdb))
+
+            temp_proj_dataset = os.path.join(temp_gdb, "src_proj")
 
             if self.transformation:
                 arcpy.env.geographicTransformations = self.transformation
