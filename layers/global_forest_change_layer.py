@@ -121,7 +121,7 @@ class GlobalForestChangeLayer(RasterLayer):
         while True:
             line = self.proc.stdout.readline().rstrip()
 
-            if line != '':
+            if line != '****FAB SUBPROCESS COMPLETE****':
                 logging.debug(line)
             else:
                 break
