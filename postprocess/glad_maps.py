@@ -114,7 +114,7 @@ def make_maps(mxd):
     global density
 
     if mxd == borneo_mxd:
-        ISO = "'BRN'"
+        ISO = "'IDN13_P'"
         name = "IDN13"
         density = r"D:\GIS Data\GFW\glad\maps\density_rasters\borneo_day2016_density.tif"
     if mxd == peru_mxd:
