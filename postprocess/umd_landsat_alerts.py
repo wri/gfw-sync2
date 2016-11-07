@@ -30,7 +30,6 @@ def post_process(layerdef):
     logging.debug(layerdef.source)
 
     olddata_hash = {}
-    #replace path with D:\GIS Data\GFW\glad\past_points
     past_points = [
     r"D:\GIS Data\GFW\glad\past_points\borneo_day2016.shp",
     r"D:\GIS Data\GFW\glad\past_points\peru_day2016.shp",
@@ -62,7 +61,6 @@ def post_process(layerdef):
         else:
             pass
 
-    #failed here
     for ras in latest_rasters:
         ras_name = os.path.basename(ras).replace(".tif", ".shp")
         output = os.path.join(os.path.dirname(ras), ras_name)
@@ -76,6 +74,19 @@ def post_process(layerdef):
                 arcpy.Copy_management(newp, pastp)
                 logging.debug("copied %s to %s" %(newp, pastp))
 
+    for idnp in new_points:
+        if "borneo" in idnp:
+            logging.debug('clipping indonesia data')
+            clip = r"D:\GIS Data\GFW\glad\maps\clip\idn_clip.shp"
+            name = "borneo_clip.shp"
+            output = os.path.join(os.path.dirname(idnp), name)
+            idnp_clipped = arcpy.Clip_analysis(idnp, clip, output)
+            new_points.remove(idnp)
+            new_points.insert(0, output)
+            logging.debug(new_points)
+        else:
+            pass
+
     for newp in new_points:
         outKDens = KernelDensity(newp, "NONE", "", "", "HECTARES")
         path = r"D:\GIS Data\GFW\glad\maps\density_rasters"
@@ -84,7 +95,7 @@ def post_process(layerdef):
         outKDens.save(output)
         logging.debug("density layer created")
 
-    for layer in layerdef.source:
+    for layer in new_points:
         if "peru" in layer:
             logging.debug("creating map for peru")
             make_maps(peru_mxd)
@@ -122,7 +133,7 @@ def make_maps(mxd):
     if mxd == borneo_mxd:
         ISO = "'BRN'"
         name = "IDN13"
-        density = r"D:\GIS Data\GFW\glad\maps\density_rasters\borneo_day2016_density.tif"
+        density = r"D:\GIS Data\GFW\glad\maps\density_rasters\borneo_clip_density.tif"
     if mxd == peru_mxd:
         ISO = "'PER'"
         name = "PER"
