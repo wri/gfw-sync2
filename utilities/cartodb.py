@@ -160,6 +160,9 @@ def add_fc_to_ogr2ogr_cmd(in_path, cmd):
     if layer_type == 'LINE':
         cmd += ['-nlt', 'LINESTRING']
 
+    elif layer_type == 'POLYGON':
+        cmd += ['-nlt', 'MULTIPOLYGON']
+
     # Check if the input FC is a GDB
     if os.path.splitext(in_path)[1] == '':
         cmd += [os.path.dirname(in_path), os.path.basename(in_path)]
@@ -309,8 +312,15 @@ def cartodb_make_valid_geom_local(src_fc):
 
     if os.path.splitext(src_fc)[1] == '.shp':
         source_dir = os.path.dirname(src_fc)
+
+    # Need to write the outfile to shp-- ogr2ogr can't handle true curves stored in geodatabases
+    # Will represent them as a point, which spatialite will then choke on
     else:
         source_dir = os.path.dirname(os.path.dirname(src_fc))
+        file_name = 'source.shp'
+        arcpy.FeatureClassToFeatureClass_conversion(src_fc, source_dir, file_name)
+
+        src_fc = os.path.join(source_dir, file_name)
 
     sqlite_dir = os.path.join(source_dir, 'sqlite')
     os.mkdir(sqlite_dir)

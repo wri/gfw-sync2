@@ -49,7 +49,7 @@ class GlobalForestChangeLayer(RasterLayer):
             source_name = self.source[x].split("\\")[-1]
             input_output_tuples.append((self.source[x], output_hash[source_name]))
 
-        print input_output_tuples
+        logging.debug(input_output_tuples)
 
         for input_ras, output_ras in input_output_tuples:
             self.copy_to_esri_output(input_ras, output_ras)

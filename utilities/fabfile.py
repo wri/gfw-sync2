@@ -19,9 +19,9 @@ def kickoff(proc_name, *regions):
     tile_cmd += ' -l {0} -r {1} --world'.format(tile_layer_name, region_str)
 
     point_cmd = 'python /home/ubuntu/raster-vector-to-tsv/processing/utilities/weekly_updates.py'
-    point_cmd += ' -l {0}'.format(lkp_proc_name)
+    point_cmd += ' -l {0}'.format(tile_layer_name)
 
-    ptw_cmd = 'python /home/ubuntu/gfw-places-to-watch/update-ptw.py -r all'
+    ptw_cmd = 'python /home/ubuntu/gfw-places-to-watch/update-ptw.py -r all --threads 30'
 
     # # Required, even though these are set for ubuntu in .bashrc
     # # Set for both tilestache and s4cmd . . . annoyingly different
