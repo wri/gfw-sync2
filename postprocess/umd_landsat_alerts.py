@@ -50,7 +50,9 @@ def post_process(layerdef):
         olddata_hash[point_name] = arcpy.SearchCursor(point, "", "", "","GRID_CODE D").next().getValue("GRID_CODE")
 
     for ras in layerdef.source:
-        if "day" in ras:
+        if "FE" in ras:
+            pass
+        elif "day" in ras:
             ras_name = os.path.basename(ras)
             shp_name = ras_name.replace(".tif", ".shp")
             where_clause = "Value > " + str(olddata_hash[shp_name])
