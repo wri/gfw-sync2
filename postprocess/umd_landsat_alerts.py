@@ -10,6 +10,9 @@ from os import walk
 import sys
 import logging
 import subprocess
+import requests
+
+from utilities import util
 
 #Check out ArcGIS Extensions
 arcpy.CheckOutExtension("Spatial")
@@ -29,6 +32,25 @@ def post_process(layerdef):
     logging.debug('starting postprocess glad maps')
     logging.debug(layerdef.source)
 
+    #start country page analysis stuff (not map related)
+    logging.debug("starting country page analytics")
+    cmd = ['python', 'update_country_stats.py', '-d', 'umd_landsat_alerts', '-a', 'gadm2_boundary']
+    cwd = r'D:\scripts\gfw-country-pages-analysis-2'
+
+    if layerdef.gfw_env == 'DEV':
+        cmd.append('--test')
+
+    subprocess.check_call(cmd, cwd=cwd)
+
+    # POST to kick off GLAD Alerts subscriptions now that we've updated the country-pages data
+    api_token = util.get_token('gfw-rw-api-prod')
+
+    headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer {0}'.format(api_token)}
+    url = r'https://production-api.globalforestwatch.org/subscriptions/notify-updates/glad-alerts'
+
+    r = requests.post(url, headers=headers)
+    logging.debug(r.text)
+
     olddata_hash = {}
     past_points = [
     r"D:\GIS Data\GFW\glad\past_points\borneo_day2016.shp",
@@ -37,12 +59,7 @@ def post_process(layerdef):
     r"D:\GIS Data\GFW\glad\past_points\brazil_day2016.shp"
     ]
 
-    latest_rasters = [
-    r"D:\GIS Data\GFW\glad\latest_points\borneo_day2016.tif",
-    r"D:\GIS Data\GFW\glad\latest_points\peru_day2016.tif",
-    r"D:\GIS Data\GFW\glad\latest_points\brazil_day2016.tif",
-    r"D:\GIS Data\GFW\glad\latest_points\roc_day2016.tif"
-    ]
+    latest_rasters = []
     new_points = []
 
     for point in past_points:
@@ -58,70 +75,76 @@ def post_process(layerdef):
             where_clause = "Value > " + str(olddata_hash[shp_name])
             raster_extract = ExtractByAttributes(ras, where_clause)
             latest_raster = raster_extract.save(os.path.join (r"D:\GIS Data\GFW\glad\latest_points", ras_name))
+            latest_rasters.append(latest_raster)
             # latest_rasters.append(latest_raster)
             logging.debug("new values for %s extracted" %(ras_name))
         else:
             pass
 
-    for ras in latest_rasters:
-        ras_name = os.path.basename(ras).replace(".tif", ".shp")
-        output = os.path.join(os.path.dirname(ras), ras_name)
-        new_point = arcpy.RasterToPoint_conversion(ras, output, "Value")
-        new_points.append(output)
-        logging.debug("converted %s to points" %(ras))
+    if not latest_rasters:
+        pass
+    else:
+        for ras in latest_rasters:
+            ras_name = os.path.basename(ras).replace(".tif", ".shp")
+            output = os.path.join(os.path.dirname(ras), ras_name)
+            new_point = arcpy.RasterToPoint_conversion(ras, output, "Value")
+            new_points.append(output)
+            logging.debug("converted %s to points" %(ras))
 
-    for newp in new_points:
-        for pastp in past_points:
-            if os.path.basename(newp) == os.path.basename(pastp):
-                arcpy.Copy_management(newp, pastp)
-                logging.debug("copied %s to %s" %(newp, pastp))
+    if not new_points:
+        pass
+    else:
+        for newp in new_points:
+            for pastp in past_points:
+                if os.path.basename(newp) == os.path.basename(pastp):
+                    arcpy.Copy_management(newp, pastp)
+                    logging.debug("copied %s to %s" %(newp, pastp))
 
-    for idnp in new_points:
-        if "borneo" in idnp:
-            logging.debug('clipping indonesia data')
-            clip = r"D:\GIS Data\GFW\glad\maps\clip\idn_clip.shp"
-            name = "borneo_clip.shp"
-            output = os.path.join(os.path.dirname(idnp), name)
-            idnp_clipped = arcpy.Clip_analysis(idnp, clip, output)
-            new_points.remove(idnp)
-            new_points.insert(0, output)
-            logging.debug(new_points)
-        else:
-            pass
+    if not new_points:
+        pass
+    else:
+        for idnp in new_points:
+            if "borneo" in idnp:
+                logging.debug('clipping indonesia data')
+                clip = r"D:\GIS Data\GFW\glad\maps\clip\idn_clip.shp"
+                name = "borneo_clip.shp"
+                output = os.path.join(os.path.dirname(idnp), name)
+                idnp_clipped = arcpy.Clip_analysis(idnp, clip, output)
+                new_points.remove(idnp)
+                new_points.insert(0, output)
+                logging.debug(new_points)
+            else:
+                pass
 
-    for newp in new_points:
-        outKDens = KernelDensity(newp, "NONE", "", "", "HECTARES")
-        path = r"D:\GIS Data\GFW\glad\maps\density_rasters"
-        name = os.path.basename(newp).replace(".shp", "")
-        output = os.path.join(path, name + "_density.tif")
-        outKDens.save(output)
-        logging.debug("density layer created")
+    if not new_points:
+        pass
+    else:
+        for newp in new_points:
+            outKDens = KernelDensity(newp, "NONE", "", "", "HECTARES")
+            path = r"D:\GIS Data\GFW\glad\maps\density_rasters"
+            name = os.path.basename(newp).replace(".shp", "")
+            output = os.path.join(path, name + "_density.tif")
+            outKDens.save(output)
+            logging.debug("density layer created")
 
-    for layer in new_points:
-        if "peru" in layer:
-            logging.debug("creating map for peru")
-            make_maps(peru_mxd)
-        if "roc" in layer:
-            logging.debug("creating map for roc")
-            make_maps(roc_mxd)
-        if "brazil" in layer:
-            logging.debug("creating map for brazil")
-            make_maps(brazil_mxd)
-        if "borneo" in layer:
-            logging.debug("creating map for borneo")
-            make_maps(borneo_mxd)
-        else:
-            pass
-
-    # #start country page analysis stuff (not map related)
-    # logging.debug("starting country page analytics")
-    # cmd = ['python', 'update_country_stats.py', '-d', 'umd_landsat_alerts', '-a', 'gadm1_boundary', '--emissions']
-    # cwd = r'D:\scripts\gfw-country-pages-analysis'
-    #
-    # if layerdef.gfw_env == 'DEV':
-    #     cmd.append('--test')
-    #
-    # subprocess.check_call(cmd, cwd=cwd)
+    if not new_points:
+        pass
+    else:
+        for layer in new_points:
+            if "peru" in layer:
+                logging.debug("creating map for peru")
+                make_maps(peru_mxd)
+            if "roc" in layer:
+                logging.debug("creating map for roc")
+                make_maps(roc_mxd)
+            if "brazil" in layer:
+                logging.debug("creating map for brazil")
+                make_maps(brazil_mxd)
+            if "borneo" in layer:
+                logging.debug("creating map for borneo")
+                make_maps(borneo_mxd)
+            else:
+                pass
 
 def make_maps(mxd):
 
