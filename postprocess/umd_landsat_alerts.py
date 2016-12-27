@@ -74,9 +74,10 @@ def post_process(layerdef):
             shp_name = ras_name.replace(".tif", ".shp")
             where_clause = "Value > " + str(olddata_hash[shp_name])
             raster_extract = ExtractByAttributes(ras, where_clause)
-            latest_raster = raster_extract.save(os.path.join (r"D:\GIS Data\GFW\glad\latest_points", ras_name))
-            latest_rasters.append(latest_raster)
-            # latest_rasters.append(latest_raster)
+            output = os.path.join (r"D:\GIS Data\GFW\glad\latest_points", ras_name)
+            latest_raster = raster_extract.save(output)
+            latest_rasters.append(output)
+            logging.debug("here's the latest_rasters list %s" %(latest_rasters))
             logging.debug("new values for %s extracted" %(ras_name))
         else:
             pass
