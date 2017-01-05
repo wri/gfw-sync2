@@ -4,6 +4,7 @@ import logging
 import arcpy
 import subprocess
 import os
+import sys
 
 from layers.raster_layer import RasterLayer
 from utilities import aws
@@ -109,9 +110,9 @@ class GlobalForestChangeLayer(RasterLayer):
         pem_file = os.path.join(tokens_dir, 'chofmann-wri.pem')
         host_name = 'ubuntu@{0}'.format(server_ip)
 
-        regions_to_update = ','.join(self.lookup_regions_from_source())
+        region_str, year_str = self.lookup_region_year_from_source()
 
-        cmd = ['fab', 'kickoff:{0},{1}'.format(self.name, regions_to_update), '-i', pem_file, '-H', host_name]
+        cmd = ['fab', 'kickoff:{0},{1},{2}'.format(self.name, region_str, year_str), '-i', pem_file, '-H', host_name]
         logging.debug('Running fabric: {0}'.format(cmd))
 
         self.proc = subprocess.Popen(cmd, cwd=utilities_dir, stdout=subprocess.PIPE)
@@ -129,30 +130,52 @@ class GlobalForestChangeLayer(RasterLayer):
         server_instance = aws.get_aws_instance(self.server_name)
         aws.set_processing_server_state(server_instance, 'stopped')
 
-    def lookup_regions_from_source(self):
-        region_list = []
+    def lookup_region_year_from_source(self):
 
         if self.name == 'terrai':
             region_list = ['eastern_hemi', 'latin']
+            year_list = ['all']
 
         else:
-            lkp_dict = {'roc': 'roc',
-                        'uganda': 'uganda',
-                        'peru': 'south_america',
-                        'brazil': 'south_america',
-                        'FE': 'russia',
-                        'borneo': 'asia'}
+            region_list = []
+            year_list = []
+
+            lkp_dict = {'roc': 'roc',  'uganda': 'uganda',
+                        'peru': 'south_america', 'brazil': 'south_america',
+                        'FE': 'russia', 'borneo': 'asia',
+                        'SEA': 'se_asia',
+                        'Africa': 'africa'}
+
+            # required to deal with uganda data, which doesn't include a year value
+            year_dict = {'c': '2016', 'p': '2015'}
 
             for output_raster in self.source:
-                country = os.path.basename(output_raster).split('_')[0]
+                ras_name = os.path.basename(output_raster)
+                country = ras_name.split('_')[0]
 
                 region = lkp_dict[country]
                 region_list.append(region)
 
+                digits_only = [s for s in ras_name if s.isdigit()]
+                year = ''.join(digits_only)
+
+                # Catch Uganda example, where year is based on a 'c' or a 'p' at the end of the filename
+                if year == '':
+                    year = year_dict[ras_name.split('_')[-1][0]]
+
+                year_list.append(year)
+
             # Remove duplicates
             region_list = list(set(region_list))
+            year_list = list(set(year_list))
 
-        return region_list
+            # This shouldn't happen. No way that 3 years are updated at thee same time. Max is 2.
+            if len(year_list) > 2:
+                logging.debug('Exiting. Found year list > 2:')
+                logging.debug(year_list)
+                sys.exit(1)
+
+        return ';'.join(region_list), ';'.join(year_list)
 
     def update(self):
 

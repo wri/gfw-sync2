@@ -4,7 +4,7 @@ import datetime
 import calendar
 
 
-def kickoff(proc_name, *regions):
+def kickoff(proc_name, regions, years):
 
     token_info = util.get_token('s3_read_write.config')
     aws_access_key = token_info[0][1]
@@ -13,13 +13,14 @@ def kickoff(proc_name, *regions):
     lkp_proc_name = {'umd_landsat_alerts': 'glad', 'terrai': 'terrai'}
     tile_layer_name = lkp_proc_name[proc_name]
 
-    region_str = ' '.join(regions)
+    region_str = ' '.join(regions.split(';'))
+    year_str = ' '.join(years.split(';'))
 
     tile_cmd = 'python /home/ubuntu/mapnik-forest-change-tiles/generate-tiles.py'
-    tile_cmd += ' -l {0} -r {1} --world'.format(tile_layer_name, region_str)
+    tile_cmd += ' -l {0} -r {1} -y {2} --world'.format(tile_layer_name, region_str, year_str)
 
     point_cmd = 'python /home/ubuntu/raster-vector-to-tsv/processing/utilities/weekly_updates.py'
-    point_cmd += ' -l {0}'.format(tile_layer_name)
+    point_cmd += ' -l {0} -r {1} -y {2}'.format(tile_layer_name, region_str, year_str)
 
     ptw_cmd = 'python /home/ubuntu/gfw-places-to-watch/update-ptw.py -r all --threads 30'
 
@@ -34,8 +35,8 @@ def kickoff(proc_name, *regions):
         # Write the rasters to point and push to s3
         fabric.api.run(point_cmd)
 
-        # If it's the last week of the month, run ptw
-        if proc_name == 'umd_landsat_alerts' and run_ptw():
+        # If it's the last week of the month and south_america is to be processed, run ptw
+        if proc_name == 'umd_landsat_alerts' and run_ptw() and 'south_america' in region_str:
             fabric.api.run(ptw_cmd)
 
         # Important to signal the global_forest_change_layer to kill the subprocess
