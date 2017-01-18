@@ -122,10 +122,11 @@ class GlobalForestChangeLayer(RasterLayer):
         while True:
             line = self.proc.stdout.readline().rstrip()
 
-            if line != '****FAB SUBPROCESS COMPLETE****':
-                logging.debug(line)
-            else:
+            if line == '****FAB SUBPROCESS COMPLETE****' or 'error' in line.lower():
                 break
+
+            else:
+                logging.debug(line)
 
         server_instance = aws.get_aws_instance(self.server_name)
         aws.set_processing_server_state(server_instance, 'stopped')

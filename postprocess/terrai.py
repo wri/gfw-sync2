@@ -10,6 +10,8 @@ def post_process(layerdef):
     """
 
     if layerdef.gfw_env == 'PROD':
+        logging.debug('Starting country page analysis')
+
         country_analysis_dir = r'D:\scripts\gfw-country-pages-analysis-2'
 
         cmd = ['python', 'update_country_stats.py', '-d', 'terra_i_alerts', '-a', 'gadm1_boundary']

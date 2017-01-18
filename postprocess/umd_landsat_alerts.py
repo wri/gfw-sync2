@@ -32,13 +32,16 @@ def post_process(layerdef):
     logging.debug('starting postprocess glad maps')
     logging.debug(layerdef.source)
 
-    #start country page analysis stuff (not map related)
+    # start country page analysis stuff (not map related)
     logging.debug("starting country page analytics")
     cmd = ['python', 'update_country_stats.py', '-d', 'umd_landsat_alerts', '-a', 'gadm2_boundary']
     cwd = r'D:\scripts\gfw-country-pages-analysis-2'
 
-    if layerdef.gfw_env == 'DEV':
-        cmd.append('--test')
+    if layerdef.gfw_env == 'PROD':
+        cmd += ['-e', 'prod']
+
+    else:
+        cmd += ['-e', 'staging']
 
     subprocess.check_call(cmd, cwd=cwd)
 
