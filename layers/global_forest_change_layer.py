@@ -141,14 +141,10 @@ class GlobalForestChangeLayer(RasterLayer):
             region_list = []
             year_list = []
 
-            lkp_dict = {'roc': 'roc',  'uganda': 'uganda',
-                        'peru': 'south_america', 'brazil': 'south_america',
+            lkp_dict = {'peru': 'south_america', 'brazil': 'south_america',
                         'FE': 'russia', 'borneo': 'asia',
                         'SEA': 'se_asia',
                         'Africa': 'africa'}
-
-            # required to deal with uganda data, which doesn't include a year value
-            year_dict = {'c': '2016', 'p': '2015'}
 
             for output_raster in self.source:
                 ras_name = os.path.basename(output_raster)
@@ -160,17 +156,13 @@ class GlobalForestChangeLayer(RasterLayer):
                 digits_only = [s for s in ras_name if s.isdigit()]
                 year = ''.join(digits_only)
 
-                # Catch Uganda example, where year is based on a 'c' or a 'p' at the end of the filename
-                if year == '':
-                    year = year_dict[ras_name.split('_')[-1][0]]
-
                 year_list.append(year)
 
             # Remove duplicates
             region_list = list(set(region_list))
             year_list = list(set(year_list))
 
-            # This shouldn't happen. No way that 3 years are updated at thee same time. Max is 2.
+            # This shouldn't happen. No way that 3 years are updated at the same time. Max is 2.
             if len(year_list) > 2:
                 logging.debug('Exiting. Found year list > 2:')
                 logging.debug(year_list)

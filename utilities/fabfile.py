@@ -22,7 +22,7 @@ def kickoff(proc_name, regions, years):
     point_cmd = 'python /home/ubuntu/raster-vector-to-tsv/processing/utilities/weekly_updates.py'
     point_cmd += ' -l {0} -r {1} -y {2}'.format(tile_layer_name, region_str, year_str)
 
-    ptw_cmd = 'python /home/ubuntu/gfw-places-to-watch/update-ptw.py -r all --threads 30'
+    ptw_cmd = 'python /home/ubuntu/gfw-places-to-watch/update-ptw.py -r all --threads 25'
 
     # # Required, even though these are set for ubuntu in .bashrc
     # # Set for both tilestache and s4cmd . . . annoyingly different
