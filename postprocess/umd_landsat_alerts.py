@@ -54,6 +54,9 @@ def post_process(layerdef):
     r = requests.post(url, headers=headers)
     logging.debug(r.text)
 
+    update_elastic()
+
+
     olddata_hash = {}
     past_points = [
     r"D:\GIS Data\GFW\glad\past_points\borneo_day2016.shp",
@@ -221,3 +224,51 @@ def make_maps(mxd):
     output = os.path.join(r"F:\climate\glad_maps", name + "_" + time_year + "_" + time_week + ".png")
     arcpy.mapping.ExportToPNG(mxd, output)
     logging.debug("map created")
+
+
+def update_elastic():
+
+    dataset_id = r'ae1fc1d2-2b96-4ce5-8418-b9159e157680'
+
+    staging_token = util.get_token('gfw-rw-api-staging')
+
+    region_list = ['se_asia', 'africa', 'south_america']
+    year_list = ['2016', '2017']
+
+    headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer {0}'.format(staging_token)}
+
+    for year in year_list:
+        for region in region_list:
+            delete_and_append(dataset_id, headers, year, region)
+
+
+def delete_and_append(dataset_id, headers, year, region):
+    delete_url = r'http://staging-api.globalforestwatch.org/query/{0}'.format(dataset_id)
+
+    qry_parms = {"sql": "DELETE FROM index_{0} "
+                        "WHERE year = {1} AND region = '{2}'".format(dataset_id.replace('-', ''), year, region)}
+
+    logging.debug('starting delete request')
+    logging.debug(qry_parms)
+
+    r = requests.get(delete_url, headers=headers, params=qry_parms)
+
+    logging.debug(r.status_code)
+    logging.debug(r.json())
+
+    src_url = r'http://gfw2-data.s3.amazonaws.com/alerts-tsv/glad/{0}_{1}.csv'.format(region, year)
+    dataset_url = r'http://staging-api.globalforestwatch.org/dataset/{0}/concat'.format(dataset_id)
+
+    payload = {'url': src_url}
+
+    logging.debug('starting concat')
+    logging.debug(payload)
+
+    r = requests.post(dataset_url, headers=headers, json=payload)
+    status = r.status_code
+
+    if status == 204:
+        logging.debug('Request succeeded!')
+    else:
+        logging.debug(r.text)
+        raise ValueError('Request failed with code: {}'.format(status))
