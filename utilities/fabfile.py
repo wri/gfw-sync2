@@ -35,7 +35,7 @@ def kickoff(proc_name, regions, years):
         # Write the rasters to point and push to s3
         fabric.api.run(point_cmd)
 
-        # If it's the last week of the month and south_america is to be processed, run ptw
+        # If today's date is >= 4 and <= 10 and south_america is to be processed, run ptw
         if proc_name == 'umd_landsat_alerts' and run_ptw() and 'south_america' in region_str:
             fabric.api.run(ptw_cmd)
 
@@ -44,12 +44,6 @@ def kickoff(proc_name, regions, years):
 
 
 def run_ptw():
-
     today = datetime.datetime.today()
-    all_weeks = calendar.monthcalendar(today.year, today.month)
 
-    full_weeks = [w for w in all_weeks if len(set(w)) == 7]
-
-    last_full_week = full_weeks[-1]
-
-    return today.day in last_full_week
+    return today.day in range(4, 11)

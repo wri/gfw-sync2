@@ -1,6 +1,8 @@
 import subprocess
 import logging
 
+from utilities import update_elastic
+
 
 def post_process(layerdef):
     """
@@ -14,8 +16,20 @@ def post_process(layerdef):
 
         country_analysis_dir = r'D:\scripts\gfw-country-pages-analysis-2'
 
-        cmd = ['python', 'update_country_stats.py', '-d', 'terra_i_alerts', '-a', 'gadm1_boundary']
+        cmd = ['python', 'update_country_stats.py', '-d', 'terra_i_alerts', '-a', 'gadm1_boundary', '-e', 'prod']
         subprocess.check_call(cmd, cwd=country_analysis_dir)
+
+        run_elastic_update()
 
     else:
         logging.debug('Not running gfw-country-pages-analysis-2; gfw_env is {0}'.format(layerdef.gfw_env))
+
+
+def run_elastic_update():
+    logging.debug('starting to update elastic')
+    dataset_id = r'05e95470-a815-4d66-b879-d185bdde4785'
+
+    api_version = 'staging'
+    src_url = r'http://gfw2-data.s3.amazonaws.com/alerts-tsv/terrai.csv'
+
+    update_elastic.delete_and_append(dataset_id, api_version, src_url)
