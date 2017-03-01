@@ -12,6 +12,7 @@ import cartodb
 import logging
 import uuid
 import urllib2
+import requests
 from ConfigParser import ConfigParser
 
 
@@ -140,6 +141,18 @@ def build_update_where_clause(in_fc, input_field):
         where_clause = None
 
     return where_clause
+
+
+def hit_vizz_webhook(dataset_name):
+
+    # POST to kick off GLAD Alerts subscriptions now that we've updated the country-pages data
+    api_token = get_token('gfw-rw-api-prod')
+
+    headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer {0}'.format(api_token)}
+    url = r'https://production-api.globalforestwatch.org/subscriptions/notify-updates/{0}'.format(dataset_name)
+
+    r = requests.post(url, headers=headers)
+    logging.debug(r.text)
 
 
 def get_token(token_file):

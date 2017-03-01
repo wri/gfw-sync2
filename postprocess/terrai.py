@@ -1,7 +1,7 @@
 import subprocess
 import logging
 
-from utilities import update_elastic
+from utilities import util, update_elastic
 
 
 def post_process(layerdef):
@@ -18,6 +18,8 @@ def post_process(layerdef):
 
         cmd = ['python', 'update_country_stats.py', '-d', 'terra_i_alerts', '-a', 'gadm1_boundary', '-e', 'prod']
         subprocess.check_call(cmd, cwd=country_analysis_dir)
+
+        util.hit_vizz_webhook('terrai-alerts')
 
         run_elastic_update()
 

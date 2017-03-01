@@ -21,14 +21,7 @@ def post_process(layerdef):
 
     subprocess.check_call(cmd, cwd=cwd)
 
-    # POST to kick off GLAD Alerts subscriptions now that we've updated the country-pages data
-    api_token = util.get_token('gfw-rw-api-prod')
-
-    headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer {0}'.format(api_token)}
-    url = r'https://production-api.globalforestwatch.org/subscriptions/notify-updates/glad-alerts'
-
-    r = requests.post(url, headers=headers)
-    logging.debug(r.text)
+    util.hit_vizz_webhook('glad-alerts')
 
     run_elastic_update()
 
