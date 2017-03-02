@@ -123,6 +123,7 @@ class GlobalForestChangeLayer(RasterLayer):
             line = self.proc.stdout.readline().rstrip()
 
             if line == '****FAB SUBPROCESS COMPLETE****' or 'error' in line.lower():
+                print line
                 break
 
             else:

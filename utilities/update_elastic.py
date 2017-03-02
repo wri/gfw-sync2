@@ -34,6 +34,9 @@ def delete_and_append(dataset_id, api_version, src_url, delete_where_clause=None
     logging.debug(r.status_code)
     logging.debug(r.json())
 
+    if r.status_code == 500:
+        raise ValueError('request failed')
+
     dataset_url = r'http://staging-api.globalforestwatch.org/dataset/{0}/concat'.format(dataset_id)
 
     payload = {'url': src_url}

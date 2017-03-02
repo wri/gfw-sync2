@@ -1,6 +1,5 @@
 import logging
 import subprocess
-import requests
 
 from utilities import util
 from utilities import update_elastic
@@ -40,7 +39,7 @@ def run_elastic_update():
         for region in region_list:
 
             src_url = r'http://gfw2-data.s3.amazonaws.com/alerts-tsv/glad/{0}_{1}.csv'.format(region, year)
-            delete_wc = "WHERE year = {1} AND region = '{2}'".format(year, region)
+            delete_wc = "WHERE year = {0} AND region = '{1}'".format(year, region)
 
             update_elastic.delete_and_append(dataset_id, api_version, src_url, delete_wc)
 
