@@ -34,10 +34,12 @@ def delete_and_append(dataset_id, api_version, src_url, delete_where_clause=None
     logging.debug(r.status_code)
     logging.debug(r.json())
 
-    if r.status_code == 500:
-        raise ValueError('request failed')
+    # Temporarily remove this-- request will timeout and return a 500, but delete will execute
+    # Raul is making this an async request, because it takes awhile to delete all the rows
+    # if r.status_code != 200:
+    #     raise ValueError('request failed with status code {}'.format(r.status_code))
 
-    dataset_url = r'http://staging-api.globalforestwatch.org/dataset/{0}/concat'.format(dataset_id)
+    dataset_url = r'{0}/dataset/{1}/concat'.format(api_url, dataset_id)
 
     payload = {'url': src_url}
 

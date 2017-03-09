@@ -1,7 +1,6 @@
 import fabric.api
 import util
 import datetime
-import calendar
 
 
 def kickoff(proc_name, regions, years):
@@ -16,9 +15,11 @@ def kickoff(proc_name, regions, years):
     region_str = ' '.join(regions.split(';'))
     year_str = ' '.join(years.split(';'))
 
+    # Generate the mapnik tiles and push to s3
     tile_cmd = 'python /home/ubuntu/mapnik-forest-change-tiles/generate-tiles.py'
     tile_cmd += ' -l {0} -r {1} -y {2} --world'.format(tile_layer_name, region_str, year_str)
 
+    # Write the rasters to point and push to s3
     point_cmd = 'python /home/ubuntu/raster-vector-to-tsv/processing/utilities/weekly_updates.py'
     point_cmd += ' -l {0} -r {1} -y {2}'.format(tile_layer_name, region_str, year_str)
 
@@ -29,15 +30,17 @@ def kickoff(proc_name, regions, years):
     # # Previouly used AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY as well for tilestache
     with fabric.api.shell_env(S3_ACCESS_KEY=aws_access_key, S3_SECRET_KEY=aws_secret_key):
 
-        # Generate the mapnik tiles and push to s3
-        fabric.api.run(tile_cmd)
-
-        # Write the rasters to point and push to s3
-        fabric.api.run(point_cmd)
+        cmd_list = [tile_cmd, point_cmd]
 
         # If today's date is >= 4 and <= 10 and south_america is to be processed, run ptw
         if proc_name == 'umd_landsat_alerts' and run_ptw() and 'south_america' in region_str:
-            fabric.api.run(ptw_cmd)
+            cmd_list += [ptw_cmd]
+
+        # required because fabric will wait if process is not actively connected to this machine
+        # can't do multiple fabric.api.run calls for some reason
+        # http://docs.fabfile.org/en/1.6/faq.html#my-cd-workon-export-etc-calls-don-t-seem-to-work
+        final_cmd = ' && '.join(cmd_list)
+        fabric.api.run(final_cmd)
 
         # Important to signal the global_forest_change_layer to kill the subprocess
         print '****FAB SUBPROCESS COMPLETE****'

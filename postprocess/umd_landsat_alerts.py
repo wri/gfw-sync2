@@ -28,12 +28,12 @@ def post_process(layerdef):
 def run_elastic_update():
 
     logging.debug('starting to update elastic')
-    dataset_id = r'274b4818-be18-4890-9d10-eae56d2a82e5'
+    dataset_id = r'e663eb09-04de-4f39-b871-35c6c2ed10b5'
 
     region_list = ['se_asia', 'africa', 'south_america']
     year_list = ['2016', '2017']
 
-    api_version = 'staging'
+    api_version = 'prod'
 
     for year in year_list:
         for region in region_list:
