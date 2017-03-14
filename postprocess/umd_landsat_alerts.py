@@ -20,7 +20,8 @@ def post_process(layerdef):
 
     subprocess.check_call(cmd, cwd=cwd)
 
-    util.hit_vizz_webhook('glad-alerts')
+    # Running this manually for now, as no way to tell when dataset has finished saving in PROD
+    # util.hit_vizz_webhook('glad-alerts')
 
     run_elastic_update()
 

@@ -19,7 +19,8 @@ def post_process(layerdef):
         cmd = ['python', 'update_country_stats.py', '-d', 'terra_i_alerts', '-a', 'gadm1_boundary', '-e', 'prod']
         subprocess.check_call(cmd, cwd=country_analysis_dir)
 
-        util.hit_vizz_webhook('terrai-alerts')
+        # Running this manually for now, as no way to tell when dataset has finished saving in PROD
+        # util.hit_vizz_webhook('terrai-alerts')
 
         run_elastic_update()
 
@@ -29,9 +30,9 @@ def post_process(layerdef):
 
 def run_elastic_update():
     logging.debug('starting to update elastic')
-    dataset_id = r'05e95470-a815-4d66-b879-d185bdde4785'
+    dataset_id = r'bb80312e-b514-48ad-9252-336408603591'
 
-    api_version = 'staging'
+    api_version = 'prod'
     src_url = r'http://gfw2-data.s3.amazonaws.com/alerts-tsv/terrai.csv'
 
     update_elastic.delete_and_append(dataset_id, api_version, src_url)
