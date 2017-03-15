@@ -153,6 +153,7 @@ def hit_vizz_webhook(dataset_name):
 
     r = requests.post(url, headers=headers)
     logging.debug(r.text)
+    print r.text
 
 
 def get_token(token_file):
