@@ -41,7 +41,7 @@ def delete_and_append(dataset_id, api_version, src_url, delete_where_clause=None
 
     dataset_url = r'{0}/dataset/{1}/concat'.format(api_url, dataset_id)
 
-    payload = {'url': src_url}
+    payload = {"url": src_url, "provider": "csv"}
 
     logging.debug('starting concat')
     logging.debug(payload)
@@ -52,5 +52,6 @@ def delete_and_append(dataset_id, api_version, src_url, delete_where_clause=None
     if status == 204:
         logging.debug('Request succeeded!')
     else:
+        print r.text
         logging.debug(r.text)
         raise ValueError('Request failed with code: {}'.format(status))
