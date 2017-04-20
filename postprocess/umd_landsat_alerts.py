@@ -58,6 +58,8 @@ def make_climate_maps(region_list):
     scripts_dir = os.path.dirname(gfw_sync_dir)
     climate_maps_dir = os.path.join(scripts_dir, 'gfw-climate-glad-maps')
 
+    python_exe = r'C:\PYTHON27\ArcGISx6410.3\python.exe'
+
     current_week = Week.thisweek()
 
     for i in range(1, 5):
@@ -68,7 +70,7 @@ def make_climate_maps(region_list):
 
         for region in region_list:
 
-            cmd = ['python', 'create_map.py', '-y', year, '-w', week, '-r', region]
+            cmd = [python_exe, 'create_map.py', '-y', year, '-w', week, '-r', region]
             logging.debug('calling subprocess:')
             logging.debug(cmd)
 

@@ -123,8 +123,9 @@ def cartodb_create(sqlite_path, template_table, output_table, temp_id_field, gfw
     logging.debug("upload data from {0} to staging table {1}".format(sqlite_path, output_table))
 
     # Create a copy of the output table for staging
-    create_staging_table_sql = "CREATE TABLE {0} AS SELECT * FROM {1} WHERE cartodb_id = -9999".format(output_table,
-                                                                                                       template_table)
+    create_staging_table_sql = "CREATE TABLE {0} AS SELECT * FROM {1} " \
+                               "WHERE cartodb_id = -9999".format(output_table, template_table)
+
     cartodb_sql(create_staging_table_sql, gfw_env)
 
     # https://github.com/CartoDB/cartodb/wiki/creating-tables-though-the-SQL-API
@@ -329,7 +330,7 @@ def cartodb_make_valid_geom_local(src_fc):
 
     cmd = ['ogr2ogr', '-f', 'SQLite', out_sqlite_path]
     cmd = add_fc_to_ogr2ogr_cmd(src_fc, cmd)
-    cmd += ["-dsco", "SPATIALITE=yes"]
+    cmd += ["-dsco", "SPATIALITE=yes", '-dim', '2']
 
     logging.debug('Creating sqlite database')
     run_subprocess(cmd)

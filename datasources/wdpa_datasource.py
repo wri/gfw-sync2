@@ -77,7 +77,7 @@ class WDPADatasource(DataSource):
         unique_col = 'Technical Title'
         unique_val = 'wdpa_protected_areas'
         update_col = 'Frequency of Updates'
-        sheet_name = 'sheet1'
+        sheet_name = 'Form Responses 1'
         gs_key = r'1hJ48cMrADMEJ67L5hTQbT5hhV20YCJHpN1NwjXiC3pI'
 
         current_version_text = gs.get_value(unique_col, unique_val, update_col, sheet_name, gs_key)

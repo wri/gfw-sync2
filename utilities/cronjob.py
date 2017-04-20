@@ -55,7 +55,8 @@ def main():
         update_layer_today = parse_update_freq(layerdef['update_days'])
 
         if update_layer_today:
-            subprocess.call(['python', 'gfw-sync.py', '-l', layername, '-e', args.environment])
+            python_exe = r'C:\PYTHON27\ArcGISx6410.3\python'
+            subprocess.call([python_exe, 'gfw-sync.py', '-l', layername, '-e', args.environment])
 
     email_stats.send_summary()
 
