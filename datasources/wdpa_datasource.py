@@ -3,7 +3,6 @@ import sys
 import logging
 import arcpy
 import re
-import datetime
 import calendar
 
 from datasource import DataSource
@@ -85,10 +84,10 @@ class WDPADatasource(DataSource):
         gdb_name = os.path.splitext(os.path.basename(wdpa_gdb))[0]
         download_version = gdb_name.replace('WDPA_', '').replace('_Public', '')
 
-        download_version = self.parse_month_abbrev(download_version)
+        download_month, download_year = self.parse_month_abbrev(download_version)
 
         # Format to match what's in the metadata
-        download_version_text = 'Monthly. Current version: {0}.'.format(download_version)
+        download_version_text = 'Monthly. Current version: {0}, {1}.'.format(download_month, download_year)
 
         # Versions match; no need to update
         if current_version_text == download_version_text:
@@ -104,7 +103,15 @@ class WDPADatasource(DataSource):
         else:
             logging.debug('Current WDPA version text is {0}, downloaded version is {1} Updating '
                           'dataset now.'.format(current_version_text, download_version_text))
-            # gs.set_value(unique_col, unique_val, update_col, sheet_name, download_version_text, gs_key)
+            gs.set_value(unique_col, unique_val, update_col, sheet_name, download_version_text, gs_key)
+
+            # update the citation as well
+            citation_str = r'IUCN and UNEP-WCMC ({y}), The World Database on Protected Areas (WDPA) [On-line], ' \
+                           r'{m}, {y}, Cambridge, UK: UNEP-WCMC. Available at: www.protectedplanet.net. Accessed ' \
+                           r'through Global Forest Watch in [insert month/year]. ' \
+                           r'www.globalforestwatch.org'.format(m=download_month, y=download_year)
+
+            gs.set_value(unique_col, unique_val, 'Citation', sheet_name, citation_str, gs_key)
 
     def parse_month_abbrev(self, download_version):
 
@@ -120,7 +127,7 @@ class WDPADatasource(DataSource):
             logging.error("Unable to parse month_text from abbrev {0}. Exiting.".format(month_abbrev))
             sys.exit(1)
 
-        return "{0} {1}".format(month_text, year_text)
+        return month_text, year_text
 
     def get_month_name(self, month_abbrev):
         """
