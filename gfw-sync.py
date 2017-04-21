@@ -37,9 +37,6 @@ def main():
     # Update the last-updated timestamp in the config table
     gs.update_gs_timestamp(args.layer, args.environment)
 
-    # Delete scratch workspace
-    layer.cleanup()
-
     logging.critical('Finished | {0}'.format(args.layer))
 
 if __name__ == "__main__":

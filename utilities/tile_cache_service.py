@@ -160,9 +160,9 @@ def push_to_production(src_cache_dir, out_local_cache_dir, service_path):
 
     out_prod_cache_dir = map_prod_server_path(out_local_cache_dir)
 
-    print 'NEED TO MOVE CACHE MANUALLY- SERVER IS TOO UNSTABLE TO BE TURNED ON/OFF'
-    print 'Source: {0}'.format(src_cache_dir)
-    print 'Dest: {0}'.format(out_prod_cache_dir)
+    logging.debug('NEED TO MOVE CACHE MANUALLY- SERVER IS TOO UNSTABLE TO BE TURNED ON/OFF')
+    logging.debug('Source: {0}'.format(src_cache_dir))
+    logging.debug('Dest: {0}'.format(out_prod_cache_dir))
 
     # # Not totally necessary to update the cache on the DM server, but helpful for troubleshooting
     # #for cache in [out_local_cache_dir, out_prod_cache_dir]:

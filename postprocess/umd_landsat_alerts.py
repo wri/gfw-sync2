@@ -11,7 +11,8 @@ def post_process(layerdef):
 
     # start country page analysis stuff (not map related)
     logging.debug("starting country page analytics")
-    cmd = ['python', 'update_country_stats.py', '-d', 'umd_landsat_alerts', '-a', 'gadm2_boundary']
+
+    cmd = [r'C:\PYTHON27\ArcGISx6410.3\python', 'update_country_stats.py', '-d', 'umd_landsat_alerts']
     cwd = r'D:\scripts\gfw-country-pages-analysis-2'
 
     if layerdef.gfw_env == 'PROD':
