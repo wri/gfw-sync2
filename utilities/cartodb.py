@@ -46,6 +46,14 @@ def run_subprocess(cmd, log=True):
     return subprocess_list
 
 
+def get_api_key_and_url(gfw_env):
+
+    key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
+    api_url = settings.get_settings(gfw_env)["cartodb"]["sql_api"]
+
+    return key, api_url
+
+
 def cartodb_sql(sql, gfw_env):
     """
     Execute a SQL statement using the API
@@ -55,11 +63,12 @@ def cartodb_sql(sql, gfw_env):
     """
 
     logging.debug(sql)
-    key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
-    api_url = settings.get_settings(gfw_env)["cartodb"]["sql_api"]
+    key, api_url = get_api_key_and_url(gfw_env)
 
     result = urllib.urlopen("{0!s}?api_key={1!s}&q={2!s}".format(api_url, key, sql))
     json_result = json.loads(result.readlines()[0], object_pairs_hook=OrderedDict)
+
+    print json_result
 
     if "error" in json_result.keys():
         raise SyntaxError(json_result['error'])
