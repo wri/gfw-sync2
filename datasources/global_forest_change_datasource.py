@@ -4,9 +4,10 @@ import logging
 import urlparse
 import datetime
 import sys
+import os
 
 from datasource import DataSource
-from utilities import aws
+from utilities import aws, download_glad_gee, settings
 from utilities import google_sheet as gs
 
 
@@ -28,6 +29,12 @@ class GlobalForestChange(DataSource):
         """
 
         raster_url_list = self.data_source.split(',')
+
+        # always update if it's GLAD, not using s3 bucket system currently
+        if self.name == 'umd_landsat_alerts':
+            paths_dict = settings.get_settings(self.gfw_env)['paths']
+            scratch_workspace = os.path.join(paths_dict['scratch_workspace'], self.name)
+            download_glad_gee.download(scratch_workspace)
 
         updated_raster_url_list = self.find_updated_data(raster_url_list)
 
@@ -56,11 +63,19 @@ class GlobalForestChange(DataSource):
         config_sheet_datetime_text = gs.get_value('tech_title', self.name, 'last_updated', self.gfw_env)
         config_sheet_datetime = datetime.datetime.strptime(config_sheet_datetime_text, '%m/%d/%Y')
 
-        first_url = raster_url_list[0]
-        netloc = urlparse.urlparse(first_url).netloc
+        # order is important here-- key names are the same + don't want to overwrite proper timestamps
+        if self.name == 'umd_landsat_alerts':
+            bucket_list = ['umd-landsat-alerts', 'gfw-gee-glad-export']
+        else:
+            bucket_list = ['terrai']
 
-        bucket = netloc.split('.')[0]
-        bucket_timestamps = aws.get_timestamps(bucket)
+        bucket_timestamps = {}
+
+        for bucket in bucket_list:
+            output_dict = aws.get_timestamps(bucket)
+
+            # add this to our current dict
+            bucket_timestamps.update(output_dict)
 
         for raster_url in raster_url_list:
 

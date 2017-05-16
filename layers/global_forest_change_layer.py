@@ -140,47 +140,55 @@ class GlobalForestChangeLayer(RasterLayer):
             year_list = ['all']
 
         else:
-            region_list = []
-            year_list = []
+            # region_list = []
+            # year_list = []
+            #
+            # lkp_dict = {'peru': 'south_america', 'brazil': 'south_america',
+            #             'FE': 'russia', 'borneo': 'asia',
+            #             'SEA': 'se_asia',
+            #             'Africa': 'africa'}
+            #
+            # for output_raster in self.source:
+            #     ras_name = os.path.basename(output_raster)
+            #     country = ras_name.split('_')[0]
+            #
+            #     region = lkp_dict[country]
+            #     region_list.append(region)
+            #
+            #     digits_only = [s for s in ras_name if s.isdigit()]
+            #     year = ''.join(digits_only)
+            #
+            #     year_list.append(year)
+            #
+            # # Remove duplicates
+            # region_list = list(set(region_list))
+            # year_list = list(set(year_list))
+            #
+            # # This shouldn't happen. No way that 3 years are updated at the same time. Max is 2.
+            # if len(year_list) > 2:
+            #     logging.debug('Exiting. Found year list > 2:')
+            #     logging.debug(year_list)
+            #     sys.exit(1)
 
-            lkp_dict = {'peru': 'south_america', 'brazil': 'south_america',
-                        'FE': 'russia', 'borneo': 'asia',
-                        'SEA': 'se_asia',
-                        'Africa': 'africa'}
-
-            for output_raster in self.source:
-                ras_name = os.path.basename(output_raster)
-                country = ras_name.split('_')[0]
-
-                region = lkp_dict[country]
-                region_list.append(region)
-
-                digits_only = [s for s in ras_name if s.isdigit()]
-                year = ''.join(digits_only)
-
-                year_list.append(year)
-
-            # Remove duplicates
-            region_list = list(set(region_list))
-            year_list = list(set(year_list))
-
-            # This shouldn't happen. No way that 3 years are updated at the same time. Max is 2.
-            if len(year_list) > 2:
-                logging.debug('Exiting. Found year list > 2:')
-                logging.debug(year_list)
-                sys.exit(1)
+            # Only south_america being updated currently
+            region_list = ['south_america']
+            year_list = ['2016', '2017']
 
         return ';'.join(region_list), ';'.join(year_list)
 
     def update(self):
 
+        print 'updating! need to add code here'
+        sys.exit()
+
         if self.gfw_env == 'DEV':
-            self.update_image_service()
+            print 'Running in development mode-- not doing tiles'
+            # self.update_image_service()
 
         else:
             self.start_visualization_process()
 
-            self.update_image_service()
+            # self.update_image_service()
 
             self.finish_visualization_process()
 

@@ -175,9 +175,10 @@ class VectorLayer(Layer):
             logging.debug('No where clause for esri_service_output found; deleting all features before '
                           'appending from source')
 
-            arcpy.MakeFeatureLayer_management("esri_service_output_fl", "fl_to_delete")
-            arcpy.DeleteRows_management("fl_to_delete")
-            arcpy.Delete_management("fl_to_delete")
+            # commented out at this already happens below with wc
+            # arcpy.MakeFeatureLayer_management("esri_service_output_fl", "fl_to_delete")
+            # arcpy.DeleteRows_management("fl_to_delete")
+            # arcpy.Delete_management("fl_to_delete")
 
             sde_sql_conn = arcpy.ArcSDESQLExecute(sde_workspace)
             esri_fc_name = os.path.basename(esri_output_fc)
