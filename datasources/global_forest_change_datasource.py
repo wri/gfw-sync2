@@ -67,7 +67,7 @@ class GlobalForestChange(DataSource):
         if self.name == 'umd_landsat_alerts':
             bucket_list = ['umd-landsat-alerts', 'gfw-gee-glad-export']
         else:
-            bucket_list = ['terrai']
+            bucket_list = ['terra-i']
 
         bucket_timestamps = {}
 

@@ -1,4 +1,5 @@
 from gee_asset import Asset
+import util
 
 
 def download(scratch_workspace):
@@ -30,8 +31,21 @@ def download(scratch_workspace):
 
         asset_object.postprocess()
 
-        asset_object.remove_output_dir()
+        qc_peru_download(asset_object.vrt)
+
+        asset_object.upload_to_s3()
 
 
-if __name__ == '__main__':
-    download()
+def qc_peru_download(input_vrt):
+
+    gdalinfo_list = util.run_subprocess(['gdalinfo', input_vrt])
+    print '\n'.join(gdalinfo_list)
+
+    size_line = gdalinfo_list[2]
+    size_results = size_line.replace(',', '').split()[2:]
+
+    size_tuple = [int(x) for x in size_results]
+    print 'Checking size of the VRT that we downloaded from GEE'
+    print size_tuple
+    if size_tuple != [56005, 80005]:
+        raise ValueError('Size tuple does not match expected peru boundaries')

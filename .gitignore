@@ -69,3 +69,4 @@ logs/
 # client_secrets.json **has** to be in the same folder as the PyDrive auth stuff
 # this is annoying but apparently no workaround other than editing the actual library
 **/client_secrets.json
+**/mycreds.txt

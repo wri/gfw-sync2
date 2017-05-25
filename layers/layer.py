@@ -385,16 +385,14 @@ class Layer(object):
 
     @archive_output.setter
     def archive_output(self, a):
-        # if not a:
-        #     logging.error("archive_output cannot be empty. Exiting now.")
-        #     sys.exit(1)
-        #
-        # archive_dir = os.path.dirname(a)
-        #
-        # if not os.path.exists(archive_dir):
-        #     util.mkdir_p(archive_dir)
+        if not a:
+            logging.error("archive_output cannot be empty. Exiting now.")
+            sys.exit(1)
 
-        logging.debug('Ignoring empty archives-- need to change this once we get cloudberry drive back')
+        archive_dir = os.path.dirname(a)
+
+        if not os.path.exists(archive_dir):
+            util.mkdir_p(archive_dir)
 
         self._archive_output = a
 

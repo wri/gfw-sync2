@@ -18,7 +18,13 @@ class Asset(object):
         self.image = ee.Image(image_id)
         self.band_list = band_list
         self.bbox = bbox
+
         self.output_name = output_name
+        self.out_tif = self.output_name + '.tif'
+        self.vrt = None
+
+        if not os.path.exists(scratch_workspace):
+            os.mkdir(scratch_workspace)
 
         self.id = str(uuid.uuid4())[0:10]
 
@@ -38,7 +44,7 @@ class Asset(object):
         export_config = {
             'image': self.image.select(self.band_list),
             'description': self.output_name,
-            'folder': 'alertDownload',
+            'folder': 'alertDownload_{}'.format(self.band_list[0]),
             'fileNamePrefix': self.id,
             'region': region.toGeoJSON()['coordinates'],
             'crs': 'EPSG:4326',
@@ -83,21 +89,20 @@ class Asset(object):
 
     def postprocess(self):
 
-        out_vrt = 'out.vrt'
-        build_vrt = ['gdalbuildvrt', out_vrt, '*.tif']
+        self.vrt = os.path.join(self.output_dir, 'out.vrt')
+        build_vrt = ['gdalbuildvrt', self.vrt, '*.tif']
         subprocess.check_call(build_vrt, cwd=self.output_dir, shell=True)
 
-        out_tif = self.output_name + '.tif'
-        to_tif = ['gdal_translate', '-co', 'COMPRESS=LZW', out_vrt, out_tif]
+        to_tif = ['gdal_translate', '-co', 'COMPRESS=LZW', self.vrt, self.out_tif]
         to_tif += ['-projwin'] + [str(x) for x in self.bbox]
+        to_tif += ['-a_nodata', '0']
         subprocess.check_call(to_tif, cwd=self.output_dir)
 
-        aws_bucket = r's3://gfw-gee-glad-export/'
-        aws_cp = ['aws', 's3', 'cp', out_tif, aws_bucket]
-        subprocess.check_call(aws_cp, cwd=self.output_dir)
+    def upload_to_s3(self):
 
-    def remove_output_dir(self):
-        shutil.rmtree(self.output_dir)
+        aws_bucket = r's3://gfw-gee-glad-export/'
+        aws_cp = ['aws', 's3', 'cp', self.out_tif, aws_bucket]
+        subprocess.check_call(aws_cp, cwd=self.output_dir)
 
 
 def authorize():

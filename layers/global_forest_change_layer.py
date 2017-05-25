@@ -178,9 +178,6 @@ class GlobalForestChangeLayer(RasterLayer):
 
     def update(self):
 
-        print 'updating! need to add code here'
-        sys.exit()
-
         if self.gfw_env == 'DEV':
             print 'Running in development mode-- not doing tiles'
             # self.update_image_service()

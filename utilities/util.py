@@ -8,6 +8,7 @@ import shutil
 import errno
 import win32file
 import sys
+import subprocess
 import cartodb
 import logging
 import uuid
@@ -141,6 +142,40 @@ def build_update_where_clause(in_fc, input_field):
         where_clause = None
 
     return where_clause
+
+
+def run_subprocess(cmd, log=True):
+    """
+    Function to run a subprocess and monitor the STDOUT. If there's an error, log it and exit
+    :param cmd: a list of commands to exeecute
+    :param log: boolean to log output to file and command line
+    :return:
+    """
+
+    if log:
+        logging.debug('Running subprocess:\n' + ' '.join(cmd))
+
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+    # ogr2ogr doesn't properly fail on an error, just displays error messages
+    # as a result, we need to read this output as it happens
+    # http://stackoverflow.com/questions/1606795/catching-stdout-in-realtime-from-subprocess
+    subprocess_list = []
+
+    # Read from STDOUT and raise an error if we parse one from the output
+    for line in iter(p.stdout.readline, b''):
+        subprocess_list.append(line.strip())
+
+    # If ogr2ogr has complained, and ERROR in one of the messages, exit
+    result = str(subprocess_list).lower()
+    if subprocess_list and ('error' in result or 'usage: ogr2ogr' in result):
+        logging.error("Error in subprocess: " + '\n'.join(subprocess_list))
+        sys.exit(1)
+
+    elif subprocess_list:
+        logging.debug('\n'.join(subprocess_list))
+
+    return subprocess_list
 
 
 def hit_vizz_webhook(dataset_name):

@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import subprocess
 import sys
 import urllib
 import arcpy
@@ -10,40 +9,6 @@ from retrying import retry
 
 import util
 import settings
-
-
-def run_subprocess(cmd, log=True):
-    """
-    Function to run a subprocess and monitor the STDOUT. If there's an error, log it and exit
-    :param cmd: a list of commands to exeecute
-    :param log: boolean to log output to file and command line
-    :return:
-    """
-
-    if log:
-        logging.debug('Running subprocess:\n' + ' '.join(cmd))
-
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-    # ogr2ogr doesn't properly fail on an error, just displays error messages
-    # as a result, we need to read this output as it happens
-    # http://stackoverflow.com/questions/1606795/catching-stdout-in-realtime-from-subprocess
-    subprocess_list = []
-
-    # Read from STDOUT and raise an error if we parse one from the output
-    for line in iter(p.stdout.readline, b''):
-        subprocess_list.append(line.strip())
-
-    # If ogr2ogr has complained, and ERROR in one of the messages, exit
-    result = str(subprocess_list).lower()
-    if subprocess_list and ('error' in result or 'usage: ogr2ogr' in result):
-        logging.error("Error in subprocess: " + '\n'.join(subprocess_list))
-        sys.exit(1)
-
-    elif subprocess_list:
-        logging.debug('\n'.join(subprocess_list))
-
-    return subprocess_list
 
 
 def get_api_key_and_url(gfw_env):
@@ -78,13 +43,13 @@ def cartodb_sql(sql, gfw_env):
 
 def sqlite_row_count(sqlite_db):
 
-    ogrinfo = run_subprocess(['ogrinfo', '-q', sqlite_db])
+    ogrinfo = util.run_subprocess(['ogrinfo', '-q', sqlite_db])
 
     # Grab the first line from the ogrinfo command, split it, and take the second value
     # Example ogrinfo output: "1: tiger_conservation_landscapes (Multi Polygon)"
     table_name = ogrinfo[0].split()[1]
 
-    ogr_row_count_text = run_subprocess(['ogrinfo', sqlite_db, '-q',
+    ogr_row_count_text = util.run_subprocess(['ogrinfo', sqlite_db, '-q',
                                          '-sql', 'SELECT count(*) FROM {0}'.format(table_name)])
 
     # Response looks like this ['', 'Layer  name: SELECT', 'OGRFeature(SELECT):0', 'count(*) (Integer) = 76', '']
@@ -102,7 +67,7 @@ def get_layer_type(in_fc):
     """
 
     if os.path.splitext(in_fc)[1] == '.sqlite':
-        ogrinfo = run_subprocess(['ogrinfo', '-q', in_fc], log=False)
+        ogrinfo = util.run_subprocess(['ogrinfo', '-q', in_fc], log=False)
         shapetype = ogrinfo[0].split('(')[1].lower()
 
     else:
@@ -217,7 +182,7 @@ def cartodb_append(sqlite_db_path, out_cartodb_name, gfw_env, where_clause=None)
     cmd = add_fc_to_ogr2ogr_cmd(sqlite_db_path, cmd)
     cmd = add_where_clause_to_ogr2ogr_cmd(where_clause, cmd)
 
-    run_subprocess(cmd)
+    util.run_subprocess(cmd)
 
 
 def get_account_name(gfw_env):
@@ -342,13 +307,13 @@ def cartodb_make_valid_geom_local(src_fc):
     cmd += ["-dsco", "SPATIALITE=yes", '-dim', '2']
 
     logging.debug('Creating sqlite database')
-    run_subprocess(cmd)
+    util.run_subprocess(cmd)
 
     table_name = util.gen_paths_shp(src_fc)[2]
     sql = 'UPDATE {0} SET GEOMETRY = ST_MakeValid(GEOMETRY) WHERE ST_IsValid(GEOMETRY) <> 1;'.format(table_name)
     cmd = ['spatialite', out_sqlite_path, sql]
 
-    run_subprocess(cmd)
+    util.run_subprocess(cmd)
 
     return out_sqlite_path
 
@@ -416,7 +381,7 @@ def ogrinfo_min_max(input_fc, oid_fieldname):
         input_fc = os.path.dirname(input_fc)
 
     sql_statement = 'SELECT min({0}), max({0}) FROM "{1}"'.format(oid_fieldname, input_table_name)
-    ogrinfo = run_subprocess(['ogrinfo', '-sql', sql_statement, input_fc])
+    ogrinfo = util.run_subprocess(['ogrinfo', '-sql', sql_statement, input_fc])
 
     # Grab the last two lines with data (the final line is blank)
     result_lines = ogrinfo[-3:-1]
