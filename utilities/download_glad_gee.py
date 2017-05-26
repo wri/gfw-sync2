@@ -1,9 +1,15 @@
+import datetime
+
 from gee_asset import Asset
 import util
 
 
 def download(scratch_workspace):
-    glad_raster = 'projects/glad/alert/UpdResult/05_11'
+    today = datetime.datetime.today()
+    yesterday = today - datetime.timedelta(days=1)
+    yesterday_str = yesterday.strftime('%m_%d')
+
+    glad_raster = 'projects/glad/alert/UpdResult/{}_SA'.format(yesterday_str)
 
     # test bbox: [-75,-16,-74,-15]
     peru_bbox = [-82.0005000, 1.0005000, -67.9995000, -19.0005000]

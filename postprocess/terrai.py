@@ -35,4 +35,4 @@ def run_elastic_update():
     api_version = 'prod'
     src_url = r'http://gfw2-data.s3.amazonaws.com/alerts-tsv/terrai.csv'
 
-    update_elastic.delete_and_append(dataset_id, api_version, src_url)
+    update_elastic.append_to_elastic(dataset_id, api_version, src_url, append_type='data-overwrite')
