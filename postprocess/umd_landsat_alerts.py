@@ -17,11 +17,12 @@ def post_process(layerdef):
     cwd = r'D:\scripts\gfw-country-pages-analysis-2'
 
     if layerdef.gfw_env == 'PROD':
-        cmd += ['-e', 'prod']
+        api_version = 'prod'
 
     else:
-        cmd += ['-e', 'staging']
+        api_version = 'staging'
 
+    cmd += ['-e', api_version]
     subprocess.check_call(cmd, cwd=cwd)
 
     # Running this manually for now, as no way to tell when dataset has finished saving in PROD
@@ -32,7 +33,7 @@ def post_process(layerdef):
     # region_list = ['se_asia', 'africa', 'south_america']
     country_list = 'PER'
 
-    run_elastic_update(country_list)
+    run_elastic_update(country_list, )
 
     # make_climate_maps(region_list)
 
@@ -77,19 +78,21 @@ def add_headers_to_s3():
     subprocess.check_call(cmd)
 
 
-def run_elastic_update(country_list):
+def run_elastic_update(country_list, api_version):
 
     logging.debug('starting to update elastic')
-    dataset_id = r'e663eb09-04de-4f39-b871-35c6c2ed10b5'
+
+    if api_version == 'prod':
+        dataset_id = r'e663eb09-04de-4f39-b871-35c6c2ed10b5'
+    else:
+        dataset_id = r'274b4818-be18-4890-9d10-eae56d2a82e5'
 
     year_list = ['2016', '2017']
-
-    api_version = 'prod'
 
     for year in year_list:
         for country in country_list:
 
-            delete_wc = "WHERE year = {0} AND region = '{1}'".format(year, country)
+            delete_wc = "WHERE year = {0} AND country_iso = '{1}'".format(year, country)
             update_elastic.delete_from_elastic(dataset_id, api_version, delete_wc)
 
     hadoop_output_url = get_current_hadoop_output()

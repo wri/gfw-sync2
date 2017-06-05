@@ -3,7 +3,7 @@ import util
 import datetime
 
 
-def kickoff(proc_name, regions, years):
+def kickoff(proc_name, regions, years, gfw_env):
 
     token_info = util.get_token('s3_read_write.config')
     aws_access_key = token_info[0][1]
@@ -23,6 +23,11 @@ def kickoff(proc_name, regions, years):
     point_cmd = 'python /home/ubuntu/raster-vector-to-tsv/processing/utilities/weekly_updates.py'
     point_cmd += ' -l {0} -r {1} -y {2}'.format(tile_layer_name, region_str, year_str)
 
+    # add staging flags if necessary
+    if gfw_env == 'staging':
+        tile_cmd += ' --staging'
+        point_cmd += ' --staging'
+
     ptw_cmd = 'python /home/ubuntu/gfw-places-to-watch/update-ptw.py -r all --threads 25'
 
     # # Required, even though these are set for ubuntu in .bashrc
@@ -33,7 +38,7 @@ def kickoff(proc_name, regions, years):
         cmd_list = [tile_cmd, point_cmd]
 
         # If today's date is >= 4 and <= 10 and south_america is to be processed, run ptw
-        if proc_name == 'umd_landsat_alerts' and run_ptw() and 'south_america' in region_str:
+        if tile_layer_name == 'glad' and run_ptw() and 'south_america' in region_str and gfw_env != 'staging':
             cmd_list += [ptw_cmd]
 
         # required because fabric will wait if process is not actively connected to this machine

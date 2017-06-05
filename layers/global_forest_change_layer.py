@@ -1,14 +1,11 @@
 __author__ = 'Charlie.Hofmann'
 
 import logging
-import arcpy
 import subprocess
 import os
-import sys
 
 from layers.raster_layer import RasterLayer
 from utilities import aws
-from utilities import arcgis_server
 
 
 class GlobalForestChangeLayer(RasterLayer):
@@ -32,66 +29,6 @@ class GlobalForestChangeLayer(RasterLayer):
         for ras in self.source:
             self.archive_source(ras)
 
-    def copy_to_esri_output_multiple(self):
-        """
-        Copy inputs downloaded from the source to the proper output location copy_to_esri_output_multiple
-        """
-        arcpy.env.overwriteOutput = True
-        output_hash = {}
-        input_output_tuples = []
-        esri_output_list = self.esri_service_output.split(',')
-        # input_output_tuples = zip(self.source, esri_output_list)
-
-        for y in range(0,len(esri_output_list)):
-            output_name = esri_output_list[y].split("\\")[-1].split("\\")[-1]
-            output_hash[output_name] = esri_output_list[y]
-
-        for x in range(0,len(self.source)):
-            source_name = self.source[x].split("\\")[-1]
-            input_output_tuples.append((self.source[x], output_hash[source_name]))
-
-        logging.debug(input_output_tuples)
-
-        for input_ras, output_ras in input_output_tuples:
-            self.copy_to_esri_output(input_ras, output_ras)
-
-    def calculate_stats(self):
-        '''
-        calculate stats on rasters and mosaics
-        '''
-        esri_raster_list = self.esri_service_output.split(',')
-        esri_mosaic_list = self.esri_mosaics.split(',')
-
-        for raster in esri_raster_list:
-            arcpy.CalculateStatistics_management(raster, "1", "1", "", "OVERWRITE", "")
-            logging.debug("stats calculated on raster")
-
-        for mosaic in esri_mosaic_list:
-            arcpy.CalculateStatistics_management(mosaic, "1", "1", "", "OVERWRITE", "")
-            logging.debug("stats calculated on mosaic")
-
-    def update_image_service(self):
-        arcpy.env.overwriteOutput = True
-
-        logging.debug("running update_image_service")
-        # Copy downloaded data to R drive
-        self.copy_to_esri_output_multiple()
-
-        # Calculate stats on files and mosaics
-        self.calculate_stats()
-
-        # Will update two GFW image services
-        # http://gis-gfw.wri.org/arcgis/rest/services/image_services/glad_alerts_analysis/ImageServer
-        # http://gis-gfw.wri.org/arcgis/rest/services/image_services/glad_alerts_con_analysis/ImageServer
-        service_dict = {'umd_landsat_alerts': 'glad_alerts_analysis', 'terrai': 'terrai_analysis'}
-        service_name = service_dict[self.name]
-
-        service = r'image_services/{0}'.format(service_name)
-
-        for i in range(0, 2):
-            arcgis_server.set_service_status(service, 'stop')
-            arcgis_server.set_service_status(service, 'start')
-
     def start_visualization_process(self):
 
         server_instance = aws.get_aws_instance(self.server_name)
@@ -113,7 +50,8 @@ class GlobalForestChangeLayer(RasterLayer):
         region_str, year_str = self.lookup_region_year_from_source()
 
         fab_path = r"C:\PYTHON27\ArcGISx6410.3\Scripts\fab.exe"
-        cmd = [fab_path, 'kickoff:{0},{1},{2}'.format(self.name, region_str, year_str), '-i', pem_file, '-H', host_name]
+        cmd = [fab_path, 'kickoff:{0},{1},{2},{3}'.format(self.name, region_str, year_str, self.gfw_env)]
+        cmd += ['-i', pem_file, '-H', host_name]
         logging.debug('Running fabric: {0}'.format(cmd))
 
         self.proc = subprocess.Popen(cmd, cwd=utilities_dir, stdout=subprocess.PIPE)
@@ -178,17 +116,10 @@ class GlobalForestChangeLayer(RasterLayer):
 
     def update(self):
 
-        if self.gfw_env == 'DEV':
-            print 'Running in development mode-- not doing tiles'
-            # self.update_image_service()
+        self.start_visualization_process()
 
-        else:
-            self.start_visualization_process()
+        self.finish_visualization_process()
 
-            # self.update_image_service()
-
-            self.finish_visualization_process()
-
-            self.archive_source_rasters()
+        self.archive_source_rasters()
 
         self.post_process()
