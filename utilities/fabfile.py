@@ -24,7 +24,7 @@ def kickoff(proc_name, regions, years, gfw_env):
     point_cmd += ' -l {0} -r {1} -y {2}'.format(tile_layer_name, region_str, year_str)
 
     # add staging flags if necessary
-    if gfw_env == 'staging':
+    if gfw_env == 'DEV':
         tile_cmd += ' --staging'
         point_cmd += ' --staging'
 

@@ -3,6 +3,7 @@ __author__ = 'Charlie.Hofmann'
 import logging
 import subprocess
 import os
+import sys
 
 from layers.raster_layer import RasterLayer
 from utilities import aws
@@ -29,7 +30,7 @@ class GlobalForestChangeLayer(RasterLayer):
         for ras in self.source:
             self.archive_source(ras)
 
-    def start_visualization_process(self):
+    def create_tiles(self):
 
         server_instance = aws.get_aws_instance(self.server_name)
         aws.set_server_instance_type(server_instance, 'm4.10xlarge')
@@ -54,22 +55,19 @@ class GlobalForestChangeLayer(RasterLayer):
         cmd += ['-i', pem_file, '-H', host_name]
         logging.debug('Running fabric: {0}'.format(cmd))
 
-        self.proc = subprocess.Popen(cmd, cwd=utilities_dir, stdout=subprocess.PIPE)
+        has_error = False
 
-    def finish_visualization_process(self):
-
-        while True:
-            line = self.proc.stdout.readline().rstrip()
-
-            if line == '****FAB SUBPROCESS COMPLETE****' or 'error' in line.lower():
-                print line
-                break
-
-            else:
-                logging.debug(line)
+        try:
+            subprocess.check_call(cmd, cwd=utilities_dir)
+        except subprocess.CalledProcessError:
+            has_error = True
 
         server_instance = aws.get_aws_instance(self.server_name)
         aws.set_processing_server_state(server_instance, 'stopped')
+
+        if has_error:
+            logging.debug('Unsuccessful tile creation. Exiting.')
+            sys.exit()
 
     def lookup_region_year_from_source(self):
 
@@ -116,9 +114,7 @@ class GlobalForestChangeLayer(RasterLayer):
 
     def update(self):
 
-        self.start_visualization_process()
-
-        self.finish_visualization_process()
+        self.create_tiles()
 
         self.archive_source_rasters()
 
