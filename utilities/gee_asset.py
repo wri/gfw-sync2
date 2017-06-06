@@ -91,7 +91,7 @@ class Asset(object):
 
         self.vrt = os.path.join(self.output_dir, 'out.vrt')
         build_vrt = ['gdalbuildvrt', self.vrt, '*.tif']
-        subprocess.check_call(build_vrt, cwd=self.output_dir, shell=True)
+        subprocess.check_call(build_vrt, cwd=self.output_dir)
 
         to_tif = ['gdal_translate', '-co', 'COMPRESS=LZW', self.vrt, self.out_tif]
         to_tif += ['-projwin'] + [str(x) for x in self.bbox]
@@ -103,7 +103,7 @@ class Asset(object):
         aws_bucket = r's3://gfw-gee-glad-export/'
         aws_cp = ['aws', 's3', 'cp', self.out_tif, aws_bucket]
 
-        subprocess.check_call(aws_cp, cwd=self.output_dir, shell=True)
+        subprocess.check_call(aws_cp, cwd=self.output_dir)
 
 
 def authorize():

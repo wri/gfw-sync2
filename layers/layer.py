@@ -59,9 +59,6 @@ class Layer(object):
         self._download_output = None
         self.download_output = layerdef['download_output']
 
-        self._esri_mosaics = None
-        self.esri_mosaics = layerdef['esri_mosaics']
-
         self._transformation = None
         self.transformation = layerdef['transformation']
 
@@ -102,27 +99,6 @@ class Layer(object):
             shutil.rmtree(s)
         os.mkdir(s)
         self._scratch_workspace = s
-
-    # Validates esri_mosaics
-    @property
-    def esri_mosaics(self):
-        return self._esri_mosaics
-
-    @esri_mosaics.setter
-    def esri_mosaics(self, e):
-
-        if not e:
-            e = None
-
-        else:
-            l = e.split(',')
-
-            for output_path in l:
-                if not arcpy.Exists(output_path):
-                    logging.error("esri_mosaics {0} does not exist".format(output_path))
-                    sys.exit(1)
-
-        self._esri_mosaics = e
 
     # Validate esri_service_output
     @property

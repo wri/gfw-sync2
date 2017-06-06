@@ -31,9 +31,9 @@ def post_process(layerdef):
     add_headers_to_s3()
 
     # region_list = ['se_asia', 'africa', 'south_america']
-    country_list = 'PER'
+    country_list = ['PER']
 
-    run_elastic_update(country_list, )
+    run_elastic_update(country_list, api_version)
 
     # make_climate_maps(region_list)
 
@@ -54,13 +54,15 @@ def add_headers_to_s3():
     s3_path = get_current_hadoop_output('s3')
 
     today = datetime.datetime.today().strftime('%Y%m%d')
-    local_path = r'I:\temp\glad_csv_download\{}.csv'.format(today)
+
+    temp_dir = r'D:\GIS Data\GFW\temp\gfw-sync2-test\glad_csv_download'
+    local_path = os.path.join(temp_dir, '{}.csv'.format(today))
 
     # download CSV without header
     cmd = ['aws', 's3', 'cp', s3_path, local_path]
     subprocess.check_call(cmd)
 
-    temp_file = r'I:\temp\glad_csv_download\temp.csv'
+    temp_file = os.path.join(temp_dir, 'temp.csv')
     if os.path.exists(temp_file):
         os.remove(temp_file)
 
@@ -84,8 +86,10 @@ def run_elastic_update(country_list, api_version):
 
     if api_version == 'prod':
         dataset_id = r'e663eb09-04de-4f39-b871-35c6c2ed10b5'
-    else:
+    elif api_version == 'staging':
         dataset_id = r'274b4818-be18-4890-9d10-eae56d2a82e5'
+    else:
+        raise ValueError('unknown API version supplied: {}'.format(api_version))
 
     year_list = ['2016', '2017']
 

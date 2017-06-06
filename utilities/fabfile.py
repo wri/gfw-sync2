@@ -30,9 +30,7 @@ def kickoff(proc_name, regions, years, gfw_env):
 
     ptw_cmd = 'python /home/ubuntu/gfw-places-to-watch/update-ptw.py -r all --threads 25'
 
-    # # Required, even though these are set for ubuntu in .bashrc
-    # # Set for both tilestache and s4cmd . . . annoyingly different
-    # # Previouly used AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY as well for tilestache
+    # Required, even though these are set for ubuntu in .bashrc
     with fabric.api.shell_env(S3_ACCESS_KEY=aws_access_key, S3_SECRET_KEY=aws_secret_key):
 
         cmd_list = [tile_cmd, point_cmd]
@@ -54,4 +52,6 @@ def kickoff(proc_name, regions, years, gfw_env):
 def run_ptw():
     today = datetime.datetime.today()
 
-    return today.day in range(4, 11)
+    # PTW on hold until we get GLAD fully back online
+    # return today.day in range(4, 11)
+    return False

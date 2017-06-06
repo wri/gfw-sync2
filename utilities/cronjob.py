@@ -1,6 +1,7 @@
 import subprocess
 import datetime
 import argparse
+import calendar
 
 import google_sheet as gs
 import email_stats
@@ -18,31 +19,48 @@ def parse_update_freq(field_text):
     :return:
     """
     update_layer = False
+    current_day = None
+    day_list = []
 
     # Check that the layer has an update frequency first
     if field_text:
 
-        # If the field text has brackets, let's examine it
-        if field_text[0] == '[' and field_text[-1] == ']':
-            field_text = field_text.replace('[', '').replace(']', '')
+        # remove the brackets from the range
+        field_text = field_text.replace('[', '').replace(']', '')
 
-            # If it has '-', assume it's a range and build a list
-            if '-' in field_text:
-                start_day, end_day = field_text.split('-')
-                day_list = range(int(start_day), int(end_day) + 1)
+        # If it has '-', assume it's a range and build a list
+        if '-' in field_text:
+            start_day, end_day = field_text.split('-')
+            day_list = range(int(start_day), int(end_day) + 1)
 
-            # Otherwise assume it's a list of dates
-            else:
-                day_list_text = field_text.split(',')
-                day_list = [int(x.strip()) for x in day_list_text]
+            # current day is the date integer given that the input is an integer range
+            current_day = datetime.datetime.now().day
 
+        # Otherwise assume it's a list of dates
         else:
-            day_list = []
+            day_list_text = field_text.split(',')
 
-        # Check to see if today's date is in the list we just built
-        # If so, update this layer
-        if datetime.datetime.now().day in day_list:
-            update_layer = True
+            try:
+                day_list = [int(x.strip()) for x in day_list_text]
+                current_day = datetime.datetime.now().day
+
+            # assume instead that we have a list of day-of-the-week names
+            except ValueError:
+                day_list = [x.strip() for x in day_list_text]
+
+                # current day is the day name, in this example
+                current_day = datetime.datetime.now().strftime('%A')
+
+                # check that our day names are valid
+                valid_day_list = list(calendar.day_name)
+
+                if not set(day_list).issubset(valid_day_list):
+                    raise ValueError('Day list {} not subset of all valid day names'.format(day_list))
+
+    # Check to see if today's date is in the list we just built
+    # If so, update this layer
+    if current_day in day_list:
+        update_layer = True
 
     return update_layer
 
