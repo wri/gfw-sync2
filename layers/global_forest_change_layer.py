@@ -50,7 +50,7 @@ class GlobalForestChangeLayer(RasterLayer):
 
         region_str, year_str = self.lookup_region_year_from_source()
 
-        fab_path = r"C:\PYTHON27\ArcGISx6410.3\Scripts\fab.exe"
+        fab_path = r"C:\PYTHON27\ArcGISx6410.5\Scripts\fab.exe"
         cmd = [fab_path, 'kickoff:{0},{1},{2},{3}'.format(self.name, region_str, year_str, self.gfw_env)]
         cmd += ['-i', pem_file, '-H', host_name]
         logging.debug('Running fabric: {0}'.format(cmd))

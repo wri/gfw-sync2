@@ -151,7 +151,8 @@ def manage_service(host_type, service_path, operation):
     path_split = service_path.split('\\')
     name = '/'.join(path_split[-2:]).replace('.MapServer', '')
 
-    cmd = ['python', service_utility, '-u', cred['username'], '-p', cred['password'],
+    python_exe = r'C:\PYTHON27\ArcGISx6410.5\python'
+    cmd = [python_exe, service_utility, '-u', cred['username'], '-p', cred['password'],
            '-s', host, '-n', name, '-o', operation]
     subprocess.check_call(cmd)
 

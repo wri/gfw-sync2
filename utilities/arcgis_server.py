@@ -11,7 +11,7 @@ def set_service_status(service, action):
     password = util.get_token('arcgis_server_pass')
 
     cwd = r"C:\Program Files\ArcGIS\Server\tools\admin"
-    cmd = ['python', "manageservice.py", '-u', 'astrong', '-p', password]
+    cmd = [r'C:\PYTHON27\ArcGISx6410.5\python', "manageservice.py", '-u', 'astrong', '-p', password]
     cmd += ['-s', 'http://gis-gfw.wri.org/arcgis/admin', '-n', service, '-o', action]
 
     # Added check_call so it will crash if the subprocess fails

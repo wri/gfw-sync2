@@ -102,7 +102,8 @@ class Asset(object):
 
         aws_bucket = r's3://gfw-gee-glad-export/'
         aws_cp = ['aws', 's3', 'cp', self.out_tif, aws_bucket]
-        subprocess.check_call(aws_cp, cwd=self.output_dir)
+
+        subprocess.check_call(aws_cp, cwd=self.output_dir, shell=True)
 
 
 def authorize():

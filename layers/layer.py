@@ -135,7 +135,7 @@ class Layer(object):
         l = e.split(',')
 
         for output_path in l:
-            if not arcpy.Exists(output_path):
+            if output_path and not arcpy.Exists(output_path):
                 logging.error("esri_service_output {0} does not exist".format(output_path))
                 sys.exit(1)
 
@@ -360,22 +360,26 @@ class Layer(object):
             from_desc = arcpy.Describe(dataset)
             from_srs = from_desc.spatialReference
 
-            to_srs = arcpy.Describe(esri_output[0]).spatialReference
+            if esri_output[0]:
+                to_srs = arcpy.Describe(esri_output[0]).spatialReference
 
-            if from_srs.GCS != to_srs.GCS:
-                if not t:
-                    logging.debug("No transformation defined")
-                else:
-                    extent = from_desc.extent
-                    transformations = arcpy.ListTransformations(from_srs, to_srs, extent)
-                    if self.transformation not in transformations:
-                        logging.info("Transformation {0!s}: not compatible with in- and output "
-                                     "spatial reference or extent".format(self.transformation))
+                if from_srs.GCS != to_srs.GCS:
+                    if not t:
+                        logging.debug("No transformation defined")
+                    else:
+                        extent = from_desc.extent
+                        transformations = arcpy.ListTransformations(from_srs, to_srs, extent)
+                        if self.transformation not in transformations:
+                            logging.info("Transformation {0!s}: not compatible with in- and output "
+                                         "spatial reference or extent".format(self.transformation))
 
-                        t = None
+                            t = None
 
-            del from_desc
-            del to_srs
+                del from_desc
+                del to_srs
+            else:
+                t = None
+
         self._transformation = t
 
     # Validate archive folder

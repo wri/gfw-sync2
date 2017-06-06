@@ -13,7 +13,7 @@ def post_process(layerdef):
     # start country page analysis stuff (not map related)
     logging.debug("starting country page analytics")
 
-    cmd = [r'C:\PYTHON27\ArcGISx6410.3\python', 'update_country_stats.py', '-d', 'umd_landsat_alerts']
+    cmd = [r'C:\PYTHON27\ArcGISx6410.5\python', 'update_country_stats.py', '-d', 'umd_landsat_alerts']
     cwd = r'D:\scripts\gfw-country-pages-analysis-2'
 
     if layerdef.gfw_env == 'PROD':
@@ -107,7 +107,7 @@ def make_climate_maps(region_list):
     scripts_dir = os.path.dirname(gfw_sync_dir)
     climate_maps_dir = os.path.join(scripts_dir, 'gfw-climate-glad-maps')
 
-    python_exe = r'C:\PYTHON27\ArcGISx6410.3\python.exe'
+    python_exe = r'C:\PYTHON27\ArcGISx6410.5\python'
 
     current_week = Week.thisweek()
 

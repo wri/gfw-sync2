@@ -32,9 +32,10 @@ class GlobalForestChange(DataSource):
 
         # always update if it's GLAD, not using s3 bucket system currently
         if self.name == 'umd_landsat_alerts':
-            paths_dict = settings.get_settings(self.gfw_env)['paths']
-            scratch_workspace = os.path.join(paths_dict['scratch_workspace'], self.name)
-            download_glad_gee.download(scratch_workspace)
+            # paths_dict = settings.get_settings(self.gfw_env)['paths']
+            # scratch_workspace = os.path.join(paths_dict['scratch_workspace'], self.name)
+            # download_glad_gee.download(scratch_workspace)
+            pass
 
         updated_raster_url_list = self.find_updated_data(raster_url_list)
 
