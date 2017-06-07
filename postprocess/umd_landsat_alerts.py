@@ -16,24 +16,18 @@ def post_process(layerdef):
     cmd = [r'C:\PYTHON27\ArcGISx6410.5\python', 'update_country_stats.py', '-d', 'umd_landsat_alerts']
     cwd = r'D:\scripts\gfw-country-pages-analysis-2'
 
-    if layerdef.gfw_env == 'PROD':
-        api_version = 'prod'
-
-    else:
-        api_version = 'staging'
-
-    cmd += ['-e', api_version]
+    cmd += ['-e', layerdef.gfw_env]
     subprocess.check_call(cmd, cwd=cwd)
 
     # Running this manually for now, as no way to tell when dataset has finished saving in PROD
     # util.hit_vizz_webhook('glad-alerts')
 
-    add_headers_to_s3()
+    add_headers_to_s3(layerdef)
 
     # region_list = ['se_asia', 'africa', 'south_america']
     country_list = ['PER']
 
-    run_elastic_update(country_list, api_version)
+    run_elastic_update(country_list, layerdef.gfw_env)
 
     # make_climate_maps(region_list)
 
@@ -49,20 +43,18 @@ def get_current_hadoop_output(url_type=None):
         return 'http://gfw2-data.s3.amazonaws.com/alerts-tsv/temp/output-glad-summary-{}/part-'.format(today)
 
 
-def add_headers_to_s3():
+def add_headers_to_s3(layerdef):
 
     s3_path = get_current_hadoop_output('s3')
 
     today = datetime.datetime.today().strftime('%Y%m%d')
-
-    temp_dir = r'D:\GIS Data\GFW\temp\gfw-sync2-test\glad_csv_download'
-    local_path = os.path.join(temp_dir, '{}.csv'.format(today))
+    local_path = os.path.join(layerdef.scratch_workspace, 'glad_csv_download', '{}.csv'.format(today))
 
     # download CSV without header
     cmd = ['aws', 's3', 'cp', s3_path, local_path]
     subprocess.check_call(cmd)
 
-    temp_file = os.path.join(temp_dir, 'temp.csv')
+    temp_file = os.path.join(local_path, 'temp.csv')
     if os.path.exists(temp_file):
         os.remove(temp_file)
 

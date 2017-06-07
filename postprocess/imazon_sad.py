@@ -12,7 +12,7 @@ def post_process(layerdef):
     """
     print 'here'
 
-    if layerdef.gfw_env == 'PROD':
+    if layerdef.gfw_env == 'prod':
         update_layerspec(layerdef)
 
     else:

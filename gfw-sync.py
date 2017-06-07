@@ -10,7 +10,7 @@ def main():
 
     # Parse commandline arguments
     parser = argparse.ArgumentParser(description='Get layer name, environment and verbosity for gfw-sync.')
-    parser.add_argument('--environment', '-e', default='DEV', choices=('DEV', 'PROD'),
+    parser.add_argument('--environment', '-e', default='staging', choices=('staging', 'prod'),
                         help='the environment/config files to use for this run')
     parser.add_argument('--layer', '-l', required=True,
                         help='the data layer to process; must match a value for tech_title in the config')

@@ -7,7 +7,7 @@ import google_sheet as gs
 import email_stats
 
 parser = argparse.ArgumentParser(description='Pass environment to kick off gfw-sync cron job.')
-parser.add_argument('--environment', '-e', default='DEV', choices=('DEV', 'PROD'),
+parser.add_argument('--environment', '-e', default='staging', choices=('staging', 'prod'),
                     help='the environment/config files to use for this run')
 args = parser.parse_args()
 

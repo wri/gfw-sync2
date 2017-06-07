@@ -25,7 +25,7 @@ def get_ini_file(ini_f, folder=None):
 def get_settings(input_env):
     """
     Get
-    :param input_env: gfw_env-- either PROD or DEV
+    :param input_env: gfw_env-- either prod or staging
     :return: the config for this gfw_env
     """
     return get_ini_file('settings.ini', 'config')[input_env]

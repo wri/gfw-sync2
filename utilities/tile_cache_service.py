@@ -206,10 +206,10 @@ def update_cache(map_service_path, scratch_workspace, gfw_env):
     logging.debug("Copying to local and production cache directories")
     src_cache_dir = os.path.join(output_dir, cache_dir_name, 'Layers')
 
-    if gfw_env == 'PROD':
+    if gfw_env == 'prod':
         push_to_production(src_cache_dir, local_cache_dir, map_service_path)
     else:
-        logging.debug("Nothing pushed to PROD dir; just testing cache generation process")
+        logging.debug("Nothing pushed to prod dir; just testing cache generation process")
         logging.debug('Cached tiles are here: {0}'.format(local_cache_dir))
 
     # Stop the map service-- no need for it to be serving on the DM machine

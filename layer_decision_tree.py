@@ -20,7 +20,7 @@ def build_layer(layerdef, gfw_env):
     """
     Used to get a layerdef for our layer of interest, then build a layer object based on the type of layer input
     :param layerdef: a layerdef that defines a layers inputs/outputs from the Google Sheet
-    :param gfw_env: the environment in which we're running the script (PROD | DEV)
+    :param gfw_env: the environment in which we're running the script (prod | staging)
     :return: a layer object to gfw-sync so that it can call the update method
     """
 

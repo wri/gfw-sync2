@@ -32,7 +32,7 @@ def _open_spreadsheet(sheet_name, custom_key=False):
 def sheet_to_dict(gfw_env):
     """
     Convert the spreadsheet to a dict with {layername: {colName: colVal, colName2: colVal}
-    :param gfw_env: the name of the sheet to call (PROD | DEV)
+    :param gfw_env: the name of the sheet to call (prod | staging)
     :return: a dictionary representing the sheet
     """
 
