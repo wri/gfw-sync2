@@ -1,5 +1,8 @@
+import os
 import requests
 import logging
+import datetime
+import subprocess
 
 from utilities import util
 
@@ -123,3 +126,41 @@ def delete_and_append(dataset_id, api_version, src_url, delete_where_clause=None
         print r.text
         logging.debug(r.text)
         raise ValueError('Request failed with code: {}'.format(status))
+
+
+def add_headers_to_s3(layerdef, s3_url, header_csv_str):
+
+    today = datetime.datetime.today().strftime('%Y%m%d')
+
+    temp_s3_dir = os.path.join(layerdef.scratch_workspace, 'temp_s3_download')
+    local_path = os.path.join(temp_s3_dir, '{}.csv'.format(today))
+
+    # download CSV without header
+    cmd = ['aws', 's3', 'cp', s3_url, local_path]
+    subprocess.check_call(cmd)
+
+    temp_file = os.path.join(temp_s3_dir, 'temp.csv')
+    if os.path.exists(temp_file):
+        os.remove(temp_file)
+
+    # create file with header
+    cmd = ['echo', header_csv_str, '>', temp_file]
+    subprocess.check_call(cmd, shell=True)
+
+    # append GLAD CSV to it
+    cmd = ['type', local_path, '>>', temp_file]
+    subprocess.check_call(cmd, shell=True)
+
+    # Copy back to s3
+    cmd = ['aws', 's3', 'cp', temp_file, s3_url]
+    subprocess.check_call(cmd)
+
+
+def get_current_hadoop_output(alert_type, url_type=None):
+    today = datetime.datetime.today().strftime('%Y%m%d')
+
+    if url_type == 's3':
+        return r's3://gfw2-data/alerts-tsv/temp/output-{}-summary-{}/part-'.format(alert_type, today)
+
+    else:
+        return 'http://gfw2-data.s3.amazonaws.com/alerts-tsv/temp/output-{}-summary-{}/part-'.format(alert_type, today)

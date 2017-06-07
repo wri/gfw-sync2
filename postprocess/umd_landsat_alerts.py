@@ -22,7 +22,10 @@ def post_process(layerdef):
     # Running this manually for now, as no way to tell when dataset has finished saving in PROD
     # util.hit_vizz_webhook('glad-alerts')
 
-    add_headers_to_s3(layerdef)
+    current_s3_path = update_elastic.get_current_hadoop_output('glad', 's3')
+    header_text = 'long,lat,confidence,year,julian_day,country_iso,state_id,dist_id,confidence_text'
+
+    update_elastic.add_headers_to_s3(layerdef, current_s3_path, header_text)
 
     # region_list = ['se_asia', 'africa', 'south_america']
     country_list = ['PER']
@@ -30,46 +33,6 @@ def post_process(layerdef):
     run_elastic_update(country_list, layerdef.gfw_env)
 
     # make_climate_maps(region_list)
-
-
-def get_current_hadoop_output(url_type=None):
-
-    today = datetime.datetime.today().strftime('%Y%m%d')
-
-    if url_type == 's3':
-        return r's3://gfw2-data/alerts-tsv/temp/output-glad-summary-{}/part-'.format(today)
-
-    else:
-        return 'http://gfw2-data.s3.amazonaws.com/alerts-tsv/temp/output-glad-summary-{}/part-'.format(today)
-
-
-def add_headers_to_s3(layerdef):
-
-    s3_path = get_current_hadoop_output('s3')
-
-    today = datetime.datetime.today().strftime('%Y%m%d')
-    local_path = os.path.join(layerdef.scratch_workspace, 'glad_csv_download', '{}.csv'.format(today))
-
-    # download CSV without header
-    cmd = ['aws', 's3', 'cp', s3_path, local_path]
-    subprocess.check_call(cmd)
-
-    temp_file = os.path.join(local_path, 'temp.csv')
-    if os.path.exists(temp_file):
-        os.remove(temp_file)
-
-    # create file with header
-    header_text = 'long,lat,confidence,year,julian_day,country_iso,state_id,dist_id,confidence_text'
-    cmd = ['echo', header_text, '>', temp_file]
-    subprocess.check_call(cmd, shell=True)
-
-    # append GLAD CSV to it
-    cmd = ['type', local_path, '>>', temp_file]
-    subprocess.check_call(cmd, shell=True)
-
-    # Copy back to s3
-    cmd = ['aws', 's3', 'cp', temp_file, s3_path]
-    subprocess.check_call(cmd)
 
 
 def run_elastic_update(country_list, api_version):
@@ -91,7 +54,7 @@ def run_elastic_update(country_list, api_version):
             delete_wc = "WHERE year = {0} AND country_iso = '{1}'".format(year, country)
             update_elastic.delete_from_elastic(dataset_id, api_version, delete_wc)
 
-    hadoop_output_url = get_current_hadoop_output()
+    hadoop_output_url = update_elastic.get_current_hadoop_output('glad')
     update_elastic.append_to_elastic(dataset_id, api_version, hadoop_output_url)
 
 

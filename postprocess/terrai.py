@@ -18,10 +18,15 @@ def post_process(layerdef):
         cmd = [r'C:\PYTHON27\ArcGISx6410.5\python', 'update_country_stats.py']
         cmd += ['-d', 'terra_i_alerts', '-e', layerdef.gfw_env]
 
-        subprocess.check_call(cmd, cwd=country_analysis_dir)
+        # subprocess.check_call(cmd, cwd=country_analysis_dir)
 
         # Running this manually for now, as no way to tell when dataset has finished saving in PROD
         # util.hit_vizz_webhook('terrai-alerts')
+
+        current_s3_path = update_elastic.get_current_hadoop_output('terrai', 's3')
+        header_text = 'long,lat,year,day,country_iso,state_id,dist_id'
+
+        update_elastic.add_headers_to_s3(layerdef, current_s3_path, header_text)
 
         run_elastic_update(layerdef.gfw_env)
 
@@ -33,6 +38,6 @@ def run_elastic_update(api_version):
     logging.debug('starting to update elastic')
     dataset_id = r'bb80312e-b514-48ad-9252-336408603591'
 
-    src_url = r'http://gfw2-data.s3.amazonaws.com/alerts-tsv/terrai.csv'
+    src_url = update_elastic.get_current_hadoop_output('terrai')
 
     update_elastic.append_to_elastic(dataset_id, api_version, src_url, append_type='data-overwrite')
