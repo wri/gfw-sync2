@@ -54,6 +54,9 @@ def build_layer(layerdef, gfw_env):
         datasource = GlobalForestChange(layerdef)
         layer = GlobalForestChangeLayer(datasource.get_layer())
 
+    elif layerdef["type"] == "forma":
+        layer = FormaLayer(layerdef)
+        
     elif layerdef["type"] == "country_vector":
         if layerdef['global_layer']:
 
