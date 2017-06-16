@@ -268,8 +268,7 @@ class Layer(object):
                 valid = False
 
         if not valid:
-            logging.error("Cannot find source {0!s} Exiting".format(s))
-            sys.exit(1)
+            logging.warning("Cannot find source {0!s}".format(s))
 
         # If there's a field map, use it as an input to the FeatureClassToFeatureClass tool and copy the data locally
         if self.field_map:
@@ -278,7 +277,9 @@ class Layer(object):
         elif type(s) is list:
             # If we're dealing with a list (currently only GLAD and Terra-I, we can skip this validation)
             pass
-
+		
+        elif r"projects/wri-datalab" in s:
+            pass
         # If there's not a field map, need to figure out what type of data source it is, and if it's local or not
         else:
             # This could be a folder, a gdb/mdb, a featuredataset, or an SDE database
@@ -327,7 +328,10 @@ class Layer(object):
         if type(self.source) is list:
             s = self.source
             esri_output = self.esri_service_output.split(',')
-
+        
+        elif r"projects/wri-datalab" in self.source:
+            s = []
+			
         else:
             s = [self.source]
             esri_output = [self.esri_service_output]

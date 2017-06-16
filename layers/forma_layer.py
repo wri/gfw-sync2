@@ -22,16 +22,17 @@ class FormaLayer(VectorLayer):
 
         forma_asset = ee.ImageCollection(self.source)
 
-        forma_img = create_image(forma_asset)
+        forma_img = self.create_image(forma_asset)
 
         geojson = '{"type":"FeatureCollection","features":[{"geometry":{"coordinates":[[[[101.07421875,20.468189222640955],[96.85546875,18.145851771694467],[99.31640625,14.774882506516272],[103.359375,18.145851771694467],[101.07421875,20.468189222640955]]],[[[-75.9375,23.241346102386135],[-122.34375,33.13755119234614],[-91.40625,5.61598581915534],[-80.15625,-1.4061088354351594],[-85.78125,-12.554563528593656],[-74.53125,-16.63619187839765],[-81.5625,-42.0329743324414],[-54.84375,-42.0329743324414],[-15.46875,-2.811371193331128],[7.03125,1.4061088354351594],[9.84375,-29.535229562948444],[26.71875,-44.08758502824516],[53.4375,-12.554563528593656],[106.875,-8.407168163601074],[136.40625,7.013667927566642],[127.96875,29.53522956294847],[-22.5,27.059125784374068],[-75.9375,23.241346102386135]]]],"geodesic":true,"type":"MultiPolygon"},"id":"0","properties":{},"type":"Feature"}]}'
 
         geom = json.loads(geojson)
 
-        export_table(forma_img, geom)
+        self.export_table(forma_img, geom)
+        
+        print "forma exported to csv"
 
         # Update the csv
-        self._update()
 
     def create_image(self, forma_asset):
         """prepare ee image"""
@@ -67,8 +68,8 @@ class FormaLayer(VectorLayer):
     def get_region(self, geom):
         """Return ee.Geometry from supplied GeoJSON object."""
 
-        poly = get_coords(geom)
-        ptype = get_type(geom)
+        poly = self.get_coords(geom)
+        ptype = self.get_type(geom)
         if ptype.lower() == 'multipolygon':
             region = ee.Geometry.MultiPolygon(poly)
         else:
@@ -82,7 +83,7 @@ class FormaLayer(VectorLayer):
 
         coll_params =  {
                         'reducer': ee.Reducer.toCollection(bands),
-                        'geometry': get_region(geom),
+                        'geometry': self.get_region(geom),
                         'scale': forma_img.projection().nominalScale(),
                         'maxPixels': ee.Number(1e12)
                         }
@@ -94,7 +95,7 @@ class FormaLayer(VectorLayer):
 
         count_params = {
                         'reducer': ee.Reducer.count(),
-                        'geometry': get_region(geom),
+                        'geometry': self.get_region(geom),
                         'scale': forma_img.projection().nominalScale(),
                         'maxPixels': ee.Number(1e12)
                         }
@@ -106,10 +107,10 @@ class FormaLayer(VectorLayer):
     def export_table(self, forma_img, geom):
         """Export collection to csv"""
 
-        coll_params = get_coll_params(forma_img, geom)
+        coll_params = self.get_coll_params(forma_img, geom)
         coll = forma_img.reduceRegion(**coll_params)
 
-        count_params = get_count_params(forma_img, geom)
+        count_params = self.get_count_params(forma_img, geom)
         count = forma_img.reduceRegion(**count_params)
 
         coll = ee.FeatureCollection(coll.values()).flatten()

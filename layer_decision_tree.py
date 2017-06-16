@@ -5,6 +5,7 @@ from layers.raster_layer import RasterLayer
 from layers.vector_layer import VectorLayer
 from layers.country_vector_layer import CountryVectorLayer
 from layers.global_forest_change_layer import GlobalForestChangeLayer
+from layers.forma_layer import FormaLayer
 
 from datasources.imazon_datasource import ImazonDataSource
 from datasources.global_forest_change_datasource import GlobalForestChange

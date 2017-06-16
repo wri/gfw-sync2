@@ -18,7 +18,7 @@ def post_process(layerdef):
         cmd = [r'C:\PYTHON27\ArcGISx6410.5\python', 'update_country_stats.py']
         cmd += ['-d', 'terra_i_alerts', '-e', layerdef.gfw_env]
 
-        # subprocess.check_call(cmd, cwd=country_analysis_dir)
+        subprocess.check_call(cmd, cwd=country_analysis_dir)
 
         # Running this manually for now, as no way to tell when dataset has finished saving in PROD
         # util.hit_vizz_webhook('terrai-alerts')
