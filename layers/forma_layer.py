@@ -28,14 +28,14 @@ class FormaLayer(VectorLayer):
 
         geom = json.loads(geojson)
 
-        self.export_table(forma_img, geom)
-        
-        print "forma exported to csv"
+        gee_geom = self.get_region(geom)
 
-        # Update the csv
+        self.export_table(forma_img, gee_geom)
+
+        logging.debug("Forma exported to csv")
 
     def create_image(self, forma_asset):
-        """prepare ee image"""
+        logging.debug("preparing GEE Image")
 
         forma_img = ee.Image(forma_asset.first()).select(['activity'])
         lonlat = ee.Image.pixelLonLat().reproject(forma_img.projection())
@@ -66,7 +66,7 @@ class FormaLayer(VectorLayer):
             return geom.get('coordinates')
 
     def get_region(self, geom):
-        """Return ee.Geometry from supplied GeoJSON object."""
+        logging.debug("Formatting geojson to GEE Geom")
 
         poly = self.get_coords(geom)
         ptype = self.get_type(geom)
@@ -76,41 +76,39 @@ class FormaLayer(VectorLayer):
             region = ee.Geometry.Polygon(poly)
         return region
 
-    def get_coll_params(self, forma_img, geom):
+    def get_coll_params(self, forma_img, gee_geom):
         """create ee collection"""
-
+        
         bands = forma_img.bandNames()
 
         coll_params =  {
                         'reducer': ee.Reducer.toCollection(bands),
-                        'geometry': self.get_region(geom),
+                        'geometry': gee_geom,
                         'scale': forma_img.projection().nominalScale(),
                         'maxPixels': ee.Number(1e12)
                         }
 
         return coll_params
 
-    def get_count_params(self, forma_img, geom):
+    def get_count_params(self, forma_img, gee_geom):
         """create count parameters"""
 
         count_params = {
                         'reducer': ee.Reducer.count(),
-                        'geometry': self.get_region(geom),
+                        'geometry': gee_geom,
                         'scale': forma_img.projection().nominalScale(),
                         'maxPixels': ee.Number(1e12)
                         }
 
         return count_params
 
-    # print (count,coll.size(),coll.first())
-
-    def export_table(self, forma_img, geom):
+    def export_table(self, forma_img, gee_geom):
         """Export collection to csv"""
 
-        coll_params = self.get_coll_params(forma_img, geom)
+        coll_params = self.get_coll_params(forma_img, gee_geom)
         coll = forma_img.reduceRegion(**coll_params)
 
-        count_params = self.get_count_params(forma_img, geom)
+        count_params = self.get_count_params(forma_img, gee_geom)
         count = forma_img.reduceRegion(**count_params)
 
         coll = ee.FeatureCollection(coll.values()).flatten()
@@ -123,5 +121,6 @@ class FormaLayer(VectorLayer):
                         'fileFormat':'CSV'
                         }
 
+        logging.debug("exporting table to csv")
         task = ee.batch.Export.table.toCloudStorage(**export_params)
         task.start()
