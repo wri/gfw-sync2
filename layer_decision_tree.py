@@ -8,6 +8,7 @@ from layers.global_forest_change_layer import GlobalForestChangeLayer
 from layers.forma_layer import FormaLayer
 
 from datasources.imazon_datasource import ImazonDataSource
+from datasources.landmark_datasource import LandMarkDataSource
 from datasources.global_forest_change_datasource import GlobalForestChange
 from datasources.wdpa_datasource import WDPADatasource
 from datasources.hot_osm_export_datasource import HotOsmExportDataSource
@@ -35,6 +36,10 @@ def build_layer(layerdef, gfw_env):
         datasource = ImazonDataSource(layerdef)
         layer = VectorLayer(datasource.get_layer())
 
+    elif layerdef["type"] == "landmark_vector":
+        datasource = LandMarkDataSource(layerdef)
+        layer = VectorLayer(datasource.get_layer())
+
     elif layerdef["type"] == "gran_chaco_vector":
         datasource = GranChacoDataSource(layerdef)
         layer = VectorLayer(datasource.get_layer())
@@ -57,7 +62,7 @@ def build_layer(layerdef, gfw_env):
 
     elif layerdef["type"] == "forma":
         layer = FormaLayer(layerdef)
-        
+
     elif layerdef["type"] == "country_vector":
         if layerdef['global_layer']:
 
@@ -70,7 +75,7 @@ def build_layer(layerdef, gfw_env):
             # This allows us to leave the source field in the google spreadsheet blank for this dataset, which makes
             # sense. The source for a global layer is made up of a bunch of smaller country layers
             global_layerdef['source'] = global_layerdef['esri_service_output']
-            VectorLayer(global_layerdef)
+            # VectorLayer(global_layerdef)
             logging.debug('Global layer validation complete')
 
             layer = CountryVectorLayer(layerdef)
