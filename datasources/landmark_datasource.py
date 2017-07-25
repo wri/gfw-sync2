@@ -21,11 +21,15 @@ class LandMarkDataSource(DataSource):
 
         self.layerdef = layerdef
 
-    def get_esri_jsons(self, map_services, output_path):
+    def get_esri_jsons(self, output_path):
+        """Query landmark map services and save esri json to file"""
 
+        #where 0 represents point files and 1 polygon files
         layer_ids = ['0','1']
+        map_services = self.data_source.split(',')
         outfiles = []
 
+        #query applied to each map service to retreieve json
         query = ("/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope"
         "&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=&returnGeometry=true"
         "&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=&outSR=&returnIdsOnly=false"
@@ -40,7 +44,7 @@ class LandMarkDataSource(DataSource):
             r = requests.get(url)
             data = r.json()
             if 'error' in data:
-                pass
+                raise ValueError('query resulted in error for {}'.format(url))
             elif len(data['features']) > 0:
                 if '0' in map_service:
                     data_name = map_service.split('/')[-3] + '_' + '0'
@@ -53,12 +57,12 @@ class LandMarkDataSource(DataSource):
                 with open(out_json, 'w') as outfile:
                     json.dump(data, outfile)
                     logging.debug("dumped %s" %(data_name))
-            else:
-                pass
 
         return outfiles
 
-    def json_to_shps(self, outfiles, output_path):
+    @staticmethod
+    def json_to_shps(outfiles, output_path):
+        """Convert esri json to shp with gdal cmds"""
 
         shps = []
 
@@ -76,7 +80,9 @@ class LandMarkDataSource(DataSource):
 
         return shps
 
-    def add_field(self, shps):
+    @staticmethod
+    def add_field(shps):
+        """Add field to each shp and enter map service name as value"""
 
         #create new field
         for shp in shps:
@@ -99,7 +105,9 @@ class LandMarkDataSource(DataSource):
             except TypeError:
                 logging.debug("{} NoneType".format(shp))
 
-    def sort_shps(self, shps):
+    @staticmethod
+    def sort_shps(shps):
+        """Sort shps into point and poly lists"""
 
         shps_point = []
         shps_poly = []
@@ -112,14 +120,12 @@ class LandMarkDataSource(DataSource):
 
         return shps_point, shps_poly
 
-
-    def merge_shps(self, shps_point, shps_poly, output_path):
+    @staticmethod
+    def merge_shps(shps_point, shps_poly, output_path):
+        """Merge shps into two output shps"""
 
         logging.debug(shps_point)
         logging.debug(shps_poly)
-
-        shps_point_upper = len(shps_point)
-        shps_poly_upper = len(shps_poly)
 
         point_output = output_path + '\\' + 'landmark_point.shp'
         poly_output = output_path + '\\' + 'landmark_poly.shp'
@@ -132,14 +138,17 @@ class LandMarkDataSource(DataSource):
         subprocess.check_call(cmd_point_create)
         logging.debug("point file created")
 
-        for x in range(1, shps_point_upper):
+        shps_point_max = len(shps_point)
+        shps_poly_max = len(shps_poly)
+
+        for x in range(1, shps_point_max):
             cmd_append = ['ogr2ogr', '-f', 'ESRI Shapefile', '-append', '-update', point_output, shps_point[x]]
-            logging.debug("append %s" %(x))
+            logging.debug("append %s" %(shps_point[x]))
             subprocess.check_call(cmd_append)
 
-        for x in range(1, shps_poly_upper):
+        for x in range(1, shps_poly_max):
             cmd_append = ['ogr2ogr', '-f', 'ESRI Shapefile', '-append', '-update', poly_output, shps_poly[x]]
-            logging.debug("append %s" %(x))
+            logging.debug("append %s" %(shps_poly[x]))
             subprocess.check_call(cmd_append)
 
     def get_layer(self):
@@ -148,12 +157,12 @@ class LandMarkDataSource(DataSource):
         Will perform the entire process of finding download and merging map service shapefiles
         :return: two merged files
         """
-        # map_services = self.layerdef['source']
-        map_services = self.data_source.split(',')
-        output_path = self.download_workspace
 
-        outfiles = self.get_esri_jsons(map_services, output_path)
+        #set class variables
+        output_path = self.download_workspace
+        outfiles = self.get_esri_jsons(output_path)
         shps = self.json_to_shps(outfiles, output_path)
+
         self.add_field(shps)
         shps_point, shps_poly = self.sort_shps(shps)
         self.merge_shps(shps_point, shps_poly, output_path)
