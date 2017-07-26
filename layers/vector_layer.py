@@ -181,7 +181,7 @@ class VectorLayer(Layer):
             # arcpy.Delete_management("fl_to_delete")
 
             sde_sql_conn = arcpy.ArcSDESQLExecute(sde_workspace)
-            esri_fc_name = os.path.basename(esri_output_fc)
+            esri_fc_name = os.path.basename(esri_output_fc) + '_evw'
 
             # Find the min and max OID values
             to_delete_oid_field = [f.name for f in arcpy.ListFields(esri_output_fc) if f.type == 'OID'][0]

@@ -3,6 +3,7 @@ import requests
 import logging
 import datetime
 import subprocess
+import boto3
 
 from utilities import util
 
@@ -157,10 +158,32 @@ def add_headers_to_s3(layerdef, s3_url, header_csv_str):
 
 
 def get_current_hadoop_output(alert_type, url_type=None):
-    today = datetime.datetime.today().strftime('%Y%m%d')
+    today = datetime.datetime.today()
 
-    if url_type == 's3':
-        return r's3://gfw2-data/alerts-tsv/temp/output-{}-summary-{}/part-'.format(alert_type, today)
+    # Given that this often runs overnight, datestamp may be today or "tomorrow"
+    # compared to when the script started
+    if check_s3(today, alert_type):
+        date_str = today.strftime('%Y%m%d')
 
     else:
-        return 'http://gfw2-data.s3.amazonaws.com/alerts-tsv/temp/output-{}-summary-{}/part-'.format(alert_type, today)
+        date_str = (today + datetime.timedelta(days=1)).strftime('%Y%m%d')
+
+    if url_type == 's3':
+        return r's3://gfw2-data/alerts-tsv/temp/output-{}-summary-{}/part-'.format(alert_type, date_str)
+
+    else:
+        return 'http://gfw2-data.s3.amazonaws.com/alerts-tsv/temp/output-{}-summary-{}/part-'.format(alert_type, date_str)
+
+
+def check_s3(date_val, alert_type):
+
+    date_str = date_val.strftime('%Y%m%d')
+
+    s3 = boto3.resource('s3')
+    bucket = s3.Bucket('gfw2-data')
+    key = 'alerts-tsv/temp/output-{}-summary-{}/part-'.format(alert_type, date_str)
+    objs = list(bucket.objects.filter(Prefix=key))
+    if len(objs) > 0 and objs[0].key == key:
+        return True
+    else:
+        return False

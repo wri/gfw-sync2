@@ -277,9 +277,10 @@ class Layer(object):
         elif type(s) is list:
             # If we're dealing with a list (currently only GLAD and Terra-I, we can skip this validation)
             pass
-		
+
         elif r"projects/wri-datalab" in s:
             pass
+
         # If there's not a field map, need to figure out what type of data source it is, and if it's local or not
         else:
             # This could be a folder, a gdb/mdb, a featuredataset, or an SDE database
@@ -331,7 +332,7 @@ class Layer(object):
         
         elif r"projects/wri-datalab" in self.source:
             s = []
-			
+
         else:
             s = [self.source]
             esri_output = [self.esri_service_output]

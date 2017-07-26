@@ -407,7 +407,7 @@ def cartodb_sync(shp, production_table, where_clause, gfw_env, scratch_workspace
     """
 
     # ogr2ogr can't use an SDE fc as an input; must export to GDB
-    if where_clause or '@localhost).sde' in shp:
+    if where_clause or 'localhost' in shp:
         shp = util.fc_to_temp_gdb(shp, scratch_workspace, where_clause)
 
     basename = os.path.basename(shp)

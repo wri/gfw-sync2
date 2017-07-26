@@ -29,7 +29,7 @@ def byteify(unicode_string):
 
 
 def gen_paths_shp(src):
-    if '@localhost).sde' in src:
+    if 'localhost' in src:
         basepath = os.path.split(src)[0]
         base_fname = os.path.basename(src).split('.')[-1]
         fname = base_fname + '.shp'
