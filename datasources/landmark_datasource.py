@@ -4,10 +4,11 @@ import os
 import logging
 import requests
 import json
-import subprocess
 from osgeo import ogr
 
 from datasource import DataSource
+from utilities import archive
+from utilities import util
 
 class LandMarkDataSource(DataSource):
     """
@@ -73,7 +74,7 @@ class LandMarkDataSource(DataSource):
 
             cmd = ['ogr2ogr', '-a_srs', 'EPSG:3857', output, outfile, 'OGRGeoJSON']
             try:
-                subprocess.check_call(cmd)
+                util.run_subprocess(cmd)
                 logging.debug("shp created for {}".format(out_name))
             except TypeError:
                 logging.debug("TypeError caused ogr2ogr to fail on {}".format(out_name))
@@ -121,8 +122,9 @@ class LandMarkDataSource(DataSource):
         return shps_point, shps_poly
 
     @staticmethod
-    def merge_shps(shps_point, shps_poly, output_path):
-        """Merge shps into two output shps"""
+    def merge_and_zip_shps(shps_point, shps_poly, output_path):
+        """Merge shps into two output shps then zip
+        :return: zip shps"""
 
         logging.debug(shps_point)
         logging.debug(shps_poly)
@@ -133,23 +135,29 @@ class LandMarkDataSource(DataSource):
         cmd_point_create = ['ogr2ogr', '-f', 'ESRI Shapefile', point_output, shps_point[0]]
         cmd_poly_create = ['ogr2ogr', '-f', 'ESRI Shapefile', poly_output, shps_poly[0]]
 
-        subprocess.check_call(cmd_poly_create)
+        #run subprocess to create polygon and point shps
+        util.run_subprocess(cmd_poly_create)
         logging.debug("poly file created")
-        subprocess.check_call(cmd_point_create)
+        util.run_subprocess(cmd_point_create)
         logging.debug("point file created")
 
         shps_point_max = len(shps_point)
         shps_poly_max = len(shps_poly)
 
+        #append shps to poly and point files
         for x in range(1, shps_point_max):
-            cmd_append = ['ogr2ogr', '-f', 'ESRI Shapefile', '-append', '-update', point_output, shps_point[x]]
+            util.run_subprocess(['ogr2ogr', '-f', 'ESRI Shapefile', '-append', '-update', point_output, shps_point[x]])
             logging.debug("append %s" %(shps_point[x]))
-            subprocess.check_call(cmd_append)
 
         for x in range(1, shps_poly_max):
-            cmd_append = ['ogr2ogr', '-f', 'ESRI Shapefile', '-append', '-update', poly_output, shps_poly[x]]
+            util.run_subprocess(['ogr2ogr', '-f', 'ESRI Shapefile', '-append', '-update', poly_output, shps_poly[x]])
             logging.debug("append %s" %(shps_poly[x]))
-            subprocess.check_call(cmd_append)
+
+        #zip merged files
+        point_zip = archive.zip_shp(point_output)
+        poly_zip = archive.zip_shp(poly_output)
+
+        return point_zip, poly_zip
 
     def get_layer(self):
         """
@@ -165,4 +173,4 @@ class LandMarkDataSource(DataSource):
 
         self.add_field(shps)
         shps_point, shps_poly = self.sort_shps(shps)
-        self.merge_shps(shps_point, shps_poly, output_path)
+        point_zip, poly_zip = self.merge_and_zip_shps(shps_point, shps_poly, output_path)

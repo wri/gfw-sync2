@@ -1,6 +1,5 @@
 __author__ = 'Asa.Strong'
 
-import subprocess
 import logging
 import ee
 import json
