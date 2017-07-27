@@ -4,6 +4,7 @@ import os
 import logging
 import requests
 import json
+import shutil
 from osgeo import ogr
 
 from datasource import DataSource
@@ -156,8 +157,18 @@ class LandMarkDataSource(DataSource):
         #zip merged files
         point_zip = archive.zip_shp(point_output)
         poly_zip = archive.zip_shp(poly_output)
+        logging.debug("zipped files locally")
 
         return point_zip, poly_zip
+
+    def sync_with_s3(self, point_zip, poly_zip):
+
+        point_download, poly_download = self.download_output.split(',')
+
+        shutil.copyfile(point_zip, point_download)
+        logging.debug("copied point file to S3")
+        shutil.copyfile(poly_zip, poly_download)
+        logging.debug("copied poly file to S3")
 
     def get_layer(self):
         """
@@ -165,7 +176,6 @@ class LandMarkDataSource(DataSource):
         Will perform the entire process of finding download and merging map service shapefiles
         :return: two merged files
         """
-
         #set class variables
         output_path = self.download_workspace
         outfiles = self.get_esri_jsons(output_path)
@@ -174,3 +184,4 @@ class LandMarkDataSource(DataSource):
         self.add_field(shps)
         shps_point, shps_poly = self.sort_shps(shps)
         point_zip, poly_zip = self.merge_and_zip_shps(shps_point, shps_poly, output_path)
+        self.sync_with_s3(point_zip, poly_zip)

@@ -30,6 +30,9 @@ class DataSource(object):
         self._data_source = None
         self.data_source = layerdef['source']
 
+        self._download_output = None
+        self.download_output = layerdef['download_output']
+
         self._gfw_env = None
         self.gfw_env = layerdef['gfw_env']
 
@@ -59,7 +62,7 @@ class DataSource(object):
             shutil.rmtree(d)
         util.mkdir_p(d)
         self._download_workspace = d
-        
+
     # Validate data_source
     @property
     def data_source(self):
