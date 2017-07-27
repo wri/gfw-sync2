@@ -10,6 +10,7 @@ from osgeo import ogr
 from datasource import DataSource
 from utilities import archive
 from utilities import util
+from utilities import cartodb
 
 class LandMarkDataSource(DataSource):
     """
@@ -165,10 +166,15 @@ class LandMarkDataSource(DataSource):
 
         point_download, poly_download = self.download_output.split(',')
 
+        #copy zipped files to S3
         shutil.copyfile(point_zip, point_download)
         logging.debug("copied point file to S3")
         shutil.copyfile(poly_zip, poly_download)
         logging.debug("copied poly file to S3")
+
+        #Sync carto tables
+        cartodb.cartodb_force_sync(self.gfw_env, 'landmark_point')
+        cartodb.cartodb_force_sync(self.gfw_env, 'landmark_poly')
 
     def get_layer(self):
         """

@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 import urllib
+import requests
 import arcpy
 from collections import OrderedDict
 from retrying import retry
@@ -15,8 +16,9 @@ def get_api_key_and_url(gfw_env):
 
     key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
     api_url = settings.get_settings(gfw_env)["cartodb"]["sql_api"]
+    sync_api = settings.get_settings(gfw_env)["cartodb"]["synchronization_api"]
 
-    return key, api_url
+    return key, api_url, sync_api
 
 
 def cartodb_sql(sql, gfw_env):
@@ -427,3 +429,31 @@ def cartodb_sync(shp, production_table, where_clause, gfw_env, scratch_workspace
     cartodb_push_to_production(staging_table, production_table, gfw_env)
 
     delete_staging_table_if_exists(staging_table, gfw_env)
+
+def cartodb_force_sync(gfw_env, table_name):
+    #force sync on synced table: https://carto.com/docs/carto-engine/import-api/sync-tables
+
+    key, api_url, sync_api = get_api_key_and_url(gfw_env)
+
+    #get synced tables data
+    get_tables_url = ("{0!s}/?api_key={1!s}".format(sync_api, key))
+
+    r = requests.get(get_tables_url)
+    table_data = r.json()
+
+    #get sync table id
+    for entry in table_data['synchronizations']:
+        if entry['name'] == table_name:
+            table_id = entry['id']
+
+    #force table sync
+    sync_tables_url = ("{0!s}/{1!s}/sync_now?api_key={2!s}".format(sync_api, table_id, key))
+
+    r = requests.put(sync_tables_url)
+
+    if r.status_code == 200:
+        logging.debug("Sync Table Success for {}".format(table_name))
+    elif r.status_code == 404:
+        logging.debug("404 request not found")
+    else:
+        logging.debug("unkonwn error")
