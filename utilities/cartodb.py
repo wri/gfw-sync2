@@ -453,10 +453,11 @@ def cartodb_force_sync(gfw_env, table_name):
     sync_tables_url = ("{0!s}/{1!s}/sync_now?api_key={2!s}".format(sync_api, table_id, key))
 
     r = requests.put(sync_tables_url)
+    status = r.status_code
 
-    if r.status_code == 200:
+    if status == 200:
         logging.debug("Sync Table Success for {}".format(table_name))
-    elif r.status_code == 404:
-        logging.debug("404 request not found")
     else:
-        logging.debug("unkonwn error")
+        print r.text
+        logging.debug(r.text)
+        raise ValueError('Request failed with code: {}'.format(status))
