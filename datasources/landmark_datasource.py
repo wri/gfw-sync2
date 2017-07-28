@@ -25,7 +25,9 @@ class LandMarkDataSource(DataSource):
         self.layerdef = layerdef
 
     def get_esri_jsons(self, output_path):
-        """Query landmark map services and save esri json to file"""
+        """Query landmark map services and save esri json to file
+        :param output_path: temp download location
+        :return: list of json files"""
 
         #where 0 represents point files and 1 polygon files
         layer_ids = ['0','1']
@@ -65,7 +67,10 @@ class LandMarkDataSource(DataSource):
 
     @staticmethod
     def json_to_shps(outfiles, output_path):
-        """Convert esri json to shp with gdal cmds"""
+        """Convert esri json to shp with gdal cmds
+        :param outfiles: list of esri json files
+        :param output_path: temp download location for shps
+        :return: list of shps"""
 
         shps = []
 
@@ -85,7 +90,8 @@ class LandMarkDataSource(DataSource):
 
     @staticmethod
     def add_field(shps):
-        """Add field to each shp and enter map service name as value"""
+        """Add field to each shp and enter map service name as value
+        :param: list of shps"""
 
         #create new field
         for shp in shps:
@@ -110,7 +116,9 @@ class LandMarkDataSource(DataSource):
 
     @staticmethod
     def sort_shps(shps):
-        """Sort shps into point and poly lists"""
+        """Sort shps into point and poly lists
+        :param: list of shps
+        :return: two shps sorted by geometry type"""
 
         shps_point = []
         shps_poly = []
@@ -126,7 +134,10 @@ class LandMarkDataSource(DataSource):
     @staticmethod
     def merge_and_zip_shps(shps_point, shps_poly, output_path):
         """Merge shps into two output shps then zip
-        :return: zip shps"""
+        :param shps_point: list of point shps
+        :param shps_poly: list of poly shps:
+        :output_path: temp download location for merged shps
+        :return: zipped merged shps"""
 
         logging.debug(shps_point)
         logging.debug(shps_poly)
@@ -162,7 +173,10 @@ class LandMarkDataSource(DataSource):
 
         return point_zip, poly_zip
 
-    def sync_with_s3(self, point_zip, poly_zip):
+    def sync_with_s3_carto(self, point_zip, poly_zip):
+        """copy zip files to s3 and force sync carto tables
+        :param point_zip: zipped point shp
+        :param poly_zip: zipped poly shp"""
 
         point_download, poly_download = self.download_output.split(',')
 
@@ -173,8 +187,9 @@ class LandMarkDataSource(DataSource):
         logging.debug("copied poly file to S3")
 
         #Sync carto tables
-        cartodb.cartodb_force_sync(self.gfw_env, 'landmark_point')
-        cartodb.cartodb_force_sync(self.gfw_env, 'landmark_poly')
+        carto_point, carto_poly = self.carto_table.split(',')
+        cartodb.cartodb_force_sync(self.gfw_env, carto_point)
+        cartodb.cartodb_force_sync(self.gfw_env, carto_poly)
 
     def get_layer(self):
         """
@@ -190,4 +205,4 @@ class LandMarkDataSource(DataSource):
         self.add_field(shps)
         shps_point, shps_poly = self.sort_shps(shps)
         point_zip, poly_zip = self.merge_and_zip_shps(shps_point, shps_poly, output_path)
-        self.sync_with_s3(point_zip, poly_zip)
+        self.sync_with_s3_carto(point_zip, poly_zip)

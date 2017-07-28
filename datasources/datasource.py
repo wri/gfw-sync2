@@ -33,6 +33,9 @@ class DataSource(object):
         self._download_output = None
         self.download_output = layerdef['download_output']
 
+        self._carto_table = None
+        self.carto_table = layerdef['cartodb_service_output']
+
         self._gfw_env = None
         self.gfw_env = layerdef['gfw_env']
 
