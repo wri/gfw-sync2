@@ -3,6 +3,7 @@ __author__ = 'Asa.Strong'
 import logging
 import ee
 import json
+import datetime
 
 from layers.vector_layer import VectorLayer
 
@@ -24,7 +25,7 @@ class FormaLayer(VectorLayer):
         forma_img = self.create_image(forma_asset)
 
         start_date = "2012-01-01"
-        end_date = "2017-06-26"
+        end_date = datetime.datetime.today().strftime('%Y-%m-%d')
 
         mask = self.create_mask(forma_img, start_date, end_date)
 
@@ -140,7 +141,7 @@ class FormaLayer(VectorLayer):
 
         export_params = {
                         'collection':coll,
-                        'description':"test_alerts_pyton",
+                        'description':"test_alerts_gfw-sync",
                         'bucket': "forma-2017",
                         'fileNamePrefix':'tmp/csv/forma_alerts_' + start_date + '_' + end_date + '.csv',
                         'fileFormat':'CSV'
@@ -149,3 +150,5 @@ class FormaLayer(VectorLayer):
         logging.debug("exporting table to csv")
         task = ee.batch.Export.table.toCloudStorage(**export_params)
         task.start()
+
+        self.post_process()
