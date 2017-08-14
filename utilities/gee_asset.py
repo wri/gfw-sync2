@@ -1,23 +1,24 @@
 import time
 import subprocess
-import shutil
 import os
 import ee
 import uuid
 
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
+import util
 
 
 ee.Initialize()
 
 
 class Asset(object):
-    def __init__(self, image_id, band_list, bbox, output_name, scratch_workspace):
+    def __init__(self, image_id, band_list, bbox, raster_size, output_name, scratch_workspace):
 
         self.image = ee.Image(image_id)
         self.band_list = band_list
         self.bbox = bbox
+        self.raster_size = raster_size
 
         self.output_name = output_name
         self.out_tif = self.output_name + '.tif'
@@ -97,6 +98,19 @@ class Asset(object):
         to_tif += ['-projwin'] + [str(x) for x in self.bbox]
         to_tif += ['-a_nodata', '0']
         subprocess.check_call(to_tif, cwd=self.output_dir)
+
+        gdalinfo_list = util.run_subprocess(['gdalinfo', self.vrt])
+        print '\n'.join(gdalinfo_list)
+
+        size_line = gdalinfo_list[2]
+        size_results = size_line.replace(',', '').split()[2:]
+
+        size_tuple = [int(x) for x in size_results]
+        print 'Checking size of the VRT that we downloaded from GEE'
+        print size_tuple
+        print self.raster_size
+        if size_tuple != self.raster_size:
+            raise ValueError('Size tuple does not match expected {} boundaries'.format(self.output_name))
 
     def upload_to_s3(self):
 

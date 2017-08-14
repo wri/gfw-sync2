@@ -1,7 +1,6 @@
 import os
 import logging
 import subprocess
-import datetime
 from isoweek import Week
 
 from utilities import util
@@ -9,6 +8,9 @@ from utilities import update_elastic
 
 
 def post_process(layerdef):
+
+    if layerdef.gfw_env == 'staging':
+        raise ValueError('Not running postprocess for staging currently')
 
     # start country page analysis stuff (not map related)
     logging.debug("starting country page analytics")
@@ -27,7 +29,6 @@ def post_process(layerdef):
 
     update_elastic.add_headers_to_s3(layerdef, current_s3_path, header_text)
 
-    # region_list = ['se_asia', 'africa', 'south_america']
     country_list = ['PER']
 
     run_elastic_update(country_list, layerdef.gfw_env)

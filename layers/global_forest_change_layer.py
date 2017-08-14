@@ -110,6 +110,9 @@ class GlobalForestChangeLayer(RasterLayer):
             region_list = ['south_america']
             year_list = ['2016', '2017']
 
+            if self.gfw_env == 'staging':
+                region_list.append('africa')
+
         return ';'.join(region_list), ';'.join(year_list)
 
     def update(self):
