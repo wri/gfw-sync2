@@ -4,6 +4,7 @@ import logging
 import urlparse
 import datetime
 import sys
+import requests
 
 from datasource import DataSource
 from utilities import aws
@@ -26,12 +27,10 @@ class GranChacoDataSource(DataSource):
             :return: an updated layerdef with the local source for the layer.update() process
             """
 
-            output_list = []
-            vect_url_list = self.data_source.split(',')
+            #Get data from source
+            logging.debug('Downloading Gran Chaco from S3')
+            url = self.data_source
+            z = self.download_file(url, self.download_workspace)
 
-
-            for vect in vect_url_list:
-                out_file = self.download_file(vect, self.download_workspace)
-                output_list.append(out_file)
-
-            self.layerdef['source'] = output_list
+            #Trigger vector process
+            self.layerdef.source = self.download_workspace + '\\gran_chaco_deforestation.shp'

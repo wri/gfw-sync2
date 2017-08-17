@@ -16,9 +16,9 @@ def get_api_key_and_url(gfw_env):
 
     key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
     api_url = settings.get_settings(gfw_env)["cartodb"]["sql_api"]
-    sync_api = settings.get_settings(gfw_env)["cartodb"]["synchronization_api"]
+    # sync_api = settings.get_settings(gfw_env)["cartodb"]["synchronization_api"]
 
-    return key, api_url, sync_api
+    return key, api_url#, sync_api
 
 
 def cartodb_sql(sql, gfw_env):
