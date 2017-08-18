@@ -21,16 +21,19 @@ class GranChacoDataSource(DataSource):
 
         self.layerdef = layerdef
 
+        def download_gran_chaco(self, data_url, download_workspace):
+
+            #Get data from source
+            logging.debug('Downloading Gran Chaco from S3')
+            self.download_file(data_url, download_workspace)
+
         def get_layer(self):
             """
             Download the Gran Chaco dataset
             :return: an updated layerdef with the local source for the layer.update() process
             """
-
-            #Get data from source
-            logging.debug('Downloading Gran Chaco from S3')
-            url = self.data_source
-            z = self.download_file(url, self.download_workspace)
+            #call download data method
+            self.download_gran_chaco(self.data_source, self.download_workspace)
 
             #Trigger vector process
             self.layerdef.source = self.download_workspace + '\\gran_chaco_deforestation.shp'
