@@ -3,6 +3,8 @@ import requests
 import logging
 import datetime
 import subprocess
+import uuid
+import time
 import boto3
 
 from utilities import util
@@ -48,6 +50,30 @@ def append_to_elastic(dataset_id, api_version, src_url, append_type='concat'):
         logging.debug(r.text)
         raise ValueError('Request failed with code: {}'.format(status))
 
+    wait_for_dataset_save(dataset_id, api_version)
+
+
+def wait_for_dataset_save(dataset_id, api_version):
+
+    url_dict = {'prod': 'production', 'staging': 'staging'}
+    api_url_prefix = url_dict[api_version]
+
+    url = 'https://{}-api.globalforestwatch.org/v1/dataset/{}?'.format(api_url_prefix, dataset_id)
+
+    for i in range(1, 1000):
+        random_hash = str(uuid.uuid4())
+
+        r = requests.get(url + random_hash)
+        status = r.json()['data']['attributes']['status']
+        logging.debug(status)
+
+        if status == 'pending':
+            time.sleep(60)
+        elif status == 'saved':
+            break
+        else:
+            raise ValueError('dataset {} has status {}'.format(dataset_id, status))
+
 
 def delete_from_elastic(dataset_id, api_version, delete_where_clause):
 
@@ -67,8 +93,12 @@ def delete_from_elastic(dataset_id, api_version, delete_where_clause):
 
     r = requests.get(delete_url, headers=headers, params=qry_parms)
 
-    logging.debug(r.status_code)
-    logging.debug(r.json())
+    try:
+        logging.debug(r.status_code)
+        logging.debug(r.json())
+    except ValueError:
+        logging.debug('No response from the DELETE request, likely due to a timeout')
+        logging.debug('This is expected, and the DELETE was likely successful')
 
 
 def delete_and_append(dataset_id, api_version, src_url, delete_where_clause=None):

@@ -21,9 +21,6 @@ def post_process(layerdef):
     cmd += ['-e', layerdef.gfw_env]
     subprocess.check_call(cmd, cwd=cwd)
 
-    # Running this manually for now, as no way to tell when dataset has finished saving in PROD
-    # util.hit_vizz_webhook('glad-alerts')
-
     current_s3_path = update_elastic.get_current_hadoop_output('glad', 's3')
     header_text = 'long,lat,confidence,year,julian_day,country_iso,state_id,dist_id,confidence_text'
 
@@ -32,6 +29,8 @@ def post_process(layerdef):
     country_list = ['PER']
 
     run_elastic_update(country_list, layerdef.gfw_env)
+
+    util.hit_vizz_webhook('glad-alerts')
 
     # make_climate_maps(region_list)
 
