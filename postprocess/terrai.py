@@ -20,15 +20,14 @@ def post_process(layerdef):
 
         subprocess.check_call(cmd, cwd=country_analysis_dir)
 
-        # Running this manually for now, as no way to tell when dataset has finished saving in PROD
-        # util.hit_vizz_webhook('terrai-alerts')
-
         current_s3_path = update_elastic.get_current_hadoop_output('terrai', 's3')
         header_text = 'long,lat,year,day,country_iso,state_id,dist_id'
 
         update_elastic.add_headers_to_s3(layerdef, current_s3_path, header_text)
 
         run_elastic_update(layerdef.gfw_env)
+
+        util.hit_vizz_webhook('terrai-alerts')
 
     else:
         logging.debug('Not running gfw-country-pages-analysis-2; gfw_env is {0}'.format(layerdef.gfw_env))
