@@ -7,6 +7,7 @@ import calendar
 
 from datasource import DataSource
 from utilities import google_sheet as gs
+from utilities import util
 
 
 class WDPADatasource(DataSource):
@@ -57,9 +58,32 @@ class WDPADatasource(DataSource):
         simplified_fc = self.data_source + '_simplified'
 
         logging.debug("Starting simplify_polygon")
-        arcpy.SimplifyPolygon_cartography(self.data_source, simplified_fc, algorithm="POINT_REMOVE",
-                                          tolerance="10 Meters", minimum_area="0 Unknown", error_option="NO_CHECK",
-                                          collapsed_point_option="NO_KEEP")
+        # arcpy.SimplifyPolygon errors almost immediately due to a memory error
+        # I have no idea why this is happening (didn't on previous server), but it's happening in
+        # ArcMap as well. Don't really care to debug it.
+        #arcpy.SimplifyPolygon_cartography(self.data_source, simplified_fc, algorithm="POINT_REMOVE",
+        #                                  tolerance="10 Meters", minimum_area="0 Unknown", error_option="NO_CHECK",
+        #                                  collapsed_point_option="NO_KEEP"
+        spatialite_db = os.path.join(self.download_workspace, 'eckert.sqlite')
+
+        src_gdb = os.path.dirname(self.data_source)
+        fc_name = os.path.basename(self.data_source)
+
+        # project to Eckert VI so we can use meters as our unit of distance for simplification
+        crs = 'EPSG:54010'
+        proj_cmd = ['ogr2ogr', '-f', 'SQLite', spatialite_db, '-t_srs', crs, src_gdb, fc_name, '-dsco', 'SPATIALITE=YES']
+        util.run_subprocess(proj_cmd)
+
+        # now actually do the simplification
+        sql = "UPDATE {} SET Geometry = CastToMULTIPOLYGON(ST_SimplifyPreserveTopology(Geometry, 10));".format(fc_name)
+        simplify_cmd = ['spatialite', spatialite_db, sql]
+        util.run_subprocess(simplify_cmd)
+
+        # and then write back to shapefile for Arc's benefit (dumb)
+        simplified_fc = os.path.join(self.download_workspace, 'wdpa_simplified.shp')
+
+        to_shp_cmd = ['ogr2ogr', '-t_srs', 'EPSG:4326', simplified_fc, spatialite_db, fc_name]
+        util.run_subprocess(to_shp_cmd)
 
         self.data_source = simplified_fc
 
