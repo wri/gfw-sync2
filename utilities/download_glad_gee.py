@@ -31,7 +31,7 @@ def download(gfw_env, scratch_workspace):
                    {
                     'name': 'brazil',
                     'gee_suffix': 'BRA',
-                    'gee_date': '5_21',
+                    # 'gee_date': '5_21',
                     'ras_name_lkp': {'brazil_day2016': ['alertDate16'],
                                      'brazil_day2017': ['alertDate17'],
                                      'brazil_conf2016': ['conf16'],
@@ -55,9 +55,9 @@ def download(gfw_env, scratch_workspace):
         for output_name, band_list in to_download['ras_name_lkp'].iteritems():
 
             # Temporary-- Brazil for the time being only has one valid date
-            ras_date = to_download.get('gee_date', yesterday_str)
+            # ras_date = to_download.get('gee_date', yesterday_str)
 
-            src_raster = 'projects/glad/alert/UpdResult/{}_{}'.format(ras_date, to_download['gee_suffix'])
+            src_raster = 'projects/glad/alert/UpdResult/{}_{}'.format(yesterday_str, to_download['gee_suffix'])
 
             asset_object = Asset(src_raster, band_list, to_download['bbox'],
                                  to_download['size'], output_name, scratch_workspace)

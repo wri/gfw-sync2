@@ -14,6 +14,7 @@ import logging
 import uuid
 import urllib2
 import requests
+from collections import namedtuple
 from ConfigParser import ConfigParser
 
 
@@ -398,3 +399,12 @@ def generate_where_clause(start_row, end_row, where_field_name, transaction_row_
 
         # Increment the current_max_id based on the rows we just processed
         current_max_id += transaction_row_limit
+
+
+def make_dummy_gfw_env(gfw_env, scratch_workspace=r'D:\data\gfw-sync-scratch\temp'):
+    # source https://stackoverflow.com/questions/1305532
+
+    MyStruct = namedtuple('MyStruct', 'gfw_env scratch_workspace')
+    s = MyStruct(gfw_env=gfw_env, scratch_workspace=scratch_workspace)
+
+    return s

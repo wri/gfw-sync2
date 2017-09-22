@@ -28,7 +28,7 @@ def get_headers(api_version):
 def append_to_elastic(dataset_id, api_version, src_url, append_type='concat'):
 
     headers, api_url = get_headers(api_version)
-    dataset_url = r'{0}/dataset/{1}/{2}'.format(api_url, dataset_id, append_type)
+    dataset_url = r'{0}/v1/dataset/{1}/{2}'.format(api_url, dataset_id, append_type)
 
     payload = {"url": src_url,
                "provider": "csv",
@@ -39,6 +39,8 @@ def append_to_elastic(dataset_id, api_version, src_url, append_type='concat'):
 
     logging.debug('starting {}'.format(append_type))
     logging.debug(payload)
+    print dataset_url
+    print payload
 
     r = requests.post(dataset_url, headers=headers, json=payload)
     status = r.status_code
@@ -54,6 +56,9 @@ def append_to_elastic(dataset_id, api_version, src_url, append_type='concat'):
 
 
 def wait_for_dataset_save(dataset_id, api_version):
+
+    logging.debug('sleeping for 30 seconds to start')
+    time.sleep(30)
 
     url_dict = {'prod': 'production', 'staging': 'staging'}
     api_url_prefix = url_dict[api_version]

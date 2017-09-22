@@ -42,7 +42,7 @@ def run_elastic_update(country_list, api_version):
     if api_version == 'prod':
         dataset_id = r'e663eb09-04de-4f39-b871-35c6c2ed10b5'
     elif api_version == 'staging':
-        dataset_id = r'274b4818-be18-4890-9d10-eae56d2a82e5'
+        dataset_id = r'a228c22c-e99a-4df3-b627-a1825e7176f2'
     else:
         raise ValueError('unknown API version supplied: {}'.format(api_version))
 
