@@ -96,7 +96,7 @@ class Asset(object):
 
         to_tif = ['gdal_translate', '-co', 'COMPRESS=LZW', self.vrt, self.out_tif]
         to_tif += ['-projwin'] + [str(x) for x in self.bbox]
-        to_tif += ['-a_nodata', '0']
+        to_tif += ['-a_nodata', '0', '-ot', 'UInt16']
         subprocess.check_call(to_tif, cwd=self.output_dir)
 
         gdalinfo_list = util.run_subprocess(['gdalinfo', self.vrt])

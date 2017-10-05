@@ -19,31 +19,30 @@ def download(gfw_env, scratch_workspace):
                     'size': [116001, 112001]
                     },
                    {
-                    'name': 'peru',
+                    'name': 'south_america',
                     'gee_suffix': 'SA',
-                    'ras_name_lkp': {'peru_day2016': ['alertDate16'],
-                                     'peru_day2017': ['alertDate17'],
-                                     'peru_conf2016': ['conf16'],
-                                     'peru_conf2017': ['conf17']},
-                    'bbox': [-82.0005000, 1.0005000, -67.9995000, -19.0005000],
-                    'size': [56005, 80005]
+                    'ras_name_lkp': {'sa_day2016': ['alertDate16'],
+                                     'sa_day2017': ['alertDate17'],
+                                     'sa_conf2016': ['conf16'],
+                                     'sa_conf2017': ['conf17']},
+                    'bbox': [-82.0005000, 6.0005000, -33.9995000, -34.0005000],
+                    'size': [192005, 160005]
                    },
                    {
-                    'name': 'brazil',
-                    'gee_suffix': 'BRA',
-                    # 'gee_date': '5_21',
-                    'ras_name_lkp': {'brazil_day2016': ['alertDate16'],
-                                     'brazil_day2017': ['alertDate17'],
-                                     'brazil_conf2016': ['conf16'],
-                                     'brazil_conf2017': ['conf17']},
-                    'bbox': [-75.0005000, 6.0005000, -33.9995000, -34.0005000],
-                    'size': [164005, 160005]
+                    'name': 'se_asia',
+                    'gee_suffix': 'SEA',
+                    'ras_name_lkp': {'SEA_day_2016n': ['alertDate16'],
+                                     'SEA_day_2017n': ['alertDate17'],
+                                     'SEA_conf_2016n': ['conf16'],
+                                     'SEA_conf_2017n': ['conf17']},
+                    'bbox': [94.9995000,   8.0005000, 156.0005000, -12.0005000],
+                    'size': [244005, 80006]
                     }
                    ]
 
     # lkp which regions/countries to process based on
-    download_dict = {'staging': {'peru', 'africa', 'brazil'},
-                     'prod': ['peru']}
+    download_dict = {'staging': ['south_america', 'africa', 'se_asia'],
+                     'prod': ['south_america', 'africa']}
 
     # grab the list of configs based on the gfw_env we're using
     download_list = [x for x in region_list if x['name'] in download_dict[gfw_env]]
@@ -75,3 +74,4 @@ def download(gfw_env, scratch_workspace):
         asset_object.postprocess()
 
         asset_object.upload_to_s3()
+

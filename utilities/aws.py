@@ -17,10 +17,13 @@ def get_timestamps(bucket):
     out_dict = {}
 
     s3 = boto.connect_s3()
-    bucket = s3.lookup(bucket)
+    bucket = s3.lookup(bucket, "/")
 
     for key in bucket:
-        out_dict[key.name] = datetime.datetime.strptime(key.last_modified, '%Y-%m-%dT%H:%M:%S.000Z')
+
+        # ignore any files within folders-- only want top level
+        if r'/' not in key.name:
+            out_dict[key.name] = datetime.datetime.strptime(key.last_modified, '%Y-%m-%dT%H:%M:%S.000Z')
 
     return out_dict
 

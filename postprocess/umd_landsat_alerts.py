@@ -26,7 +26,9 @@ def post_process(layerdef):
 
     update_elastic.add_headers_to_s3(layerdef, current_s3_path, header_text)
 
-    country_list = ['PER']
+    # updating basically everything except RUS at this point
+    country_list = ['BDI', 'BRA', 'BRN', 'CAF', 'CMR', 'COD', 'COG', 'ECU', 'GAB', 'GNQ',
+                    'IDN', 'MYS', 'PER', 'PNG', 'RWA', 'SGP', 'TLS', 'UGA']
 
     run_elastic_update(country_list, layerdef.gfw_env)
 

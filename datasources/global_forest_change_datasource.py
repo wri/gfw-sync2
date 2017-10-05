@@ -4,10 +4,9 @@ import logging
 import urlparse
 import datetime
 import sys
-import os
 
 from datasource import DataSource
-from utilities import aws, download_glad_gee, settings
+from utilities import aws, download_glad_gee
 from utilities import google_sheet as gs
 
 
@@ -63,17 +62,16 @@ class GlobalForestChange(DataSource):
 
         # order is important here-- key names are the same + don't want to overwrite proper timestamps
         if self.name == 'umd_landsat_alerts':
-            bucket_list = ['umd-landsat-alerts', 'gfw-gee-glad-export']
+            bucket = 'gfw-gee-glad-export'
         else:
-            bucket_list = ['terra-i']
+            bucket = 'terra-i'
 
         bucket_timestamps = {}
 
-        for bucket in bucket_list:
-            output_dict = aws.get_timestamps(bucket)
+        output_dict = aws.get_timestamps(bucket)
 
-            # add this to our current dict
-            bucket_timestamps.update(output_dict)
+        # add this to our current dict
+        bucket_timestamps.update(output_dict)
 
         for raster_url in raster_url_list:
 
