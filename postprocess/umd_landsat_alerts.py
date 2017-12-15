@@ -30,9 +30,9 @@ def post_process(layerdef):
     country_list = ['BDI', 'BRA', 'BRN', 'CAF', 'CMR', 'COD', 'COG', 'ECU', 'GAB', 'GNQ',
                     'IDN', 'MYS', 'PER', 'PNG', 'RWA', 'SGP', 'TLS', 'UGA']
 
-    run_elastic_update(country_list, layerdef.gfw_env)
-
-    util.hit_vizz_webhook('glad-alerts')
+    # run_elastic_update(country_list, layerdef.gfw_env)
+    #
+    # util.hit_vizz_webhook('glad-alerts')
 
     # make_climate_maps(region_list)
 
@@ -48,7 +48,7 @@ def run_elastic_update(country_list, api_version):
     else:
         raise ValueError('unknown API version supplied: {}'.format(api_version))
 
-    year_list = ['2016', '2017']
+    year_list = ['2017']
 
     for year in year_list:
         for country in country_list:

@@ -142,6 +142,7 @@ class VectorLayer(Layer):
         logging.info('Starting vector_layer.append_to_esri_source for {0}'.format(self.name))
 
         fc_to_append = self.project_to_output_srs(input_fc, esri_output_fc)
+        logging.info('appending {} to {}'.format(input_fc, esri_output_fc))
 
         logging.debug('Creating a versioned FL from esri_service_output')
         arcpy.MakeFeatureLayer_management(esri_output_fc, "esri_service_output_fl")
@@ -181,7 +182,15 @@ class VectorLayer(Layer):
             # arcpy.Delete_management("fl_to_delete")
 
             sde_sql_conn = arcpy.ArcSDESQLExecute(sde_workspace)
-            esri_fc_name = os.path.basename(esri_output_fc) + '_evw'
+            esri_fc_name = os.path.basename(esri_output_fc)
+            print esri_fc_name
+
+            # why this, exactly?
+            # there's also a lbr_plantations_old feature class (for some reason)
+            # and lbr_plantation_evw points to that.
+            # I don't know why and I don't have time to fix it
+            if esri_fc_name != 'gfw_countries.gfw.lbr_plantations':
+                esri_fc_name += '_evw'
 
             # Find the min and max OID values
             to_delete_oid_field = [f.name for f in arcpy.ListFields(esri_output_fc) if f.type == 'OID'][0]
@@ -208,17 +217,29 @@ class VectorLayer(Layer):
 
         logging.debug('Starting to append to esri_service_output')
 
-        # Find the min and max OID values
-        to_append_oid_field = [f.name for f in arcpy.ListFields(fc_to_append) if f.type == 'OID'][0]
-        to_append_min_oid, to_append_max_oid = cartodb.ogrinfo_min_max(fc_to_append, to_append_oid_field)
+        # don't need to batch append if it's coming from an SDE data source
+        # these are used exclusively by country-vector layers
+        # and the data is generally small, compared to things like WDPA
+        if 'sde' in fc_to_append:
+            logging.debug("Appending all features from {}- no wc because it's an SDE input".format(fc_to_append))
 
-        for wc in util.generate_where_clause(to_append_min_oid, to_append_max_oid, to_append_oid_field, 1000):
-
-            logging.debug('Appending features with {0}'.format(wc))
-            arcpy.MakeFeatureLayer_management(fc_to_append, "fl_to_append", wc)
-
+            arcpy.MakeFeatureLayer_management(fc_to_append, "fl_to_append")
             arcpy.Append_management("fl_to_append", "esri_service_output_fl", "NO_TEST")
+
             arcpy.Delete_management("fl_to_append")
+
+        else:
+            # Find the min and max OID values
+            to_append_oid_field = [f.name for f in arcpy.ListFields(fc_to_append) if f.type == 'OID'][0]
+            to_append_min_oid, to_append_max_oid = cartodb.ogrinfo_min_max(fc_to_append, to_append_oid_field)
+
+            for wc in util.generate_where_clause(to_append_min_oid, to_append_max_oid, to_append_oid_field, 1000):
+
+                logging.debug('Appending features with {0}'.format(wc))
+                arcpy.MakeFeatureLayer_management(fc_to_append, "fl_to_append", wc)
+
+                arcpy.Append_management("fl_to_append", "esri_service_output_fl", "NO_TEST")
+                arcpy.Delete_management("fl_to_append")
 
         logging.debug('Append finished, starting to reconcile versions')
 

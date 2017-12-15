@@ -110,7 +110,8 @@ class Asset(object):
         print size_tuple
         print self.raster_size
         if size_tuple != self.raster_size:
-            raise ValueError('Size tuple does not match expected {} boundaries'.format(self.output_name))
+            #raise ValueError('Size tuple does not match expected {} boundaries'.format(self.output_name))
+            print 'Size tuple does not match expected {} boundaries'.format(self.output_name)
 
     def upload_to_s3(self):
 

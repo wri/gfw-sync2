@@ -130,14 +130,18 @@ def build_update_where_clause(in_fc, input_field):
     :param input_field: the field to look at
     :return: where clause in form '''field_name in ('fielval1', 'fieldval2', 'fieldval3')'''
     """
+
     if input_field:
         # Get unique values in specified where_clause field
         # Uses a set comprehension. Fun!
         # http://love-python.blogspot.com/2012/12/set-comprehensions-in-python.html
         unique_values = list({x[0] for x in arcpy.da.SearchCursor(in_fc, [input_field])})
-        unique_values_sql = "'" + "', '".join(unique_values) + "'"
 
-        where_clause = """{0} IN ({1})""".format(input_field, unique_values_sql)
+        if unique_values:
+            unique_values_sql = "'" + "', '".join(unique_values) + "'"
+            where_clause = """{0} IN ({1})""".format(input_field, unique_values_sql)
+        else:
+            where_clause = None
 
     else:
         where_clause = None
