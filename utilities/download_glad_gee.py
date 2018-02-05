@@ -13,7 +13,10 @@ def download(gfw_env, scratch_workspace):
                     'gee_suffix': 'AFR',
                     'ras_name_lkp': {
                                      'Africa_day_2017n': ['alertDate17'],
-                                     'Africa_conf_2017n': ['conf17']},
+                                     'Africa_conf_2017n': ['conf17'],
+                                     'Africa_day_2018n': ['alertDate18'],
+                                     'Africa_conf_2018n': ['conf18'],
+                    },
                     'bbox': [7.0000000, 14.0000000, 36.0000000, -14.0000000],
                     'size': [116001, 112001]
                     },
@@ -21,17 +24,11 @@ def download(gfw_env, scratch_workspace):
                     'name': 'south_america',
                     'gee_suffix': 'SA',
                     'ras_name_lkp': {
-                                     'sa_day2017': ['alertDate17'],
-                                     'sa_conf2017': ['conf17']},
-                    'bbox': [-82.0005000, 6.0005000, -33.9995000, -34.0005000],
-                    'size': [192005, 160005]
-                   },
-                   {
-                    'name': 'nsa',
-                    'gee_suffix': 'NSA',
-                    'ras_name_lkp': {
                                      'nsa_day2017': ['alertDate17'],
-                                     'nsa_conf2017': ['conf17']},
+                                     'nsa_conf2017': ['conf17'],
+                                     'nsa_day2018': ['alertDate18'],
+                                     'nsa_conf2018': ['conf18']
+                    },
                     'bbox': [-82.0005000, 12.639700000, -33.9995000, -34.0005000],
                     'size': [192005, 186562]
                    },
@@ -40,15 +37,18 @@ def download(gfw_env, scratch_workspace):
                     'gee_suffix': 'SEA',
                     'ras_name_lkp': {
                                      'SEA_day_2017n': ['alertDate17'],
-                                     'SEA_conf_2017n': ['conf17']},
+                                     'SEA_conf_2017n': ['conf17'],
+                                     'SEA_day_2018n': ['alertDate18'],
+                                     'SEA_conf_2018n': ['conf18']
+                    },
                     'bbox': [94.9995000,   8.0005000, 156.0005000, -12.0005000],
                     'size': [244005, 80006]
                     }
                    ]
 
     # lkp which regions/countries to process based on
-    download_dict = {'staging': ['nsa', 'africa', 'se_asia'],
-                     'prod': ['nsa', 'africa', 'se_asia']}
+    download_dict = {'staging': ['south_america', 'africa', 'se_asia'],
+                     'prod': ['south_america', 'africa', 'se_asia']}
 
     # grab the list of configs based on the gfw_env we're using
     download_list = [x for x in region_list if x['name'] in download_dict[gfw_env]]

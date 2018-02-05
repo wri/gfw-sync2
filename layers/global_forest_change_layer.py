@@ -108,7 +108,7 @@ class GlobalForestChangeLayer(RasterLayer):
 
             # Only south_america and africa being updated currently
             region_list = ['nsa', 'africa', 'se_asia']
-            year_list = ['2017']
+            year_list = ['2017', '2018']
 
             if self.gfw_env == 'staging':
                 region_list = ['nsa', 'africa', 'se_asia']
