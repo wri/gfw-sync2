@@ -376,7 +376,7 @@ class Layer(object):
 
         archive_dir = os.path.dirname(a)
 
-        if not os.path.exists(archive_dir):
+        if r's3://' not in archive_dir and not os.path.exists(archive_dir):
             util.mkdir_p(archive_dir)
 
         self._archive_output = a
@@ -395,7 +395,7 @@ class Layer(object):
         else:
             download_dir = os.path.dirname(d)
 
-            if not os.path.exists(download_dir):
+            if r's3://' not in download_dir and not os.path.exists(download_dir):
                 util.mkdir_p(download_dir)
 
         self._download_output = d

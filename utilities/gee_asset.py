@@ -8,8 +8,11 @@ from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 import util
 
-
-ee.Initialize()
+try:
+    ee.Initialize()
+except:
+    print 'GEE was unable to initialize \n' \
+          'if this is required for this layer, start a separate python shell '
 
 
 class Asset(object):
@@ -41,6 +44,7 @@ class Asset(object):
         # selected to match the 2015 extent
         # a little larger given that EE seems to clip a little off for some reason
         region = ee.Geometry.Rectangle(self.bbox)
+        import json
 
         export_config = {
             'image': self.image.select(self.band_list),
@@ -49,7 +53,7 @@ class Asset(object):
             'fileNamePrefix': self.id,
             'region': region.toGeoJSON()['coordinates'],
             'crs': 'EPSG:4326',
-            'crsTransform': [0.00025, 0, 0, 0, -0.00025, 0],
+            'crsTransform': json.dumps([0.00025, 0, 0, 0, -0.00025, 0]),
             'maxPixels': 1e12
         }
 
@@ -91,7 +95,9 @@ class Asset(object):
     def postprocess(self):
 
         self.vrt = os.path.join(self.output_dir, 'out.vrt')
-        build_vrt = ['gdalbuildvrt', self.vrt, '*.tif']
+        tif_list = os.listdir(self.output_dir)
+        build_vrt = ['gdalbuildvrt', self.vrt] + tif_list
+        print build_vrt
         subprocess.check_call(build_vrt, cwd=self.output_dir)
 
         to_tif = ['gdal_translate', '-co', 'COMPRESS=LZW', self.vrt, self.out_tif]
@@ -110,7 +116,7 @@ class Asset(object):
         print size_tuple
         print self.raster_size
         if size_tuple != self.raster_size:
-            #raise ValueError('Size tuple does not match expected {} boundaries'.format(self.output_name))
+            # raise ValueError('Size tuple does not match expected {} boundaries'.format(self.output_name))
             print 'Size tuple does not match expected {} boundaries'.format(self.output_name)
 
     def upload_to_s3(self):

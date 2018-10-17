@@ -10,11 +10,12 @@ from retrying import retry
 
 import util
 import settings
+import token_util
 
 
 def get_api_key_and_url(gfw_env):
 
-    key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
+    key = token_util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
     api_url = settings.get_settings(gfw_env)["cartodb"]["sql_api"]
     # sync_api = settings.get_settings(gfw_env)["cartodb"]["synchronization_api"]
 
@@ -33,6 +34,7 @@ def cartodb_sql(sql, gfw_env):
     key, api_url = get_api_key_and_url(gfw_env)
 
     result = urllib.urlopen("{0!s}?api_key={1!s}&q={2!s}".format(api_url, key, sql))
+    print "{0!s}?api_key={1!s}&q={2!s}".format(api_url, key, sql)
     json_result = json.loads(result.readlines()[0], object_pairs_hook=OrderedDict)
 
     print json_result
@@ -173,12 +175,12 @@ def cartodb_append(sqlite_db_path, out_cartodb_name, gfw_env, where_clause=None)
     :param where_clause: where_clause to apply to the dataset
     :return:
     """
-    key = util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
+    key = token_util.get_token(settings.get_settings(gfw_env)['cartodb']['token'])
     account_name = get_account_name(gfw_env)
 
     # Help: http://www.gdal.org/ogr2ogr.html
     # The -dim 2 option ensures that only two dimensional data is created; no Z or M values
-    cmd = ['ogr2ogr', '--config', 'CARTODB_API_KEY', key, '-append', '-skipfailures', '-t_srs', 'EPSG:4326',
+    cmd = [r'C:\Program Files\GDAL\ogr2ogr', '--config', 'CARTODB_API_KEY', key, '-append', '-skipfailures', '-t_srs', 'EPSG:4326',
            '-f', 'CartoDB',  '-nln', out_cartodb_name, '-dim', '2', 'CartoDB:{0}'.format(account_name)]
 
     cmd = add_fc_to_ogr2ogr_cmd(sqlite_db_path, cmd)
@@ -232,6 +234,9 @@ def cartodb_min_max(table_name, gfw_env):
     """
     sql = "SELECT min(cartodb_id) as a, max(cartodb_id) as b FROM {0}".format(table_name)
     result = cartodb_sql(sql, gfw_env)['rows'][0]
+    print '\n\n'
+    print result
+    print '\n\n'
 
     min_cartodb_id = result['a']
 
@@ -382,8 +387,8 @@ def ogrinfo_min_max(input_fc, oid_fieldname):
         oid_fieldname = 'FID'
         input_fc = os.path.dirname(input_fc)
 
-    sql_statement = 'SELECT min({0}), max({0}) FROM "{1}"'.format(oid_fieldname, input_table_name)
-    ogrinfo = util.run_subprocess(['ogrinfo', '-sql', sql_statement, input_fc])
+    sql_statement = 'SELECT min({0}), max({0}) FROM {1}'.format(oid_fieldname, input_table_name)
+    ogrinfo = util.run_subprocess([r'C:\Program Files\GDAL\ogrinfo', input_fc, '-sql', sql_statement])
 
     # Grab the last two lines with data (the final line is blank)
     result_lines = ogrinfo[-3:-1]

@@ -5,7 +5,7 @@ import urllib2
 import logging
 import arcpy
 
-from utilities import util
+import utilities.token_util
 from utilities import field_map
 from datasource import DataSource
 
@@ -32,7 +32,7 @@ class HotOsmExportDataSource(DataSource):
         :param job_type: reruns kicks off the job again, runs just monitors job progress
         :return: return the json output
         """
-        auth_key = util.get_token('thomas.maschler@hot_export')
+        auth_key = utilities.token_util.get_token('thomas.maschler@hot_export')
         headers = {"Content-Type": "application/json", "Authorization": "Token " + auth_key}
         url = "http://export.hotosm.org/api/{0}?job_uid={1}".format(job_type, job_uid)
 

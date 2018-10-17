@@ -5,6 +5,7 @@ from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 
 import util
+import token_util
 
 
 def send_summary():
@@ -95,7 +96,7 @@ def send_email(body_text):
     server = smtplib.SMTP('smtp.gmail.com', 587)
     server.ehlo()
     server.starttls()
-    server.login(fromaddr, util.get_token(username))
+    server.login(fromaddr, token_util.get_token(username))
 
     for toaddr in ["chofmann@wri.org", "mweisse@wri.org"]:
         msg['To'] = toaddr

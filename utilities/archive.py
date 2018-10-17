@@ -10,6 +10,7 @@ import time
 import datetime
 import util
 import logging
+import subprocess
 
 
 def unzip(source_filename, dest_dir):
@@ -167,7 +168,11 @@ def zip_file(input_fc, temp_zip_dir, download_output=None, archive_output=None, 
         timestamp = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d%H%M%S')
         dst = os.path.splitext(archive_output)[0] + '_{0}.zip'.format(timestamp)
 
-        shutil.copy(temp_zip, dst)
+        if r's3://' in dst:
+            subprocess.check_call(['aws', 's3', 'cp', temp_zip, dst])
+
+        else:
+            shutil.copy(temp_zip, dst)
 
     # Define output path for download zip file and copy temp zip there
     if download_output:
@@ -178,4 +183,7 @@ def zip_file(input_fc, temp_zip_dir, download_output=None, archive_output=None, 
         else:
             dst = download_output
 
-        shutil.copy(temp_zip, dst)
+        if r's3://' in dst:
+            subprocess.check_call(['aws', 's3', 'cp', temp_zip, dst])
+        else:
+            shutil.copy(temp_zip, dst)

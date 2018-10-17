@@ -8,8 +8,7 @@ import shutil
 import calendar
 import logging
 
-from bs4 import BeautifulSoup
-from urllib2 import urlopen
+import requests
 
 from datasource import DataSource
 from utilities import util
@@ -58,24 +57,22 @@ class ImazonDataSource(DataSource):
 
     def list_sad_urls(self):
         """
-        Scrape the page at the URL listed in the source field of the config table and return all links > 1/1/2014
+        Scrape the page at the URL listed in the source field of the config table
         :return: a list of recent urls
         """
-        mindate = datetime.datetime(2014, 1, 1)
+        r = requests.get(self.layerdef['source'])
+        data = r.json()['data']
 
-        html = urlopen(self.layerdef['source']).read()
-        bs = BeautifulSoup(html, 'lxml')
+        # grab only the degraded and loss URLs from the JSON
+        url_list = [(x['DownloadBase']['degradacao_path'], x['DownloadBase']['path']) for x in data]
 
-        # get list elements
-        tds = [td.find('a') for td in bs('td')]
+        # and then collapse the urls into one list
+        url_list = list(sum(url_list, ()))
 
-        # get urls from list elements li if they exist
-        urls = [td['href'] for td in tds if td]
+        # then add the base url in front of this
+        url_list = ['https://imazongeo.org.br' + url for url in url_list]
 
-        # only keep urls containing 'desmatamento' or 'degradacao'
-        deforest_degrade_urls = [url for url in urls if 'desmatamento' in url or 'degradacao' in url]
-
-        return [x for x in deforest_degrade_urls if self.recent_file(mindate, x)]
+        return url_list
 
     def check_imazon_already_downloaded(self, url_list):
         """
@@ -105,8 +102,6 @@ class ImazonDataSource(DataSource):
         unzip_list = []
         
         for url in to_download_list:
-            if 'http://' not in url:
-                url = 'http://imazongeo.org.br{0!s}'.format(url)
 
             z = self.download_file(url, self.download_workspace)
             
@@ -145,7 +140,10 @@ class ImazonDataSource(DataSource):
                 
                 self.unzip(download_file, outdir)
 
-                outfilename = os.path.splitext(os.path.basename(download_file))[0] + '.shp'
+                # grab the basename, then strip everything before imazon_ (sometimes junk in front)
+                # also replace _ with -
+                base_name = os.path.splitext(os.path.basename(download_file))[0].replace('-', '_')
+                outfilename = base_name[base_name.index('imazon_'):] + '.shp'
                 outfilepath = os.path.join(outdir, outfilename)
                 
                 source_list.append(outfilepath)
@@ -167,9 +165,15 @@ class ImazonDataSource(DataSource):
     @staticmethod
     def get_date_from_filename(filename):
         parts = filename.split('_')
-        date_obj = datetime.datetime.strptime(parts[3], '%Y-%m')
-        year = date_obj.year
-        month = date_obj.month
+
+        try:
+            year = int(parts[3])
+            month = int(parts[4])
+        except ValueError:
+            year, month = parts[3].split('-')
+            year = int(year)
+            month = int(month)
+
         day = calendar.monthrange(year, month)[1]
         imazon_date = datetime.date(year, month, day)
         imazon_date_text = imazon_date.strftime("%m/%d/%Y")
@@ -189,6 +193,16 @@ class ImazonDataSource(DataSource):
             shp_name = os.path.basename(shp).replace('-', '_')
             
             single_part_path = os.path.join(os.path.dirname(shp), shp_name.replace('.shp', '') + '_singlepart.shp')
+
+            # unclear why this extra garbage is added to the filename, but it is
+            if 'desmatamento' in shp and int(shp[shp.index('2018')+5:shp.index('2018')+7]) <= 7:
+                shp = os.path.splitext(shp)[0] + '_01102018.shp'
+
+            # sometimes the zip files have dashes after the month, sometimes underscores
+            # who can ever know why
+            if not os.path.exists(shp):
+                idx_2018 = shp.index('2018') + 4
+                shp = shp[:idx_2018] + '-' + shp[idx_2018 + 1:]
 
             logging.info('Starting multipart to singlepart for ' + shp_name)
             arcpy.MultipartToSinglepart_management(shp, single_part_path)
@@ -229,9 +243,6 @@ class ImazonDataSource(DataSource):
                 area_hectares = area_m2 / 10000.0
 
                 row[0] = area_hectares
-
-                print area_hectares
-
                 cursor.updateRow(row)
 
     def get_layer(self):

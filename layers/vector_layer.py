@@ -32,12 +32,17 @@ class VectorLayer(Layer):
         """
         logging.info('Starting vector_layer.archive source for {0}'.format(self.name))
         archive_dir = os.path.dirname(self.archive_output)
-        archive_src_dir = os.path.join(archive_dir, 'src')
 
-        if not os.path.exists(archive_src_dir):
-            os.mkdir(archive_src_dir)
+        if 's3://' in archive_dir:
+            src_archive_output = archive_dir + '/src/' +  os.path.basename(self.archive_output)
+        else:
+            archive_src_dir = os.path.join(archive_dir, 'src')
 
-        src_archive_output = os.path.join(archive_src_dir, os.path.basename(self.archive_output))
+            if not os.path.exists(archive_src_dir):
+                os.mkdir(archive_src_dir)
+
+            src_archive_output = os.path.join(archive_src_dir, os.path.basename(self.archive_output))
+
         self._archive(self.source, None, src_archive_output)
 
     def delete_and_append(self):
@@ -418,7 +423,6 @@ class VectorLayer(Layer):
         Contains all relevant update functions for a vector layer
         :return:
         """
-
         self.archive_source()
 
         self.filter_source_dataset(self.delete_features_input_where_clause)

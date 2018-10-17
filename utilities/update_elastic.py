@@ -7,16 +7,17 @@ import uuid
 import time
 import boto3
 
+import utilities.token_util
 from utilities import util
 
 
 def get_headers(api_version):
     if api_version == 'staging':
         api_url = r'http://staging-api.globalforestwatch.org'
-        token = util.get_token('gfw-rw-api-staging')
+        token = utilities.token_util.get_token('gfw-rw-api-staging')
     elif api_version == 'prod':
         api_url = r'http://production-api.globalforestwatch.org'
-        token = util.get_token('gfw-rw-api-prod')
+        token = utilities.token_util.get_token('gfw-rw-api-prod')
     else:
         raise ValueError('unknown api_version: {}'.format(api_version))
 
@@ -110,10 +111,10 @@ def delete_and_append(dataset_id, api_version, src_url, delete_where_clause=None
 
     if api_version == 'staging':
         api_url = r'http://staging-api.globalforestwatch.org'
-        token = util.get_token('gfw-rw-api-staging')
+        token = utilities.token_util.get_token('gfw-rw-api-staging')
     elif api_version == 'prod':
         api_url = r'http://production-api.globalforestwatch.org'
-        token = util.get_token('gfw-rw-api-prod')
+        token = utilities.token_util.get_token('gfw-rw-api-prod')
     else:
         raise ValueError('unknown api_version: {}'.format(api_version))
 
@@ -212,7 +213,7 @@ def get_current_hadoop_output(alert_type, url_type=None):
 
 def check_s3(date_val, alert_type):
 
-    date_str = date_val.strftime('%Y-%m-%d')
+    date_str = date_val.strftime('%Y%m%d')
 
     s3 = boto3.resource('s3')
     bucket = s3.Bucket('gfw2-data')

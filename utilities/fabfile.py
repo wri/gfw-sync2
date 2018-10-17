@@ -1,11 +1,12 @@
 import fabric.api
-import util
 import datetime
+
+import token_util
 
 
 def kickoff(proc_name, regions, years, gfw_env):
 
-    token_info = util.get_token('s3_read_write.config')
+    token_info = token_util.get_token('s3_read_write.config')
     aws_access_key = token_info[0][1]
     aws_secret_key = token_info[1][1]
 

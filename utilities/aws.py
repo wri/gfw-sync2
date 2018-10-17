@@ -4,8 +4,9 @@ import datetime
 import logging
 import time
 import util
+import utilities.token_util
 
-token_info = util.get_token('boto.config')
+token_info = utilities.token_util.get_token('boto.config')
 access_key = token_info[0][1]
 secret_key = token_info[1][1]
 

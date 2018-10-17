@@ -50,7 +50,7 @@ class GlobalForestChangeLayer(RasterLayer):
 
         region_str, year_str = self.lookup_region_year_from_source()
 
-        fab_path = r"C:\PYTHON27\ArcGISx6410.5\Scripts\fab.exe"
+        fab_path = r"C:\PYTHON27\ArcGISx6410.6\Scripts\fab.exe"
         cmd = [fab_path, 'kickoff:{0},{1},{2},{3}'.format(self.name, region_str, year_str, self.gfw_env)]
         cmd += ['-i', pem_file, '-H', host_name]
         logging.debug('Running fabric: {0}'.format(cmd))
@@ -76,39 +76,9 @@ class GlobalForestChangeLayer(RasterLayer):
             year_list = ['all']
 
         else:
-            # region_list = []
-            # year_list = []
-            #
-            # lkp_dict = {'peru': 'south_america', 'brazil': 'south_america',
-            #             'FE': 'russia', 'borneo': 'asia',
-            #             'SEA': 'se_asia',
-            #             'Africa': 'africa'}
-            #
-            # for output_raster in self.source:
-            #     ras_name = os.path.basename(output_raster)
-            #     country = ras_name.split('_')[0]
-            #
-            #     region = lkp_dict[country]
-            #     region_list.append(region)
-            #
-            #     digits_only = [s for s in ras_name if s.isdigit()]
-            #     year = ''.join(digits_only)
-            #
-            #     year_list.append(year)
-            #
-            # # Remove duplicates
-            # region_list = list(set(region_list))
-            # year_list = list(set(year_list))
-            #
-            # # This shouldn't happen. No way that 3 years are updated at the same time. Max is 2.
-            # if len(year_list) > 2:
-            #     logging.debug('Exiting. Found year list > 2:')
-            #     logging.debug(year_list)
-            #     sys.exit(1)
 
-            # Only south_america and africa being updated currently
             region_list = ['nsa', 'africa', 'se_asia']
-            year_list = ['2017', '2018']
+            year_list = ['2018']
 
             if self.gfw_env == 'staging':
                 region_list = ['nsa', 'africa', 'se_asia']
@@ -117,8 +87,11 @@ class GlobalForestChangeLayer(RasterLayer):
 
     def update(self):
 
-        self.create_tiles()
+        if self.gfw_env == 'prod':
+            self.create_tiles()
 
-        self.archive_source_rasters()
+            self.archive_source_rasters()
 
-        self.post_process()
+            self.post_process()
+        else:
+            print 'GFW ENV is {}, not running create tiles at this time'.format(self.gfw_env)

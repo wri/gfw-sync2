@@ -1,21 +1,23 @@
-import arcpy
-import json
 import ctypes
-import itertools
-import os
-import string
-import shutil
 import errno
-import win32file
-import sys
-import subprocess
-import cartodb
+import itertools
+import json
 import logging
-import uuid
+import os
+import shutil
+import string
+import subprocess
+import sys
 import urllib2
-import requests
+import uuid
+import win32file
 from collections import namedtuple
-from ConfigParser import ConfigParser
+
+import arcpy
+import requests
+
+import cartodb
+from token_util import get_token
 
 
 def byteify(unicode_string):
@@ -175,15 +177,15 @@ def run_subprocess(cmd, log=True):
     # add ignore for error 6 because some esri jsons still use espg which causes ogr to fail
     # https://gis.stackexchange.com/questions/87428/how-do-i-teach-ogr2ogr-about-a-projection
     result = str(subprocess_list).lower()
-    if subprocess_list and ('error' in result or 'usage: ogr2ogr' in result):
-        if 'error 6' in result:
-            pass
-        else:
-            logging.error("Error in subprocess: " + '\n'.join(subprocess_list))
-            sys.exit(1)
-
-    elif subprocess_list:
-        logging.debug('\n'.join(subprocess_list))
+    # if subprocess_list and ('error' in result or 'usage: ogr2ogr' in result):
+    #     if 'error 6' in result or 'load requested DLL' in result:
+    #         pass
+    #     else:
+    #         logging.error("Error in subprocess: " + '\n'.join(subprocess_list))
+    #         sys.exit(1)
+    #
+    # elif subprocess_list:
+    logging.debug('\n'.join(subprocess_list))
 
     return subprocess_list
 
@@ -199,32 +201,6 @@ def hit_vizz_webhook(dataset_name):
     r = requests.post(url, headers=headers)
     logging.debug(r.text)
     print r.text
-
-
-def get_token(token_file):
-    """
-    Grab token from the tokens\ folder in the root directory
-    :param token_file: name of the file
-    :return: the token value
-    """
-    abspath = os.path.abspath(__file__)
-    dir_name = os.path.dirname(os.path.dirname(abspath))
-    token_path = os.path.join(dir_name, r"tokens\{0!s}".format(token_file))
-
-    if not os.path.exists(token_path):
-        raise IOError('Cannot find any token for {0!s}\n Make sure there is a file called {1!s} '
-                      'in the tokens directory'.format(token_file, token_file))
-    else:
-        if os.path.splitext(token_path)[1] == '.json':
-            return json.load(open(token_path))
-        elif os.path.splitext(token_path)[1] == '.config':
-            parser = ConfigParser()
-            parser.read(token_path)
-            return parser.items('Credentials')
-        else:
-            with open(token_path, "r") as f:
-                for row in f:
-                    return row
 
 
 def mkdir_p(path):
