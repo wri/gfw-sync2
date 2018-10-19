@@ -37,7 +37,10 @@ def find_src_mxd_and_cache_dir(map_service_path):
     # Start at the paren index and grab the rest of the path
     map_service = partial_path[paren_index+2:]
 
-    base_url = r'http://localhost/arcgis/admin/services/{0}'
+    # convert windows path to internet path
+    map_service = map_service.replace('''\\''', '/')
+
+    base_url = r'http://localhost:6080/arcgis/admin/services/{0}'
     url = urlparse.urljoin(base_url, map_service)
 
     payload = {"token": token, "f": "json"}
@@ -121,7 +124,7 @@ def request_token(cred):
          "client": "requestip",
          "f": "json"}
 
-    url = "http://localhost/arcgis/admin/generateToken"
+    url = "http://localhost:6080/arcgis/admin/generateToken"
     r = requests.post(url, data=d)
 
     response = json.loads(r.content)
@@ -135,7 +138,7 @@ def request_token(cred):
 def manage_service(host_type, service_path, operation):
 
     if host_type == 'dev':
-        host = 'http://localhost'
+        host = 'http://localhost:6080'
         cred = settings.get_ini_file('arcgis_server_dm', 'tokens')
 
     elif host_type == 'prod':
@@ -151,7 +154,7 @@ def manage_service(host_type, service_path, operation):
     path_split = service_path.split('\\')
     name = '/'.join(path_split[-2:]).replace('.MapServer', '')
 
-    python_exe = r'C:\PYTHON27\ArcGISx6410.5\python'
+    python_exe = r'C:\PYTHON27\ArcGISx6410.6\python'
     cmd = [python_exe, service_utility, '-u', cred['username'], '-p', cred['password'],
            '-s', host, '-n', name, '-o', operation]
     subprocess.check_call(cmd)

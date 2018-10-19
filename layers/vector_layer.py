@@ -181,11 +181,6 @@ class VectorLayer(Layer):
             logging.debug('No where clause for esri_service_output found; deleting all features before '
                           'appending from source')
 
-            # commented out at this already happens below with wc
-            # arcpy.MakeFeatureLayer_management("esri_service_output_fl", "fl_to_delete")
-            # arcpy.DeleteRows_management("fl_to_delete")
-            # arcpy.Delete_management("fl_to_delete")
-
             sde_sql_conn = arcpy.ArcSDESQLExecute(sde_workspace)
             esri_fc_name = os.path.basename(esri_output_fc)
             print esri_fc_name
@@ -194,6 +189,8 @@ class VectorLayer(Layer):
             # there's also a lbr_plantations_old feature class (for some reason)
             # and lbr_plantation_evw points to that.
             # I don't know why and I don't have time to fix it
+
+            # WDPA test - leave off
             if esri_fc_name != 'gfw_countries.gfw.lbr_plantations':
                 esri_fc_name += '_evw'
 

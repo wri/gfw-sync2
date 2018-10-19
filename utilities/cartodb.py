@@ -435,6 +435,7 @@ def cartodb_sync(shp, production_table, where_clause, gfw_env, scratch_workspace
 
     delete_staging_table_if_exists(staging_table, gfw_env)
 
+
 def cartodb_force_sync(gfw_env, table_name):
     """force sync on synced table: https://carto.com/docs/carto-engine/import-api/sync-tables
     :param gfw_env: gfw_env
