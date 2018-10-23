@@ -65,7 +65,7 @@ def find_src_mxd(json_response):
     # Now that we have the path to the MSD, we can find the manifest.json file
     # This can be used to get the path to the source MXD
     config_dir = os.path.dirname(os.path.dirname(server_path_to_msd))
-    config_json = os.path.join(config_dir, 'manifest.json')
+    config_json = os.path.join(configa_dir, 'manifest.json')
     #
     # # This config_json file is on the D:\ of the prod server, but that's actually the P:\ drive of the DM server
     # # Use this to change the path
