@@ -73,7 +73,7 @@ class DataSource(object):
 
     @data_source.setter
     def data_source(self, d):
-        if d is not None:
+        if d is not None and len(d) > 0:
 
             if validators.url(d):
                 pass

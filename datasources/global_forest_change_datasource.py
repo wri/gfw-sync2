@@ -6,7 +6,7 @@ import datetime
 import sys
 
 from datasource import DataSource
-from utilities import aws, download_glad_gee
+from utilities import aws
 from utilities import google_sheet as gs
 
 
@@ -27,29 +27,29 @@ class GlobalForestChange(DataSource):
         :return: an updated layerdef with the local source for the layer.update() process
         """
 
-        raster_url_list = self.data_source.split(',')
-
-        # always update if it's GLAD, not using s3 bucket system currently
+        # all umd_landsat_alerts updates now taken care of on terranalysis server
         if self.name == 'umd_landsat_alerts':
-            download_glad_gee.download(self.gfw_env, self.download_workspace)
-
-        updated_raster_url_list = self.find_updated_data(raster_url_list)
-
-        if updated_raster_url_list:
-            output_list = []
-
-            for ras in updated_raster_url_list:
-                out_file = self.download_file(ras, self.download_workspace)
-                output_list.append(out_file)
-
-            self.layerdef['source'] = output_list
+            pass
 
         else:
-            # Important for the script that reads the log file and sends an email
-            # Including this 'Checked' message will show that we checked the layer but it didn't need updating
-            logging.debug('Checked S3 bucket, no new data as compared to last timestamp in gfw-sync2 config')
-            logging.critical('Checked | {0}'.format(self.name))
-            sys.exit(0)
+            raster_url_list = self.data_source.split(',')
+            updated_raster_url_list = self.find_updated_data(raster_url_list)
+
+            if updated_raster_url_list:
+                output_list = []
+
+                for ras in updated_raster_url_list:
+                    out_file = self.download_file(ras, self.download_workspace)
+                    output_list.append(out_file)
+
+                self.layerdef['source'] = output_list
+
+            else:
+                # Important for the script that reads the log file and sends an email
+                # Including this 'Checked' message will show that we checked the layer but it didn't need updating
+                logging.debug('Checked S3 bucket, no new data as compared to last timestamp in gfw-sync2 config')
+                logging.critical('Checked | {0}'.format(self.name))
+                sys.exit(0)
 
         return self.layerdef
 

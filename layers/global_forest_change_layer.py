@@ -27,15 +27,18 @@ class GlobalForestChangeLayer(RasterLayer):
         Create timestamped backup of source datasets
         :return:
         """
-        for ras in self.source:
-            self.archive_source(ras)
+
+        # not archiving GLAD rasters- never local to this machine
+        if self.name == 'terrai':
+            for ras in self.source:
+                self.archive_source(ras)
 
     def create_tiles(self):
 
         server_instance = aws.get_aws_instance(self.server_name)
-        aws.set_server_instance_type(server_instance, 'm4.10xlarge')
+        aws.set_server_instance_type(server_instance, 'm4.16xlarge')
 
-        # Required so that the machine now knows it's an m4.10xlarge
+        # Required so that the machine now knows it's an m4.16xlarge
         server_instance.update()
         server_ip = aws.set_processing_server_state(server_instance, 'running')
 
@@ -77,11 +80,8 @@ class GlobalForestChangeLayer(RasterLayer):
 
         else:
 
-            region_list = ['nsa', 'africa', 'se_asia']
+            region_list = ['south_america', 'afr_asia']
             year_list = ['2018']
-
-            if self.gfw_env == 'staging':
-                region_list = ['nsa', 'africa', 'se_asia']
 
         return ';'.join(region_list), ';'.join(year_list)
 

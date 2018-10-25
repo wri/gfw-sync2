@@ -278,6 +278,10 @@ class Layer(object):
             # If we're dealing with a list (currently only GLAD and Terra-I, we can skip this validation)
             pass
 
+        elif len(s) == 0:
+            # a blank cell in the google config sheet is not None, for some reason
+            pass
+
         elif r"projects/wri-datalab" in s:
             pass
 
@@ -330,7 +334,7 @@ class Layer(object):
             s = self.source
             esri_output = self.esri_service_output.split(',')
         
-        elif r"projects/wri-datalab" in self.source:
+        elif r"projects/wri-datalab" in self.source or len(self.source) == 0:
             s = []
 
         else:
@@ -370,14 +374,11 @@ class Layer(object):
 
     @archive_output.setter
     def archive_output(self, a):
-        if not a:
-            logging.error("archive_output cannot be empty. Exiting now.")
-            sys.exit(1)
+        if a:
+            archive_dir = os.path.dirname(a)
 
-        archive_dir = os.path.dirname(a)
-
-        if r's3://' not in archive_dir and not os.path.exists(archive_dir):
-            util.mkdir_p(archive_dir)
+            if r's3://' not in archive_dir and not os.path.exists(archive_dir):
+                util.mkdir_p(archive_dir)
 
         self._archive_output = a
 

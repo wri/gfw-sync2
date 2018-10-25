@@ -8,7 +8,6 @@ import time
 import boto3
 
 import utilities.token_util
-from utilities import util
 
 
 def get_headers(api_version):

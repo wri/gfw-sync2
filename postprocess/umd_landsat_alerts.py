@@ -3,61 +3,18 @@ import logging
 import subprocess
 from isoweek import Week
 
-from utilities import util
-from utilities import update_elastic
-
 
 def post_process(layerdef):
 
-    if layerdef.gfw_env == 'staging':
-        raise ValueError('Not running postprocess for staging currently')
-
-    # start country page analysis stuff (not map related)
-    logging.debug("starting country page analytics")
-
-    cmd = [r'C:\PYTHON27\ArcGISx6410.6\python', 'update_country_stats.py', '-d', 'umd_landsat_alerts']
-    cwd = r'D:\scripts\gfw-country-pages-analysis-2'
-
-    cmd += ['-e', layerdef.gfw_env]
-    subprocess.check_call(cmd, cwd=cwd)
-
-    current_s3_path = update_elastic.get_current_hadoop_output('glad', 's3')
-    header_text = 'long,lat,confidence,year,julian_day,country_iso,state_id,dist_id,confidence_text'
-
-    update_elastic.add_headers_to_s3(layerdef, current_s3_path, header_text)
-
-    # updating basically everything except RUS at this point
-    country_list = ['BDI', 'BRA', 'BRN', 'CAF', 'CMR', 'COD', 'COG', 'ECU', 'GAB', 'GNQ',
-                    'IDN', 'MYS', 'PER', 'PNG', 'RWA', 'SGP', 'TLS', 'UGA']
-
-    # run_elastic_update(country_list, layerdef.gfw_env)
-    #
-    # util.hit_vizz_webhook('glad-alerts')
+    # for the most part this postprocessing is handled on the terranalysis machine now
+    # in the future, we may choose to resurrect the make_climate_maps workflow
+    # If we do, would recommend either:
+    # - finding a way to do this with open source tools on the linux server
+    # - grabbing one of the CSV point extracts from here: s3://gfw2-data/alerts-tsv/glad-download
+    #   filtering it by week, and using that as the input
 
     # make_climate_maps(region_list)
-
-
-def run_elastic_update(country_list, api_version):
-
-    logging.debug('starting to update elastic')
-
-    if api_version == 'prod':
-        dataset_id = r'e663eb09-04de-4f39-b871-35c6c2ed10b5'
-    elif api_version == 'staging':
-        dataset_id = r'a228c22c-e99a-4df3-b627-a1825e7176f2'
-    else:
-        raise ValueError('unknown API version supplied: {}'.format(api_version))
-
-    year_list = ['2017']
-
-    for year in year_list:
-        for country in country_list:
-
-            delete_wc = "WHERE year = {0} AND country_iso = '{1}'".format(year, country)
-            update_elastic.delete_from_elastic(dataset_id, api_version, delete_wc)
-
-    hadoop_output_url = update_elastic.get_current_hadoop_output('glad')
-    update_elastic.append_to_elastic(dataset_id, api_version, hadoop_output_url)
+    pass
 
 
 def make_climate_maps(region_list):
