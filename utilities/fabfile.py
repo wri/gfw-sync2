@@ -17,6 +17,9 @@ def kickoff(proc_name, regions, years, gfw_env):
         final_cmd = 'python /home/ubuntu/staging/glad-vt-analysis/update_glad_data.py ' \
                     '-r {} -y {}'.format(region_str, year_str)
 
+        if gfw_env == 'staging':
+            final_cmd += ' --staging'
+
     else:
         # Generate the mapnik tiles and push to s3
         tile_cmd = 'python /home/ubuntu/mapnik-forest-change-tiles/generate-tiles.py'

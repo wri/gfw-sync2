@@ -3,7 +3,6 @@ import boto.ec2
 import datetime
 import logging
 import time
-import util
 import utilities.token_util
 
 token_info = utilities.token_util.get_token('boto.config')
@@ -81,10 +80,11 @@ def set_processing_server_state(aws_instance_object, desired_state):
             # Need to keep checking get updated instance status
             aws_instance_object.update()
 
-    logging.debug('Server {0} is now '
-                  '{1} at {2}'.format(aws_instance_object.tags['Name'], aws_instance_object.state,
-                                      aws_instance_object.private_ip_address))
-    logging.debug('Sleeping for a minute to be sure server is ready')
-    time.sleep(60)
+        logging.debug('Server {0} is now '
+                      '{1} at {2}'.format(aws_instance_object.tags['Name'], aws_instance_object.state,
+                                          aws_instance_object.private_ip_address))
+
+        logging.debug('Sleeping for a minute to be sure server is ready')
+        time.sleep(60)
 
     return aws_instance_object.private_ip_address

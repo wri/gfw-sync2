@@ -29,6 +29,11 @@ class GlobalForestChange(DataSource):
 
         # all umd_landsat_alerts updates now taken care of on terranalysis server
         if self.name == 'umd_landsat_alerts':
+
+            today = datetime.datetime.today()
+            if today.year != 2018:
+                raise ValueError('Update code not ready for 2019- need to edit data '
+                                 'in mapnik-forest-change-tiles, among other things')
             pass
 
         else:
