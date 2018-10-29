@@ -65,12 +65,16 @@ class GlobalForestChangeLayer(RasterLayer):
         except subprocess.CalledProcessError:
             has_error = True
 
-        server_instance = aws.get_aws_instance(self.server_name)
-        aws.set_processing_server_state(server_instance, 'stopped')
-
         if has_error:
+
+            server_instance = aws.get_aws_instance(self.server_name)
+            aws.set_processing_server_state(server_instance, 'stopped')
             logging.debug('Unsuccessful tile creation. Exiting.')
-            sys.exit()
+
+            logging.debug('Killing related EMR clusters if there are any')
+            aws.kill_emr_cluster(self.name)
+
+            sys.exit(1)
 
     def lookup_region_year_from_source(self):
 

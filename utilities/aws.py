@@ -1,8 +1,11 @@
-import boto
-import boto.ec2
 import datetime
 import logging
 import time
+
+import boto
+import boto.ec2
+import boto3
+
 import utilities.token_util
 
 token_info = utilities.token_util.get_token('boto.config')
@@ -62,6 +65,10 @@ def set_server_instance_type(aws_instance_object, desired_type):
 
 def set_processing_server_state(aws_instance_object, desired_state):
 
+    """
+
+    :type aws_instance_object: object
+    """
     if aws_instance_object.state != desired_state:
         logging.debug('Current server state is {0}. '
                       'Setting it to {1} now.'.format(aws_instance_object.state, desired_state))
@@ -88,3 +95,19 @@ def set_processing_server_state(aws_instance_object, desired_state):
         time.sleep(60)
 
     return aws_instance_object.private_ip_address
+
+
+def kill_emr_cluster(layer_name):
+    emr = boto3.client('emr')
+
+    cluster_name_dict = {'umd_landsat_alerts': 'glad', 'terrai': 'terrai'}
+    cluster_name = cluster_name_dict[layer_name]
+
+    cluster_resp = emr.list_clusters(
+        ClusterStates=['STARTING', 'BOOTSTRAPPING', 'RUNNING', 'WAITING', 'TERMINATING']
+    )
+    cluster_list = cluster_resp['Clusters']
+    cluster_list = [x for x in cluster_list if cluster_name.lower() in x['Name'].lower()]
+
+    for cluster in cluster_list:
+        emr.terminate_job_flows(JobFlowIds=[cluster['Id']])
