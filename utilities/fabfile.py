@@ -23,7 +23,7 @@ def kickoff(proc_name, regions, years, gfw_env):
     else:
         # Generate the mapnik tiles and push to s3
         tile_cmd = 'python /home/ubuntu/mapnik-forest-change-tiles/generate-tiles.py'
-        tile_cmd += ' -l terrai -r {} -y {} --world'.format(region_str, year_str)
+        tile_cmd += ' -l terrai -r {} -y {} --world --threads 60 '.format(region_str, year_str)
 
         # Write the rasters to point and push to s3
         point_cmd = 'python /home/ubuntu/raster-vector-to-tsv/processing/utilities/weekly_updates.py'

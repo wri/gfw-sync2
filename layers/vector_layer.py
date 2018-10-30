@@ -267,6 +267,11 @@ class VectorLayer(Layer):
                           'Exiting'.format(esri_output_pre_append_count, input_feature_count, post_append_count))
             sys.exit(1)
 
+        # now that we've finished syncing everything locally, need to push it to the PROD replica
+        local_sde = r'D:\scripts\connections\gfw (gfw@localhost).sde'
+        prod_gdb = r'P:\data\gfw_database\gfw.gdb'
+        arcpy.SynchronizeChanges_management(local_sde, "gfw.GFW", prod_gdb, "FROM_GEODATABASE1_TO_2")
+
         return
 
     def project_to_output_srs(self, input_fc, esri_output_fc):
