@@ -171,21 +171,25 @@ def run_subprocess(cmd, log=True):
 
     # Read from STDOUT and raise an error if we parse one from the output
     for line in iter(p.stdout.readline, b''):
-        subprocess_list.append(line.strip())
+
+        if 'load requested' in line or 'valid Win32' in line or line == '\r\n':
+            pass
+        else:
+            subprocess_list.append(line.strip())
 
     # If ogr2ogr has complained, and ERROR in one of the messages, exit
-    # add ignore for error 6 because some esri jsons still use espg which causes ogr to fail
+    # add ignore for error 6 because some esri jsons still use epsg which causes ogr to fail
     # https://gis.stackexchange.com/questions/87428/how-do-i-teach-ogr2ogr-about-a-projection
     result = str(subprocess_list).lower()
-    # if subprocess_list and ('error' in result or 'usage: ogr2ogr' in result):
-    #     if 'error 6' in result or 'load requested DLL' in result:
-    #         pass
-    #     else:
-    #         logging.error("Error in subprocess: " + '\n'.join(subprocess_list))
-    #         sys.exit(1)
-    #
-    # elif subprocess_list:
-    logging.debug('\n'.join(subprocess_list))
+    if subprocess_list and ('error' in result or 'usage: ogr2ogr' in result):
+        if 'error 6' in result or 'load requested dll' in result:
+            pass
+        else:
+            logging.error("Error in subprocess: " + '\n'.join(subprocess_list))
+            sys.exit(1)
+
+    elif subprocess_list:
+        logging.debug('\n'.join(subprocess_list))
 
     return subprocess_list
 

@@ -57,7 +57,7 @@ def sqlite_row_count(sqlite_db):
                                          '-sql', 'SELECT count(*) FROM {0}'.format(table_name)])
 
     # Response looks like this ['', 'Layer  name: SELECT', 'OGRFeature(SELECT):0', 'count(*) (Integer) = 76', '']
-    row_count = int(ogr_row_count_text[-2].split(' = ')[1])
+    row_count = int(ogr_row_count_text[-1].split(' = ')[1])
 
     return row_count
 
@@ -390,8 +390,8 @@ def ogrinfo_min_max(input_fc, oid_fieldname):
     sql_statement = 'SELECT min({0}), max({0}) FROM {1}'.format(oid_fieldname, input_table_name)
     ogrinfo = util.run_subprocess([r'C:\Program Files\GDAL\ogrinfo', input_fc, '-sql', sql_statement])
 
-    # Grab the last two lines with data (the final line is blank)
-    result_lines = ogrinfo[-3:-1]
+    # Grab the last two lines with data
+    result_lines = ogrinfo[-2:]
 
     # Result lines look like `MIN_FID (Integer) = 0`
     # Split them at the ' = ' and grab the result then convert to int()
