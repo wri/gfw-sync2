@@ -14,7 +14,7 @@ def kickoff(proc_name, regions, years, gfw_env):
 
     if proc_name == 'umd_landsat_alerts':
 
-        final_cmd = 'python /home/ubuntu/staging/glad-vt-analysis/update_glad_data.py ' \
+        final_cmd = 'python /home/ubuntu/glad-data-management/update_glad_data.py ' \
                     '-r {} -y {}'.format(region_str, year_str)
 
         if gfw_env == 'staging':

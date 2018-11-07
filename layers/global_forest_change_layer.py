@@ -67,7 +67,6 @@ class GlobalForestChangeLayer(RasterLayer):
 
         if has_error:
 
-            server_instance = aws.get_aws_instance(self.server_name)
             aws.set_processing_server_state(server_instance, 'stopped')
             logging.debug('Unsuccessful tile creation. Exiting.')
 
@@ -75,6 +74,9 @@ class GlobalForestChangeLayer(RasterLayer):
             aws.kill_emr_cluster(self.name)
 
             sys.exit(1)
+
+        else:
+            aws.set_processing_server_state(server_instance, 'stopped')
 
     def lookup_region_year_from_source(self):
 
