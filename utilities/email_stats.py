@@ -98,7 +98,7 @@ def send_email(body_text):
     server.starttls()
     server.login(fromaddr, token_util.get_token(username))
 
-    for toaddr in ["chofmann@wri.org", "mweisse@wri.org"]:
+    for toaddr in ["chofmann@wri.org", "mweisse@wri.org", "tmaschler@wri.org"]:
         msg['To'] = toaddr
         text = msg.as_string()
         server.sendmail(fromaddr, toaddr, text)
